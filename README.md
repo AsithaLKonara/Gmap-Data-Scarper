@@ -1,58 +1,148 @@
-Google Maps Business Details Scraper
-This Python script automates the process of extracting business details from Google Maps based on a list of search queries. It uses Selenium to interact with the Google Maps interface, allowing for automated data collection directly from the web.
+# 🏺️ Gmap Lead Scraper
 
-Features
-Automated Search: The script automatically searches for each query term on Google Maps.
-Data Extraction: It extracts the following details:
-Business Name
-Business Category
-Address
-Website URL
-Phone Number
-Plus Code
-Other available details
-Error Handling: The script includes error handling to manage elements that might be missing or cause exceptions during scraping.
-Logging: Errors and issues encountered during execution are logged for review.
-Requirements
-Python 3.x
-Selenium
-Google Chrome
-ChromeDriver (compatible with your Chrome version)
-Installation
-Clone this repository:
+A powerful and customizable web scraping tool built in Python to collect business leads from Google Maps. It extracts essential business information for multiple search queries and saves the data into a CSV file for use in outreach, research, or lead generation.
 
-bash
-Copy code
-git clone https://github.com/pcb2k18/gmap-data-scraper.git
-Navigate to the project directory:
+---
 
-bash
-Copy code
-cd gmaps_business_details_scrapper
-Install the required Python packages:
+## ✨ Features
 
-bash
-Copy code
+* 🔍 Automates Google Maps searches
+* 📅 Extracts multiple leads per query
+* 📌 Captures:
+
+  * Business Name
+  * Category
+  * Address
+  * Phone Number
+  * Website
+  * Plus Code
+* 📄 Saves data to CSV in `~/Documents`
+* 💻 Works on Mac and cross-platform
+* 🧠 Handles both multi-result lists and single business pages
+* 🔁 Retries failed attempts automatically
+
+---
+
+## 📁 File Structure
+
+```
+gmap-data-scraper/
+├── app.py                  # Main scraper script
+├── search_queries.txt      # List of search terms (one per line)
+├── gmap_all_leads.csv      # Output file with results
+├── venv/                   # Python virtual environment
+├── README.md               # This documentation
+```
+
+---
+
+## 🧰 Requirements
+
+* Python 3.8 or higher
+* Google Chrome browser (latest)
+* ChromeDriver (managed automatically)
+
+Install dependencies with:
+
+```bash
+pip install selenium webdriver-manager
+```
+
+---
+
+## 🚀 Setup Instructions
+
+### Step 1: Clone the Project
+
+```bash
+git clone <your-local-folder>
+cd gmap-data-scraper
+```
+
+### Step 2: Create Virtual Environment
+
+```bash
+python3 -m venv venv
+source venv/bin/activate  # Mac/Linux
+```
+
+### Step 3: Install Dependencies
+
+```bash
 pip install -r requirements.txt
-Download the ChromeDriver and place it in the specified directory in the script, or update the path in the script accordingly.
+```
 
-Usage
-Place your search queries in a text file (e.g., search_queries.txt), with each query on a new line.
+If `requirements.txt` is missing:
 
-Run the script:
+```bash
+pip install selenium webdriver-manager
+```
 
-bash
-Copy code
-python app.py
-The script will search for each query in Google Maps and extract the business details. Results will be saved to a file called gmap_results.txt in the same directory as your search queries file.
+---
 
-Any queries that fail to process after multiple attempts will be logged in failed_queries.txt.
+## ✏️ Create Input File
 
-Notes
-The script includes a time.sleep() delay between operations to mimic human interaction and avoid potential issues with Google Maps.
-The search results are written to a text file with each query result separated by a blank line for clarity.
-Contributing
-Feel free to submit issues or pull requests for improvements or new features.
+Create a file named `search_queries.txt` in the **project folder**:
 
-License
-This project is licensed under the MIT License. See the LICENSE file for details.
+```bash
+touch search_queries.txt
+```
+
+Add search terms like:
+
+```
+restaurant in Nuwara Eliya
+auto parts shop in Badulla
+furniture shop in Polonnaruwa
+salon in Anuradhapura
+```
+
+---
+
+## ▶️ Run the Scraper
+
+From the project folder:
+
+```bash
+python3 app.py
+```
+
+This will:
+
+* Launch Chrome
+* Search each term
+* Scroll and click on each result
+* Collect data and save to `gmap_all_leads.csv` in the same folder
+
+---
+
+## ✅ Output Format
+
+CSV columns:
+
+* Search Query
+* Business Name
+* Category
+* Address
+* Phone
+* Website
+* Plus Code
+
+Example row:
+
+```
+restaurant in Nuwara Eliya,Green Hills Restaurant,Restaurant,No.10 Gregory Road,+94 77 123 4567,www.greenhills.lk,PX9W+V3 Nuwara Eliya
+```
+
+---
+
+## 👨‍💻 Author
+
+**Asitha L Konara**
+
+---
+
+## ⚠️ Disclaimer
+
+This tool is intended for personal or educational use. Please use responsibly and in accordance with Google Maps' terms of service.
+# Gmap-Data-Scarper
