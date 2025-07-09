@@ -55,7 +55,7 @@ pip install selenium webdriver-manager
 ### Step 1: Clone the Project
 
 ```bash
-git clone <your-local-folder>
+git clone https://github.com/AsithaLKonara/Gmap-Data-Scarper.git
 cd gmap-data-scraper
 ```
 
@@ -145,4 +145,3 @@ restaurant in Nuwara Eliya,Green Hills Restaurant,Restaurant,No.10 Gregory Road,
 ## ⚠️ Disclaimer
 
 This tool is intended for personal or educational use. Please use responsibly and in accordance with Google Maps' terms of service.
-# Gmap-Data-Scarper

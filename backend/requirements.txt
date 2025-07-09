@@ -1,0 +1,15 @@
+fastapi==0.104.1
+uvicorn==0.24.0
+python-multipart==0.0.6
+sqlalchemy==2.0.23
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+aiofiles
+pydantic[email]
+stripe 
+PyMySQL==1.1.0
+websockets==12.0
+psutil==5.9.6
+bcrypt==4.0.1
+schedule==1.2.0
+aiohttp==3.9.1 
