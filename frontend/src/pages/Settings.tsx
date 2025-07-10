@@ -1,4 +1,4 @@
-import { getWebhookUrl, setWebhookUrl, deleteWebhookUrl, testWebhook, connectCRM, getCRMStatus, disconnectCRM, enable2FA, verify2FA, disable2FA, exportUserData, deleteAccount, getReferralInfo, useReferralCode, getReferralStats, getUsage, purchaseCredits, getTenantSsoConfig, updateTenantSsoConfig, getTenantPlan, updateTenantPlan, getTenantBilling, updateTenantBilling, createPayHereSession } from '../api';
+import { getWebhookUrl, setWebhookUrl, deleteWebhookUrl, testWebhook, connectCRM, getCRMStatus, disconnectCRM, enable2FA, verify2FA, disable2FA, exportUserData, deleteAccount, getReferralInfo, useReferralCode, getReferralStats, getUsage, purchaseCredits, getTenantSsoConfig, updateTenantSsoConfig, getTenantPlan, updateTenantPlan, getTenantBilling, updateTenantBilling, createPayHereSession, getTenant, updateTenant } from '../api';
 import { useState, useEffect } from 'react';
 import { Box, Heading, Text, HStack, Input, Button, toast, useToast } from '@chakra-ui/react';
 import { Link as RouterLink } from 'react-router-dom';
@@ -40,6 +40,9 @@ const [planEdit, setPlanEdit] = useState(false);
 const [planForm, setPlanForm] = useState<any>({ plan: '', plan_expiry: '' });
 const [billingEdit, setBillingEdit] = useState(false);
 const [billingForm, setBillingForm] = useState<any>({ billing_email: '' });
+const [customDomain, setCustomDomain] = useState('');
+const [customDomainLoading, setCustomDomainLoading] = useState(false);
+const [customDomainEdit, setCustomDomainEdit] = useState(false);
 const tenantId = localStorage.getItem('tenantId');
 
 const toast = useToast();
@@ -66,6 +69,7 @@ useEffect(() => {
       setBillingInfo(info);
       setBillingForm(info);
     }).finally(() => setBillingLoading(false));
+    getTenant(tenantId).then(t => setCustomDomain(t.custom_domain || ''));
   }
 }, [tenantId]);
 
@@ -283,6 +287,19 @@ const handleUpgradePlan = async () => {
   }
 };
 
+const handleSaveCustomDomain = async () => {
+  setCustomDomainLoading(true);
+  try {
+    await updateTenant(tenantId, { custom_domain: customDomain });
+    setCustomDomainEdit(false);
+    toast({ title: 'Custom domain updated', status: 'success' });
+  } catch (e: any) {
+    toast({ title: 'Error', description: e.message, status: 'error' });
+  } finally {
+    setCustomDomainLoading(false);
+  }
+};
+
 <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" mb={8} data-tour="settings-webhook-section">
   <Heading size="md" mb={2} data-tour="settings-webhook-title">Webhook Management</Heading>
   <Text fontSize="sm" color="gray.600" mb={2}>Receive real-time notifications in your own systems or Zapier. Enter your webhook URL below.</Text>
@@ -475,6 +492,25 @@ const handleUpgradePlan = async () => {
       </>
     )}
   </Box>
+</Box>
+
+<Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" mb={8} data-tour="settings-custom-domain-section">
+  <Heading size="md" mb={2} data-tour="settings-custom-domain-title">Custom Domain (White-Label)</Heading>
+  {!customDomainEdit ? (
+    <>
+      <Text>Current Domain: {customDomain || '-'}</Text>
+      <Button mt={2} onClick={() => setCustomDomainEdit(true)}>Set/Change Domain</Button>
+    </>
+  ) : (
+    <>
+      <Input placeholder="your.customdomain.com" value={customDomain} onChange={e => setCustomDomain(e.target.value)} mb={2} />
+      <Button colorScheme="blue" onClick={handleSaveCustomDomain} isLoading={customDomainLoading}>Save</Button>
+      <Button ml={2} onClick={() => setCustomDomainEdit(false)}>Cancel</Button>
+    </>
+  )}
+  <Text mt={4} fontSize="sm" color="gray.500">
+    To use a custom domain, point your DNS CNAME to our platform and enter your domain above. SSL will be automatically provisioned.
+  </Text>
 </Box>
 
 <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" mb={8} data-tour="settings-audit-section">
