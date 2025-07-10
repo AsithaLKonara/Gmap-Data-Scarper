@@ -23,8 +23,18 @@ from analytics import router as analytics_router
 from lead_collection import router as lead_collection_router
 from security import router as security_router
 from integrations import router as integrations_router
+from onboarding import router as onboarding_router
+from roi_calculator import router as roi_router
+from lead_scoring import router as lead_scoring_router
+from enhanced_analytics import router as enhanced_analytics_router
 
-app = FastAPI()
+app = FastAPI(
+    title="LeadTap API",
+    description="LeadTap - Google Maps Data Scraping and Lead Generation Platform",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
 
 # CORS settings
 app.add_middleware(
@@ -45,6 +55,7 @@ async def add_security_headers(request: Request, call_next):
     response.headers["Referrer-Policy"] = "same-origin"
     return response
 
+# Include all routers
 app.include_router(auth_router)
 app.include_router(jobs_router)
 app.include_router(payhere_router)
@@ -62,6 +73,10 @@ app.include_router(analytics_router)
 app.include_router(lead_collection_router)
 app.include_router(security_router)
 app.include_router(integrations_router)
+app.include_router(onboarding_router)
+app.include_router(roi_router)
+app.include_router(lead_scoring_router)
+app.include_router(enhanced_analytics_router)
 
 @app.on_event("startup")
 def on_startup():
@@ -83,7 +98,7 @@ def root():
 
 @app.get("/api/health")
 def health_check():
-    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
 
 # WebSocket connection manager
 class ConnectionManager:
@@ -116,7 +131,7 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             data = await websocket.receive_text()
             # Echo back for testing
-            await manager.send_personal_message(f"Message text was: {data}", websocket)
+            await manager.send_personal_message(f"Message received: {data}", websocket)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
