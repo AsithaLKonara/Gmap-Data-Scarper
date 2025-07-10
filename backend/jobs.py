@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, Query, Body
+from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, Query, Body, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List
@@ -12,6 +12,7 @@ from scraper import run_scraper
 from fastapi.responses import StreamingResponse
 import logging
 import secrets
+from tenant_utils import get_tenant_from_request
 
 router = APIRouter(prefix="/api/scrape", tags=["scrape"])
 
@@ -162,7 +163,8 @@ def download_csv(job_id: int, db: Session = Depends(get_db), user=Depends(get_cu
         raise HTTPException(status_code=500, detail="Failed to download CSV")
 
 @router.get("/jobs")
-def list_user_jobs(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def list_user_jobs(request: Request, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    tenant = get_tenant_from_request(request, db)
     try:
         jobs = db.query(Job).filter(Job.user_id == user.id).order_by(Job.id.desc()).all()
         return {

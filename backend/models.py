@@ -77,6 +77,8 @@ class Job(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     user = relationship('User', back_populates='jobs')
     share_token = Column(String(64), unique=True, nullable=True)
+    tenant_id = Column(Integer, ForeignKey('tenants.id'), nullable=True)
+    tenant = relationship('Tenant')
 
 class Lead(Base):
     __tablename__ = 'leads'
@@ -94,6 +96,8 @@ class Lead(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     user = relationship('User', back_populates='leads')
     share_token = Column(String(64), unique=True, nullable=True)
+    tenant_id = Column(Integer, ForeignKey('tenants.id'), nullable=True)
+    tenant = relationship('Tenant')
 
 class UserProfile(Base):
     __tablename__ = 'user_profiles'
