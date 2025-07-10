@@ -22,6 +22,7 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [tenant, setTenant] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
@@ -31,6 +32,8 @@ const Login = () => {
     setIsLoading(true);
 
     try {
+      if (!tenant) throw new Error('Tenant/Organization is required');
+      localStorage.setItem('tenantSlug', tenant);
       await login(email, password);
       toast({
         title: 'Login successful!',
@@ -88,6 +91,16 @@ const Login = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Enter your password"
+                      className="input-modern"
+                    />
+                  </FormControl>
+
+                  <FormControl isRequired>
+                    <FormLabel color="white">Organization/Tenant</FormLabel>
+                    <Input
+                      value={tenant}
+                      onChange={(e) => setTenant(e.target.value)}
+                      placeholder="Enter your organization/tenant slug"
                       className="input-modern"
                     />
                   </FormControl>
