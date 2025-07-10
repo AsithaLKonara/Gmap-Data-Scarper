@@ -21,6 +21,7 @@ from support import router as support_router
 from saved_queries import router as saved_queries_router
 from analytics import router as analytics_router
 from lead_collection import router as lead_collection_router
+from security import router as security_router
 
 app = FastAPI()
 
@@ -58,6 +59,7 @@ app.include_router(support_router)
 app.include_router(saved_queries_router)
 app.include_router(analytics_router)
 app.include_router(lead_collection_router)
+app.include_router(security_router)
 
 @app.on_event("startup")
 def on_startup():
