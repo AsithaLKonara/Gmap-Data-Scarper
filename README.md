@@ -192,3 +192,39 @@ Tenant admins can enable and configure SSO/SAML for their organization:
 - Ensure all SSO fields are correct and match your IdP’s metadata.
 - If SSO is not working, check the SSO config and try again.
 - Contact support if you need help with SAML metadata or certificates.
+
+## Per-Tenant Custom Domain (White-Label) Setup
+
+Tenant admins can set up a custom domain for their portal:
+1. Go to **Settings > Custom Domain** in the admin dashboard.
+2. Enter your desired domain (e.g., portal.yourcompany.com).
+3. Update your DNS provider to point a CNAME record to your platform’s domain (see instructions in the UI).
+4. SSL will be automatically provisioned for your domain.
+5. All branding, SSO, and integrations will be applied based on your domain.
+
+## Per-Tenant Integrations (CRM, Webhooks)
+
+- Go to **Settings > Integrations** to connect your CRM or set a webhook URL.
+- Each tenant’s integrations are isolated and configurable.
+- Supported CRMs: (list supported CRMs here)
+- Webhooks: Enter your endpoint to receive lead/job notifications.
+
+## Per-Tenant Billing (PayHere)
+
+- Go to **Settings > Plan & Billing** to view or upgrade your plan.
+- Click **Upgrade Plan** to pay securely via PayHere.
+- After payment, your plan and usage limits will be updated automatically.
+- Billing email and invoices are managed per tenant.
+
+## Multi-Tenancy Onboarding & Admin Features
+
+- Super-admins can create, update, and manage tenants from the admin dashboard.
+- Each tenant can manage their own users, branding, SSO, billing, integrations, and custom domain.
+- All data is strictly isolated by tenant.
+
+## Troubleshooting & FAQ
+
+- If your custom domain is not working, check DNS propagation and CNAME settings.
+- For SSO issues, verify your IdP metadata and certificate.
+- For billing issues, contact support with your PayHere order ID.
+- For integration/webhook issues, check your endpoint and logs.
