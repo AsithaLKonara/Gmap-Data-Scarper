@@ -29,6 +29,7 @@ from onboarding import router as onboarding_router
 from roi_calculator import router as roi_router
 from lead_scoring import router as lead_scoring_router
 from enhanced_analytics import router as enhanced_analytics_router
+from referral import router as referral_router
 
 # Sentry integration
 SENTRY_DSN = os.getenv("SENTRY_DSN")
@@ -88,6 +89,7 @@ app.include_router(onboarding_router)
 app.include_router(roi_router)
 app.include_router(lead_scoring_router)
 app.include_router(enhanced_analytics_router)
+app.include_router(referral_router)
 
 @app.on_event("startup")
 def on_startup():
