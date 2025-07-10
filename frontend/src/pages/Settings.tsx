@@ -7,7 +7,9 @@ import QRCode from 'qrcode.react';
 const [webhookUrl, setWebhookUrlState] = useState('');
 const [webhookLoading, setWebhookLoading] = useState(false);
 const [webhookTestResult, setWebhookTestResult] = useState<string | null>(null);
-const [crmStatus, setCrmStatus] = useState<any>(null);
+const [crmStatus, setCrmStatus] = useState<any>({});
+const [crmProvider, setCrmProvider] = useState('');
+const [crmConfig, setCrmConfig] = useState<any>({});
 const [crmLoading, setCrmLoading] = useState(false);
 const [twoFAEnabled, setTwoFAEnabled] = useState(false);
 const [twoFASecret, setTwoFASecret] = useState<string | null>(null);
@@ -294,26 +296,20 @@ const handleUpgradePlan = async () => {
 </Box>
 
 <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" mb={8}>
-  <Heading size="md" mb={2}>Zapier Integration</Heading>
-  <Text fontSize="sm" color="gray.600" mb={2}>
-    Connect LeadTap to 5,000+ apps using Zapier! Use your webhook URL above as a Zapier trigger to automate workflows like adding leads to your CRM, sending notifications, or updating spreadsheets.
-  </Text>
-  <Text fontSize="sm" mb={2}>
-    <b>How to use:</b>
-    <ol style={{ marginLeft: 20 }}>
-      <li>Go to <a href="https://zapier.com/app/editor" target="_blank" rel="noopener noreferrer">Zapier Editor</a>.</li>
-      <li>Choose <b>Webhooks by Zapier</b> as the trigger app.</li>
-      <li>Select <b>Catch Hook</b> and paste your webhook URL from above.</li>
-      <li>Test the trigger using the <b>Test</b> button above.</li>
-      <li>Connect any action app (e.g., Gmail, Google Sheets, Slack, HubSpot, etc.).</li>
-    </ol>
-  </Text>
-  <Text fontSize="sm" color="gray.500">
-    Need a template? Try this: <a href="https://zapier.com/apps/webhook/integrations" target="_blank" rel="noopener noreferrer">Zapier Webhook Templates</a>
-  </Text>
-  <Text fontSize="xs" color="gray.400" mt={2}>
-    Tip: You can use filters and formatting in Zapier to customize your automation.
-  </Text>
+  <Heading size="md" mb={2}>Integrations</Heading>
+  <Box mb={4}>
+    <Heading size="sm" mb={2}>CRM Integration</Heading>
+    <Input placeholder="CRM Provider (e.g., HubSpot)" value={crmProvider} onChange={e => setCrmProvider(e.target.value)} mb={2} />
+    <Input placeholder="CRM Config (JSON)" value={JSON.stringify(crmConfig)} onChange={e => setCrmConfig(JSON.parse(e.target.value || '{}'))} mb={2} />
+    <Button colorScheme="blue" onClick={handleConnectCrm} isLoading={crmLoading}>Connect CRM</Button>
+    <Text mt={2}>Current: {crmStatus.provider || '-'} {crmStatus.config ? JSON.stringify(crmStatus.config) : ''}</Text>
+  </Box>
+  <Box>
+    <Heading size="sm" mb={2}>Webhook Integration</Heading>
+    <Input placeholder="Webhook URL" value={webhookUrl} onChange={e => setWebhookUrlState(e.target.value)} mb={2} />
+    <Button colorScheme="blue" onClick={handleSaveWebhook} isLoading={webhookLoading}>Save Webhook</Button>
+    <Text mt={2}>Current: {webhookUrl || '-'}</Text>
+  </Box>
 </Box>
 
 <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" mb={8} data-tour="settings-crm-section">
