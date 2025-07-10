@@ -52,6 +52,14 @@ class SocialMediaLeadResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+class LeadSourceStatus(BaseModel):
+    id: int
+    name: str
+    type: str
+    status: str
+    last_sync: Optional[datetime]
+    config: Optional[Dict[str, Any]]
+
 # Lead source management
 @router.post("/sources", response_model=Dict[str, Any])
 async def create_lead_source(
@@ -80,22 +88,24 @@ async def create_lead_source(
         "config": json.loads(source.config) if source.config else None
     }
 
-@router.get("/sources", response_model=List[Dict[str, Any]])
-async def get_lead_sources(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+@router.get("/sources", response_model=List[LeadSourceStatus], summary="List available lead sources", response_description="List of lead sources and their status")
+def list_lead_sources(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
 ):
-    """Get available lead sources"""
-    sources = db.query(LeadSource).filter(LeadSource.is_active == True).all()
-    return [
-        {
-            "id": source.id,
-            "name": source.name,
-            "type": source.type,
-            "config": json.loads(source.config) if source.config else None
-        }
-        for source in sources
-    ]
+    """Get all available lead sources and their connection status."""
+    sources = db.query(LeadSource).filter(LeadSource.user_id == user.id).all()
+    result = []
+    for source in sources:
+        result.append(LeadSourceStatus(
+            id=source.id,
+            name=source.name,
+            type=source.type,
+            status=source.status if hasattr(source, 'status') else 'unknown',
+            last_sync=source.last_sync if hasattr(source, 'last_sync') else None,
+            config=json.loads(source.config) if source.config else None
+        ))
+    return result
 
 # Lead collection management
 @router.post("/collections", response_model=Dict[str, Any])
