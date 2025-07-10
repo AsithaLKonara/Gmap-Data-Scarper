@@ -1,4 +1,4 @@
-import { getWebhookUrl, setWebhookUrl, deleteWebhookUrl, testWebhook, connectCRM, getCRMStatus, disconnectCRM, enable2FA, verify2FA, disable2FA, exportUserData, deleteAccount, getReferralInfo, useReferralCode, getReferralStats, getUsage, purchaseCredits, getTenantSsoConfig, updateTenantSsoConfig } from '../api';
+import { getWebhookUrl, setWebhookUrl, deleteWebhookUrl, testWebhook, connectCRM, getCRMStatus, disconnectCRM, enable2FA, verify2FA, disable2FA, exportUserData, deleteAccount, getReferralInfo, useReferralCode, getReferralStats, getUsage, purchaseCredits, getTenantSsoConfig, updateTenantSsoConfig, getTenantPlan, updateTenantPlan, getTenantBilling, updateTenantBilling } from '../api';
 import { useState, useEffect } from 'react';
 import { Box, Heading, Text, HStack, Input, Button, toast, useToast } from '@chakra-ui/react';
 import { Link as RouterLink } from 'react-router-dom';
@@ -30,6 +30,14 @@ const [ssoConfig, setSsoConfig] = useState<any>({});
 const [ssoLoading, setSsoLoading] = useState(false);
 const [ssoEdit, setSsoEdit] = useState(false);
 const [ssoForm, setSsoForm] = useState<any>({ entity_id: '', sso_url: '', cert: '' });
+const [planInfo, setPlanInfo] = useState<any>({});
+const [billingInfo, setBillingInfo] = useState<any>({});
+const [planLoading, setPlanLoading] = useState(false);
+const [billingLoading, setBillingLoading] = useState(false);
+const [planEdit, setPlanEdit] = useState(false);
+const [planForm, setPlanForm] = useState<any>({ plan: '', plan_expiry: '' });
+const [billingEdit, setBillingEdit] = useState(false);
+const [billingForm, setBillingForm] = useState<any>({ billing_email: '' });
 const tenantId = localStorage.getItem('tenantId');
 
 const toast = useToast();
@@ -46,6 +54,16 @@ useEffect(() => {
       setSsoConfig(cfg);
       setSsoForm(cfg || { entity_id: '', sso_url: '', cert: '' });
     }).finally(() => setSsoLoading(false));
+    setPlanLoading(true);
+    getTenantPlan(tenantId).then(info => {
+      setPlanInfo(info);
+      setPlanForm(info);
+    }).finally(() => setPlanLoading(false));
+    setBillingLoading(true);
+    getTenantBilling(tenantId).then(info => {
+      setBillingInfo(info);
+      setBillingForm(info);
+    }).finally(() => setBillingLoading(false));
   }
 }, [tenantId]);
 
@@ -222,6 +240,33 @@ const handleSaveSsoConfig = async () => {
   }
 };
 
+const handleSavePlan = async () => {
+  setPlanLoading(true);
+  try {
+    await updateTenantPlan(tenantId, planForm);
+    setPlanInfo(planForm);
+    setPlanEdit(false);
+    toast({ title: 'Plan updated', status: 'success' });
+  } catch (e: any) {
+    toast({ title: 'Error', description: e.message, status: 'error' });
+  } finally {
+    setPlanLoading(false);
+  }
+};
+const handleSaveBilling = async () => {
+  setBillingLoading(true);
+  try {
+    await updateTenantBilling(tenantId, billingForm);
+    setBillingInfo(billingForm);
+    setBillingEdit(false);
+    toast({ title: 'Billing info updated', status: 'success' });
+  } catch (e: any) {
+    toast({ title: 'Error', description: e.message, status: 'error' });
+  } finally {
+    setBillingLoading(false);
+  }
+};
+
 <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" mb={8} data-tour="settings-webhook-section">
   <Heading size="md" mb={2} data-tour="settings-webhook-title">Webhook Management</Heading>
   <Text fontSize="sm" color="gray.600" mb={2}>Receive real-time notifications in your own systems or Zapier. Enter your webhook URL below.</Text>
@@ -378,6 +423,47 @@ const handleSaveSsoConfig = async () => {
       )}
     </>
   )}
+</Box>
+
+<Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" mb={8}>
+  <Heading size="md" mb={2}>Plan & Billing</Heading>
+  {planLoading ? <Text>Loading...</Text> : (
+    <>
+      {!planEdit ? (
+        <>
+          <Text>Current Plan: {planInfo.plan || '-'}</Text>
+          <Text>Expiry: {planInfo.plan_expiry || '-'}</Text>
+          <Button mt={2} onClick={() => setPlanEdit(true)}>Change Plan</Button>
+        </>
+      ) : (
+        <>
+          <Input placeholder="Plan" value={planForm.plan} onChange={e => setPlanForm(f => ({ ...f, plan: e.target.value }))} mb={2} />
+          <Input placeholder="Expiry" value={planForm.plan_expiry} onChange={e => setPlanForm(f => ({ ...f, plan_expiry: e.target.value }))} mb={2} />
+          <Button colorScheme="blue" onClick={handleSavePlan} isLoading={planLoading}>Save</Button>
+          <Button ml={2} onClick={() => setPlanEdit(false)}>Cancel</Button>
+        </>
+      )}
+    </>
+  )}
+  <Box mt={6}>
+    <Heading size="sm" mb={2}>Billing Info</Heading>
+    {billingLoading ? <Text>Loading...</Text> : (
+      <>
+        {!billingEdit ? (
+          <>
+            <Text>Email: {billingInfo.billing_email || '-'}</Text>
+            <Button mt={2} onClick={() => setBillingEdit(true)}>Edit Billing</Button>
+          </>
+        ) : (
+          <>
+            <Input placeholder="Billing Email" value={billingForm.billing_email} onChange={e => setBillingForm(f => ({ ...f, billing_email: e.target.value }))} mb={2} />
+            <Button colorScheme="blue" onClick={handleSaveBilling} isLoading={billingLoading}>Save</Button>
+            <Button ml={2} onClick={() => setBillingEdit(false)}>Cancel</Button>
+          </>
+        )}
+      </>
+    )}
+  </Box>
 </Box>
 
 <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" mb={8} data-tour="settings-audit-section">
