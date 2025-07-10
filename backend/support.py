@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional, List
@@ -6,6 +6,8 @@ from models import User
 from auth import get_current_user
 from database import get_db
 import logging
+from models import SupportTicket
+from tenant_utils import get_tenant_from_request
 
 router = APIRouter(prefix="/api/support", tags=["support"])
 logger = logging.getLogger("support")
@@ -56,3 +58,28 @@ def submit_support_request(
 def get_faqs():
     """Get the list of frequently asked questions for the Knowledge Base."""
     return _FAQ_LIST 
+
+@router.get("/support", response_model=List[SupportTicket], summary="Get Support Tickets", response_description="List of support tickets")
+def get_support_tickets(request: Request, db: Session = Depends(get_db)):
+    tenant = get_tenant_from_request(request, db)
+    tickets = db.query(SupportTicket).filter_by(tenant_id=tenant.id).all()
+    return tickets
+
+@router.post("/support", response_model=SupportTicket, summary="Create Support Ticket", response_description="Created support ticket")
+def create_support_ticket(
+    req: BaseModel, # Assuming req is a BaseModel for simplicity, as SupportRequest is removed
+    user: User = Depends(get_current_user),
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    tenant = get_tenant_from_request(request, db)
+    ticket = SupportTicket(
+        subject=req.subject,
+        message=req.message,
+        phone=req.phone,
+        user_id=user.id,
+        tenant_id=tenant.id
+    )
+    db.add(ticket)
+    db.commit()
+    return ticket 

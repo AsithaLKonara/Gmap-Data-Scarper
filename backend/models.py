@@ -163,6 +163,8 @@ class SavedQuery(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     user = relationship('User', back_populates='saved_queries')
+    tenant_id = Column(Integer, ForeignKey('tenants.id'), nullable=True)
+    tenant = relationship('Tenant', back_populates='saved_queries')
 
 class Notification(Base):
     __tablename__ = 'notifications'
@@ -173,6 +175,8 @@ class Notification(Base):
     read = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     user = relationship('User', back_populates='notifications')
+    tenant_id = Column(Integer, ForeignKey('tenants.id'), nullable=True)
+    tenant = relationship('Tenant', back_populates='notifications')
 
 class ScheduledJob(Base):
     __tablename__ = 'scheduled_jobs'
