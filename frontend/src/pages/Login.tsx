@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -17,15 +17,27 @@ import {
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { EmailIcon, LockIcon } from '@chakra-ui/icons';
+import { getTenantSsoConfig } from '../api';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [tenant, setTenant] = useState('');
+  const [ssoEnabled, setSsoEnabled] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
+
+  useEffect(() => {
+    if (tenant) {
+      getTenantSsoConfig(tenant)
+        .then(cfg => setSsoEnabled(!!cfg && !!cfg.entity_id && !!cfg.sso_url && !!cfg.cert))
+        .catch(() => setSsoEnabled(false));
+    } else {
+      setSsoEnabled(false);
+    }
+  }, [tenant]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,6 +116,16 @@ const Login = () => {
                       className="input-modern"
                     />
                   </FormControl>
+
+                  {ssoEnabled && (
+                    <Button
+                      w="full"
+                      colorScheme="purple"
+                      onClick={() => window.location.href = `/api/auth/sso/login?tenant=${tenant}`}
+                    >
+                      Sign in with SSO
+                    </Button>
+                  )}
 
                   <Button
                     type="submit"

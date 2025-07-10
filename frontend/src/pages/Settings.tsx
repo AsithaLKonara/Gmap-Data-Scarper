@@ -1,4 +1,4 @@
-import { getWebhookUrl, setWebhookUrl, deleteWebhookUrl, testWebhook, connectCRM, getCRMStatus, disconnectCRM, enable2FA, verify2FA, disable2FA, exportUserData, deleteAccount, getReferralInfo, useReferralCode, getReferralStats, getUsage, purchaseCredits } from '../api';
+import { getWebhookUrl, setWebhookUrl, deleteWebhookUrl, testWebhook, connectCRM, getCRMStatus, disconnectCRM, enable2FA, verify2FA, disable2FA, exportUserData, deleteAccount, getReferralInfo, useReferralCode, getReferralStats, getUsage, purchaseCredits, getTenantSsoConfig, updateTenantSsoConfig } from '../api';
 import { useState, useEffect } from 'react';
 import { Box, Heading, Text, HStack, Input, Button, toast, useToast } from '@chakra-ui/react';
 import { Link as RouterLink } from 'react-router-dom';
@@ -26,6 +26,11 @@ const [referralUsed, setReferralUsed] = useState(false);
 const [usageInfo, setUsageInfo] = useState<any>(null);
 const [purchaseAmount, setPurchaseAmount] = useState(10);
 const [usageLoading, setUsageLoading] = useState(false);
+const [ssoConfig, setSsoConfig] = useState<any>({});
+const [ssoLoading, setSsoLoading] = useState(false);
+const [ssoEdit, setSsoEdit] = useState(false);
+const [ssoForm, setSsoForm] = useState<any>({ entity_id: '', sso_url: '', cert: '' });
+const tenantId = localStorage.getItem('tenantId');
 
 const toast = useToast();
 
@@ -35,7 +40,14 @@ useEffect(() => {
   getReferralInfo().then(setReferralInfo);
   getReferralStats().then(setReferralStats);
   getUsage().then(setUsageInfo);
-}, []);
+  if (tenantId) {
+    setSsoLoading(true);
+    getTenantSsoConfig(tenantId).then(cfg => {
+      setSsoConfig(cfg);
+      setSsoForm(cfg || { entity_id: '', sso_url: '', cert: '' });
+    }).finally(() => setSsoLoading(false));
+  }
+}, [tenantId]);
 
 const handleSaveWebhook = async () => {
   setWebhookLoading(true);
@@ -196,6 +208,20 @@ const handlePurchaseCredits = async () => {
   }
 };
 
+const handleSaveSsoConfig = async () => {
+  setSsoLoading(true);
+  try {
+    await updateTenantSsoConfig(tenantId, { sso_config: ssoForm });
+    setSsoConfig(ssoForm);
+    setSsoEdit(false);
+    toast({ title: 'SSO config saved', status: 'success' });
+  } catch (e: any) {
+    toast({ title: 'Error', description: e.message, status: 'error' });
+  } finally {
+    setSsoLoading(false);
+  }
+};
+
 <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" mb={8} data-tour="settings-webhook-section">
   <Heading size="md" mb={2} data-tour="settings-webhook-title">Webhook Management</Heading>
   <Text fontSize="sm" color="gray.600" mb={2}>Receive real-time notifications in your own systems or Zapier. Enter your webhook URL below.</Text>
@@ -326,6 +352,30 @@ const handlePurchaseCredits = async () => {
         <Input type="number" value={purchaseAmount} min={1} onChange={e => setPurchaseAmount(Number(e.target.value))} w="120px" />
         <Button colorScheme="blue" onClick={handlePurchaseCredits} isLoading={usageLoading}>Purchase Credits</Button>
       </HStack>
+    </>
+  )}
+</Box>
+
+<Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" mb={8} data-tour="settings-sso-section">
+  <Heading size="md" mb={2} data-tour="settings-sso-title">SSO/SAML Configuration</Heading>
+  {ssoLoading ? <Text>Loading...</Text> : (
+    <>
+      {!ssoEdit ? (
+        <>
+          <Text>Entity ID: {ssoConfig.entity_id || '-'}</Text>
+          <Text>SSO URL: {ssoConfig.sso_url || '-'}</Text>
+          <Text>Certificate: {ssoConfig.cert ? '[set]' : '-'}</Text>
+          <Button mt={2} onClick={() => setSsoEdit(true)}>Edit</Button>
+        </>
+      ) : (
+        <>
+          <Input placeholder="Entity ID" value={ssoForm.entity_id} onChange={e => setSsoForm(f => ({ ...f, entity_id: e.target.value }))} mb={2} />
+          <Input placeholder="SSO URL" value={ssoForm.sso_url} onChange={e => setSsoForm(f => ({ ...f, sso_url: e.target.value }))} mb={2} />
+          <Input placeholder="Certificate" value={ssoForm.cert} onChange={e => setSsoForm(f => ({ ...f, cert: e.target.value }))} mb={2} />
+          <Button colorScheme="blue" onClick={handleSaveSsoConfig} isLoading={ssoLoading}>Save</Button>
+          <Button ml={2} onClick={() => setSsoEdit(false)}>Cancel</Button>
+        </>
+      )}
     </>
   )}
 </Box>
