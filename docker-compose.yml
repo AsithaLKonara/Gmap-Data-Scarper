@@ -1,36 +1,70 @@
 version: '3.8'
+
 services:
   backend:
-    build: ./backend
-    env_file: ./backend/env.example
-    volumes:
-      - ./backend:/app
+    build:
+      context: ./backend
+    container_name: leadtap-backend
+    env_file:
+      - .env
+    environment:
+      - ENVIRONMENT=production
     ports:
       - "8000:8000"
-    environment:
-      - FRONTEND_URL=http://localhost
-      - DATABASE_URL=mysql+pymysql://leadtap:leadtap@mysql/leadtap
     depends_on:
-      - mysql
+      - db
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - ./backend:/app
+      - backend_static:/app/static
+
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+    container_name: leadtap-frontend
+    env_file:
+      - .env
+    environment:
+      - ENVIRONMENT=production
     ports:
-      - "80:80"
+      - "5173:5173"
     depends_on:
       - backend
-    restart: unless-stopped 
-  mysql:
-    image: mysql:8
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5173"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - ./frontend:/app
+      - frontend_static:/app/dist
+
+  db:
+    image: mysql:8.0
+    container_name: leadtap-db
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: leadtap
-      MYSQL_USER: leadtap
-      MYSQL_PASSWORD: leadtap
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-leadtap}
+      MYSQL_USER: ${MYSQL_USER:-leadtap}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-leadtap}
     ports:
       - "3306:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
 volumes:
-  mysql_data: 
+  db_data:
+  backend_static:
+  frontend_static: 

@@ -1,3 +1,5 @@
+import os
+import sentry_sdk
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 import asyncio
@@ -27,6 +29,15 @@ from onboarding import router as onboarding_router
 from roi_calculator import router as roi_router
 from lead_scoring import router as lead_scoring_router
 from enhanced_analytics import router as enhanced_analytics_router
+
+# Sentry integration
+SENTRY_DSN = os.getenv("SENTRY_DSN")
+if SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        traces_sample_rate=0.1,
+        environment=os.getenv("ENVIRONMENT", "development"),
+    )
 
 app = FastAPI(
     title="LeadTap API",
