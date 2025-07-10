@@ -74,6 +74,20 @@ function App() {
     }
   ];
 
+  useEffect(() => {
+    // White-label: detect domain and fetch tenant config
+    const domain = window.location.hostname;
+    fetch(`/api/branding/config?domain=${domain}`)
+      .then(res => res.json())
+      .then(cfg => {
+        if (cfg && cfg.tenant_slug) {
+          (window as any).tenantSlug = cfg.tenant_slug;
+          localStorage.setItem('tenantSlug', cfg.tenant_slug);
+        }
+        // Optionally apply branding/colors here
+      });
+  }, []);
+
   return (
     <ChakraProvider theme={theme}>
       <AuthProvider>
