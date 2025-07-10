@@ -146,3 +146,31 @@ restaurant in Nuwara Eliya,Green Hills Restaurant,Restaurant,No.10 Gregory Road,
 
 This tool is intended for personal or educational use. Please use responsibly and in accordance with Google Maps' terms of service.
 # Auto-commit system added
+
+## SSO/SAML Support
+
+- SSO/SAML login is only available in Docker or supported Linux environments.
+- On macOS 12, the SSO endpoints are placeholders and will not function.
+- For SSO development, use Docker or deploy to a Linux server.
+
+## Multi-Tenancy Architecture
+
+LeadTap supports full multi-tenancy for SaaS and enterprise use cases. All user, job, lead, CRM, analytics, notification, support, and API key data is isolated by tenant (organization).
+
+### How it works
+- Each user, job, lead, etc. is associated with a `tenant_id`.
+- All API requests must include the `X-Tenant` header (tenant slug), set automatically by the frontend after login/registration.
+- Backend endpoints strictly filter and validate by tenant, preventing cross-tenant data access.
+- Super-admins can manage tenants, onboard new organizations, and switch context for support.
+
+### Migration for Existing Data
+- Run `python scripts/assign_default_tenant.py` to assign all orphaned records to a Default Tenant.
+
+### Tenant Onboarding
+- Use the admin endpoints to create a new tenant (organization).
+- Invite users to the tenant via the onboarding API or UI.
+- Users must enter their organization/tenant slug on login/registration.
+
+### Security
+- All endpoints enforce tenant isolation.
+- Automated tests and utilities ensure no cross-tenant data leaks.
