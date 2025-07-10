@@ -174,3 +174,21 @@ LeadTap supports full multi-tenancy for SaaS and enterprise use cases. All user,
 ### Security
 - All endpoints enforce tenant isolation.
 - Automated tests and utilities ensure no cross-tenant data leaks.
+
+## Per-Tenant SSO/SAML Setup
+
+Tenant admins can enable and configure SSO/SAML for their organization:
+
+1. Go to **Settings > SSO/SAML Configuration** in the admin dashboard.
+2. Enter your SSO provider’s details:
+   - **Entity ID**: Your SAML entity ID (from your IdP, e.g., Okta, Google, Azure).
+   - **SSO URL**: The SAML SSO endpoint (from your IdP).
+   - **Certificate**: The X.509 certificate (PEM format) from your IdP.
+3. Save the configuration.
+4. Users will now see a “Sign in with SSO” button on the login page after entering your organization/tenant slug.
+5. Clicking the button will redirect to your SSO provider for authentication.
+
+**Troubleshooting:**
+- Ensure all SSO fields are correct and match your IdP’s metadata.
+- If SSO is not working, check the SSO config and try again.
+- Contact support if you need help with SAML metadata or certificates.
