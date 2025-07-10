@@ -228,3 +228,25 @@ Tenant admins can set up a custom domain for their portal:
 - For SSO issues, verify your IdP metadata and certificate.
 - For billing issues, contact support with your PayHere order ID.
 - For integration/webhook issues, check your endpoint and logs.
+
+## Go Live Checklist
+
+- [ ] All tenant data is migrated and assigned (run migration script if needed)
+- [ ] SSL is provisioned for all custom domains
+- [ ] DNS/CNAME records are set up for each tenant domain
+- [ ] PayHere billing is tested and working for all plans
+- [ ] SSO/SAML is tested for all tenants using SSO
+- [ ] Integrations (CRM, webhooks) are tested per tenant
+- [ ] Monitoring and alerting are enabled for billing, SSO, and webhooks
+- [ ] Backups and disaster recovery are configured
+- [ ] CI/CD pipeline is green and deploys to production
+- [ ] Documentation is up to date for all features
+
+## Deployment Notes
+
+- Use Docker Compose for production deployment (`docker-compose up -d`)
+- Set all required environment variables (see `.env.example`)
+- For custom domains, ensure DNS and SSL are configured
+- For PayHere, set merchant ID and URLs in environment
+- For SSO, ensure IdP metadata is correct per tenant
+- For support, see the Knowledge Base or contact the admin team
