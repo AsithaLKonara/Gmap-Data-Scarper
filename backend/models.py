@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, Float, JSON
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean, Float, JSON, Numeric
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -11,6 +11,11 @@ class Tenant(Base):
     slug = Column(String, unique=True, nullable=False)
     branding = Column(JSON, nullable=True)
     sso_config = Column(JSON, nullable=True)
+    plan = Column(String, default='free')
+    plan_expiry = Column(String, nullable=True)
+    billing_email = Column(String, nullable=True)
+    billing_customer_id = Column(String, nullable=True)  # e.g., Stripe customer ID
+    usage = Column(JSON, nullable=True)  # e.g., {queries_today: 0, ...}
     # Add more fields as needed
 
     users = relationship('User', back_populates='tenant')
