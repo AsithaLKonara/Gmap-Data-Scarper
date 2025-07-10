@@ -1,75 +1,61 @@
-from fastapi import APIRouter, Request, Depends, HTTPException, Form
+from fastapi import APIRouter, Request, HTTPException, Depends
 from sqlalchemy.orm import Session
-from config import FRONTEND_URL
-from models import User
+from models import Tenant
 from database import get_db
-from auth import get_current_user
 import os
-import hashlib
-import hmac
 
 router = APIRouter(prefix="/api/payhere", tags=["payhere"])
 
-PAYHERE_MERCHANT_ID = os.getenv('PAYHERE_MERCHANT_ID', '121XXXX')
-PAYHERE_MERCHANT_SECRET = os.getenv('PAYHERE_MERCHANT_SECRET', 'sandboxSecret')
-PAYHERE_BASE_URL = os.getenv('PAYHERE_BASE_URL', 'https://sandbox.payhere.lk/pay/checkout')
+PAYHERE_MERCHANT_ID = os.getenv('PAYHERE_MERCHANT_ID')
+PAYHERE_RETURN_URL = os.getenv('PAYHERE_RETURN_URL', 'https://yourapp.com/payhere/return')
+PAYHERE_CANCEL_URL = os.getenv('PAYHERE_CANCEL_URL', 'https://yourapp.com/payhere/cancel')
+PAYHERE_NOTIFY_URL = os.getenv('PAYHERE_NOTIFY_URL', 'https://yourapp.com/api/payhere/webhook')
 
-PLANS = {
-    'pro': {'amount': 9, 'name': 'Pro'},
-    'business': {'amount': 49, 'name': 'Business'}
-}
-
-@router.post("/create-session")
-def create_payhere_session(plan: str = Form(...), user=Depends(get_current_user)):
-    if plan not in PLANS:
-        raise HTTPException(status_code=400, detail="Invalid plan")
-    order_id = f"{user.id}-{plan}-{os.urandom(4).hex()}"
-    amount = PLANS[plan]['amount']
-    payload = {
+@router.post("/create-session", response_model=dict)
+async def create_payhere_session(request: Request, db: Session = Depends(get_db)):
+    data = await request.json()
+    plan = data.get('plan')
+    tenant_id = data.get('tenant_id')
+    tenant = db.query(Tenant).get(tenant_id)
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+    # Prepare PayHere payment params
+    params = {
         'merchant_id': PAYHERE_MERCHANT_ID,
-        'return_url': f'{FRONTEND_URL}/payment-success',
-        'cancel_url': f'{FRONTEND_URL}/payment-cancel',
-        'notify_url': f'{FRONTEND_URL}/api/payhere/notify',
-        'order_id': order_id,
-        'items': PLANS[plan]['name'],
-        'currency': 'USD',
-        'amount': amount,
-        'first_name': user.email.split('@')[0],
-        'last_name': 'User',
-        'email': user.email,
-        'phone': '0000000000',
-        'address': 'N/A',
-        'city': 'N/A',
+        'return_url': PAYHERE_RETURN_URL,
+        'cancel_url': PAYHERE_CANCEL_URL,
+        'notify_url': PAYHERE_NOTIFY_URL,
+        'order_id': f"tenant-{tenant.id}-{plan}",
+        'items': f"{plan} Plan Subscription",
+        'amount': '0',  # Set plan price here
+        'currency': 'LKR',
+        'first_name': tenant.name,
+        'last_name': '',
+        'email': tenant.billing_email or '',
+        'address': '',
+        'city': '',
         'country': 'Sri Lanka',
+        'custom_1': tenant.id,
     }
-    # The frontend should POST this payload to PayHere
-    return {'payhere_url': PAYHERE_BASE_URL, 'payload': payload}
+    # Return PayHere form URL (or redirect URL)
+    payhere_url = f"https://www.payhere.lk/pay/checkout?{'&'.join([f'{k}={v}' for k,v in params.items()])}"
+    return {"payhere_url": payhere_url}
 
-@router.post("/notify")
-def payhere_notify(
-    merchant_id: str = Form(...),
-    order_id: str = Form(...),
-    payment_id: str = Form(...),
-    payhere_amount: str = Form(...),
-    payhere_currency: str = Form(...),
-    status_code: str = Form(...),
-    md5sig: str = Form(...),
-    method: str = Form(None),
-    db: Session = Depends(get_db)
-):
-    # Validate signature
-    local_md5sig = hashlib.md5((merchant_id + order_id + payhere_amount + payhere_currency + status_code + PAYHERE_MERCHANT_SECRET).encode()).hexdigest().upper()
-    if md5sig != local_md5sig:
-        raise HTTPException(status_code=400, detail="Invalid signature")
-    # Only process completed payments
-    if status_code == '2':
-        # Extract user_id and plan from order_id
-        try:
-            user_id, plan, _ = order_id.split('-', 2)
-            user = db.query(User).filter(User.id == int(user_id)).first()
-            if user and plan in PLANS:
-                user.plan = plan
-                db.commit()
-        except Exception:
-            pass
-    return {"status": "ok"} 
+@router.post("/webhook", response_model=dict)
+async def payhere_webhook(request: Request, db: Session = Depends(get_db)):
+    data = await request.form()
+    order_id = data.get('order_id')
+    status_code = data.get('status_code')
+    plan = None
+    tenant_id = None
+    if order_id and order_id.startswith('tenant-'):
+        parts = order_id.split('-')
+        tenant_id = int(parts[1])
+        plan = parts[2]
+    if status_code == '2' and tenant_id and plan:
+        tenant = db.query(Tenant).get(tenant_id)
+        if tenant:
+            tenant.plan = plan
+            # Optionally set plan_expiry, etc.
+            db.commit()
+    return {"ok": True} 
