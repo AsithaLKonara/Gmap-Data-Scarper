@@ -11,6 +11,9 @@ async function apiFetch(path: string, options: any = {}) {
   const headers: Record<string, string> = options.headers || {};
   if (token) headers['Authorization'] = `Bearer ${token}`;
   if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
+  // Add X-Tenant header if available
+  let tenantSlug = localStorage.getItem('tenantSlug') || (window as any).tenantSlug;
+  if (tenantSlug) headers['X-Tenant'] = tenantSlug;
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
     headers,
