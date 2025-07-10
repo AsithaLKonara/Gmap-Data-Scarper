@@ -1,4 +1,4 @@
-import { getWebhookUrl, setWebhookUrl, deleteWebhookUrl, testWebhook, connectCRM, getCRMStatus, disconnectCRM, enable2FA, verify2FA, disable2FA, exportUserData, deleteAccount, getReferralInfo, useReferralCode, getReferralStats, getUsage, purchaseCredits, getTenantSsoConfig, updateTenantSsoConfig, getTenantPlan, updateTenantPlan, getTenantBilling, updateTenantBilling } from '../api';
+import { getWebhookUrl, setWebhookUrl, deleteWebhookUrl, testWebhook, connectCRM, getCRMStatus, disconnectCRM, enable2FA, verify2FA, disable2FA, exportUserData, deleteAccount, getReferralInfo, useReferralCode, getReferralStats, getUsage, purchaseCredits, getTenantSsoConfig, updateTenantSsoConfig, getTenantPlan, updateTenantPlan, getTenantBilling, updateTenantBilling, createPayHereSession } from '../api';
 import { useState, useEffect } from 'react';
 import { Box, Heading, Text, HStack, Input, Button, toast, useToast } from '@chakra-ui/react';
 import { Link as RouterLink } from 'react-router-dom';
@@ -267,6 +267,20 @@ const handleSaveBilling = async () => {
   }
 };
 
+const handleUpgradePlan = async () => {
+  setPlanLoading(true);
+  try {
+    const res = await createPayHereSession(planForm.plan, tenantId);
+    if (res.payhere_url) {
+      window.location.href = res.payhere_url;
+    }
+  } catch (e: any) {
+    toast({ title: 'Error', description: e.message, status: 'error' });
+  } finally {
+    setPlanLoading(false);
+  }
+};
+
 <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" mb={8} data-tour="settings-webhook-section">
   <Heading size="md" mb={2} data-tour="settings-webhook-title">Webhook Management</Heading>
   <Text fontSize="sm" color="gray.600" mb={2}>Receive real-time notifications in your own systems or Zapier. Enter your webhook URL below.</Text>
@@ -434,6 +448,7 @@ const handleSaveBilling = async () => {
           <Text>Current Plan: {planInfo.plan || '-'}</Text>
           <Text>Expiry: {planInfo.plan_expiry || '-'}</Text>
           <Button mt={2} onClick={() => setPlanEdit(true)}>Change Plan</Button>
+          <Button mt={2} colorScheme="green" onClick={handleUpgradePlan} isLoading={planLoading}>Upgrade Plan (PayHere)</Button>
         </>
       ) : (
         <>
