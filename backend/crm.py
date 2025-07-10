@@ -10,7 +10,7 @@ from pydantic import BaseModel
 import secrets
 from config import lru_cache, CACHE_TIMEOUT_SECONDS
 import threading
-from tenant_utils import get_tenant_from_request
+from tenant_utils import get_tenant_from_request, get_tenant_record_or_403
 
 router = APIRouter(prefix="/api/crm", tags=["crm"])
 

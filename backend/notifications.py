@@ -15,6 +15,9 @@ from datetime import datetime, timedelta
 from enum import Enum
 import asyncio
 import aiohttp
+from tenant_utils import get_tenant_record_or_403
+from fastapi import Request
+from tenant_utils import get_tenant_from_request
 
 logger = logging.getLogger("notifications")
 
@@ -425,6 +428,12 @@ class NotificationIn(BaseModel):
 @router.get("/", response_model=List[NotificationOut])
 def list_notifications(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     return db.query(Notification).filter(Notification.user_id == user.id).order_by(Notification.created_at.desc()).all()
+
+@router.get("/notifications/{notif_id}", response_model=NotificationOut)
+def get_notification(notif_id: int, request: Request, db: Session = Depends(get_db)):
+    tenant = get_tenant_from_request(request, db)
+    notif = get_tenant_record_or_403(Notification, notif_id, tenant.id, db)
+    return notif
 
 @router.post("/{notif_id}/read")
 def mark_notification_read(notif_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):

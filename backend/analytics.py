@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List
@@ -7,6 +7,7 @@ from database import get_db
 from auth import get_current_user
 from config import CACHE_TIMEOUT_SECONDS
 import threading
+from tenant_utils import get_tenant_record_or_403
 
 # Thread-safe cache for per-user analytics
 _analytics_cache = {}

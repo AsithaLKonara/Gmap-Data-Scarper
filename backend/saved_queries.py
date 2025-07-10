@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List
 from models import SavedQuery, User
 from database import get_db
 from auth import get_current_user
+from tenant_utils import get_tenant_record_or_403, get_tenant_from_request
 
 router = APIRouter(prefix="/api/saved-queries", tags=["saved-queries"])
 
@@ -52,4 +53,10 @@ def delete_saved_query(query_id: int, db: Session = Depends(get_db), user: User 
         raise HTTPException(status_code=404, detail="Saved query not found")
     db.delete(sq)
     db.commit()
-    return {"status": "deleted"} 
+    return {"status": "deleted"}
+
+@router.get("/saved_queries/{query_id}", response_model=SavedQueryOut)
+def get_saved_query(query_id: int, request: Request, db: Session = Depends(get_db)):
+    tenant = get_tenant_from_request(request, db)
+    query = get_tenant_record_or_403(SavedQuery, query_id, tenant.id, db)
+    return query 

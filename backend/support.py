@@ -8,6 +8,7 @@ from database import get_db
 import logging
 from models import SupportTicket
 from tenant_utils import get_tenant_from_request
+from tenant_utils import get_tenant_record_or_403
 
 router = APIRouter(prefix="/api/support", tags=["support"])
 logger = logging.getLogger("support")
@@ -82,4 +83,10 @@ def create_support_ticket(
     )
     db.add(ticket)
     db.commit()
+    return ticket 
+
+@router.get("/support/{ticket_id}", response_model=SupportTicket, summary="Get Support Ticket", response_description="Retrieve a specific support ticket")
+def get_support_ticket(ticket_id: int, request: Request, db: Session = Depends(get_db)):
+    tenant = get_tenant_from_request(request, db)
+    ticket = get_tenant_record_or_403(SupportTicket, ticket_id, tenant.id, db)
     return ticket 
