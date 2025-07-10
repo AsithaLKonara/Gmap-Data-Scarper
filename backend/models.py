@@ -4,6 +4,17 @@ from sqlalchemy.sql import func
 from database import Base
 import datetime
 
+class Tenant(Base):
+    __tablename__ = 'tenants'
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False)
+    slug = Column(String, unique=True, nullable=False)
+    branding = Column(JSON, nullable=True)
+    sso_config = Column(JSON, nullable=True)
+    # Add more fields as needed
+
+    users = relationship('User', back_populates='tenant')
+
 class User(Base):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True, index=True)
@@ -51,6 +62,8 @@ class User(Base):
     referred_by = Column(Integer, ForeignKey('users.id'), nullable=True)
     referral_credits = Column(Integer, default=0)
     usage_credits = Column(Integer, default=0)
+    tenant_id = Column(Integer, ForeignKey('tenants.id'), nullable=True)
+    tenant = relationship('Tenant', back_populates='users')
 
 class Job(Base):
     __tablename__ = 'jobs'
