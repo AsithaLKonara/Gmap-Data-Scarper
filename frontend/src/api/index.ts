@@ -709,3 +709,57 @@ export async function getSocialMediaLeads(params?: { platform?: string; status?:
   const queryString = queryParams.toString();
   return apiFetch(`/api/lead-collection/leads${queryString ? `?${queryString}` : ''}`);
 } 
+
+// Tenant SSO Config
+export async function getTenantSsoConfig(tenantId: string) {
+  // Replace with real endpoint if available
+  return apiFetch(`/api/tenant/${tenantId}/sso-config`);
+}
+export async function updateTenantSsoConfig(tenantId: string, data: any) {
+  // Replace with real endpoint if available
+  return apiFetch(`/api/tenant/${tenantId}/sso-config`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+// Tenant Plan
+export async function getTenantPlan(tenantId: string) {
+  // Replace with real endpoint if available
+  return apiFetch(`/api/tenant/${tenantId}/plan`);
+}
+export async function updateTenantPlan(tenantId: string, data: any) {
+  // Replace with real endpoint if available
+  return apiFetch(`/api/tenant/${tenantId}/plan`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+// Tenant Billing
+export async function getTenantBilling(tenantId: string) {
+  // Replace with real endpoint if available
+  return apiFetch(`/api/tenant/${tenantId}/billing`);
+}
+export async function updateTenantBilling(tenantId: string, data: any) {
+  // Replace with real endpoint if available
+  return apiFetch(`/api/tenant/${tenantId}/billing`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+// Tenant Info
+export async function getTenant(tenantId: string) {
+  // Replace with real endpoint if available
+  return apiFetch(`/api/tenant/${tenantId}`);
+}
+export async function updateTenant(tenantId: string, data: any) {
+  // Replace with real endpoint if available
+  return apiFetch(`/api/tenant/${tenantId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+} 
+
+// Analytics
+export async function getAnalytics(timeRange: string = '30') {
+  return apiFetch(`/api/analytics?timeRange=${timeRange}`);
+} 

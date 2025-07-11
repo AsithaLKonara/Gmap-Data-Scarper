@@ -13,10 +13,7 @@ import NotFound from './pages/NotFound';
 import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentCancel from './pages/PaymentCancel';
 import AdminDashboard from './pages/AdminDashboard';
-import CRM from './pages/CRM';
 import Profile from './pages/Profile';
-import Analytics from './pages/Analytics';
-import TeamManagement from './pages/TeamManagement';
 import SharedJob from './pages/SharedJob';
 import SharedLead from './pages/SharedLead';
 import AuditLog from './pages/AuditLog';
@@ -29,8 +26,8 @@ import './styles/global.css';
 import LiveChatWidget from './components/LiveChatWidget';
 import LeadCollection from './pages/LeadCollection';
 
-const Analytics = lazy(() => import('./pages/Analytics'));
 const CRM = lazy(() => import('./pages/CRM'));
+const Analytics = lazy(() => import('./pages/Analytics'));
 const TeamManagement = lazy(() => import('./pages/TeamManagement'));
 const KnowledgeBase = lazy(() => import('./pages/KnowledgeBase'));
 

@@ -58,7 +58,7 @@ def submit_support_request(
 @router.get("/faqs", response_model=List[FAQ], summary="Get FAQs", response_description="List of frequently asked questions")
 def get_faqs():
     """Get the list of frequently asked questions for the Knowledge Base."""
-    return _FAQ_LIST 
+    return _FAQ_LIST
 
 @router.get("/support", response_model=List[SupportTicket], summary="Get Support Tickets", response_description="List of support tickets")
 def get_support_tickets(request: Request, db: Session = Depends(get_db)):
@@ -68,9 +68,9 @@ def get_support_tickets(request: Request, db: Session = Depends(get_db)):
 
 @router.post("/support", response_model=SupportTicket, summary="Create Support Ticket", response_description="Created support ticket")
 def create_support_ticket(
-    req: BaseModel, # Assuming req is a BaseModel for simplicity, as SupportRequest is removed
-    user: User = Depends(get_current_user),
+    req: BaseModel,  # Assuming req is a BaseModel for simplicity, as SupportRequest is removed
     request: Request,
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     tenant = get_tenant_from_request(request, db)
@@ -83,7 +83,7 @@ def create_support_ticket(
     )
     db.add(ticket)
     db.commit()
-    return ticket 
+    return ticket
 
 @router.get("/support/{ticket_id}", response_model=SupportTicket, summary="Get Support Ticket", response_description="Retrieve a specific support ticket")
 def get_support_ticket(ticket_id: int, request: Request, db: Session = Depends(get_db)):

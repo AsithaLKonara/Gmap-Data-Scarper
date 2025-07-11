@@ -41,29 +41,29 @@ def create_scrape_job(req: ScrapeRequest, background_tasks: BackgroundTasks, db:
     try:
         print(f"📝 [JOB] Creating new scraping job - User: {user.email}, Queries: {len(req.queries)}")
         
-    plan = user.plan or 'free'
-    limits = PLAN_LIMITS.get(plan, PLAN_LIMITS['free'])
-    now = datetime.now(timezone.utc)
-    # Reset daily usage if new day
-    if not user.last_query_date or user.last_query_date.date() != now.date():
-        user.queries_today = 0
-        user.last_query_date = now
-    if user.queries_today >= limits['max_queries_per_day']:
+        plan = user.plan or 'free'
+        limits = PLAN_LIMITS.get(plan, PLAN_LIMITS['free'])
+        now = datetime.now(timezone.utc)
+        # Reset daily usage if new day
+        if not user.last_query_date or user.last_query_date.date() != now.date():
+            user.queries_today = 0
+            user.last_query_date = now
+        if user.queries_today >= limits['max_queries_per_day']:
             print(f"❌ [JOB] Job creation failed - User {user.email} has reached daily limit ({limits['max_queries_per_day']})")
-        raise HTTPException(status_code=403, detail=f"Daily query limit reached for your plan ({limits['max_queries_per_day']})")
-    if len(req.queries) > limits['max_results_per_query']:
-        raise HTTPException(status_code=403, detail=f"Max results per query exceeded for your plan ({limits['max_results_per_query']})")
-    user.queries_today += 1
-    user.last_query_date = now
-    db.commit()
-    job = Job(queries=json.dumps(req.queries), status="pending", user_id=user.id)
-    db.add(job)
-    db.commit()
-    db.refresh(job)
-    background_tasks.add_task(run_scraper, job.id)
+            raise HTTPException(status_code=403, detail=f"Daily query limit reached for your plan ({limits['max_queries_per_day']})")
+        if len(req.queries) > limits['max_results_per_query']:
+            raise HTTPException(status_code=403, detail=f"Max results per query exceeded for your plan ({limits['max_results_per_query']})")
+        user.queries_today += 1
+        user.last_query_date = now
+        db.commit()
+        job = Job(queries=json.dumps(req.queries), status="pending", user_id=user.id)
+        db.add(job)
+        db.commit()
+        db.refresh(job)
+        background_tasks.add_task(run_scraper, job.id)
         print(f"🎉 [JOB] Job created successfully - ID: {job.id}, User: {user.email}, Status: {job.status}")
         print(f"📊 [JOB] Updated user query count - {user.email}: {user.queries_today} queries today")
-    return {"job_id": job.id, "status": job.status}
+        return {"job_id": job.id, "status": job.status}
     except Exception as e:
         logger.exception("Error creating scrape job")
         raise HTTPException(status_code=500, detail="Failed to create job. Please try again later.")
@@ -85,14 +85,14 @@ def get_job_status(job_id: int, db: Session = Depends(get_db), user=Depends(get_
     try:
         print(f"🔍 [JOB] Checking job status - Job ID: {job_id}, User: {user.email}")
         
-    job = db.query(Job).filter(Job.id == job_id, Job.user_id == user.id).first()
-    if not job:
+        job = db.query(Job).filter(Job.id == job_id, Job.user_id == user.id).first()
+        if not job:
             print(f"❌ [JOB] Job not found - ID: {job_id}")
-        raise HTTPException(status_code=404, detail="Job not found")
+            raise HTTPException(status_code=404, detail="Job not found")
         
         print(f"✅ [JOB] Job found - ID: {job.id}, Status: {job.status}, User: {user.email}")
         
-    return {"job_id": job.id, "status": job.status}
+        return {"job_id": job.id, "status": job.status}
     except Exception as e:
         print(f"❌ [JOB] Job status check failed - Error: {e}")
         raise HTTPException(status_code=500, detail="Failed to get job status")
@@ -109,10 +109,10 @@ def get_job_results(
 ):
     try:
         print(f"📋 [JOB] Getting job results - Job ID: {job_id}, User: {user.email}")
-    job = db.query(Job).filter(Job.id == job_id, Job.user_id == user.id).first()
-    if not job or not job.result:
+        job = db.query(Job).filter(Job.id == job_id, Job.user_id == user.id).first()
+        if not job or not job.result:
             print(f"❌ [JOB] Job not found - ID: {job_id}")
-        raise HTTPException(status_code=404, detail="Results not found")
+            raise HTTPException(status_code=404, detail="Results not found")
         print(f"✅ [JOB] Job found - ID: {job.id}, Status: {job.status}, User: {user.email}")
         if job.status != "completed":
             print(f"⚠️ [JOB] Job not completed yet - Status: {job.status}")
@@ -146,10 +146,10 @@ def download_csv(job_id: int, db: Session = Depends(get_db), user=Depends(get_cu
     try:
         print(f"📄 [JOB] Getting job CSV - Job ID: {job_id}, User: {user.email}")
         
-    job = db.query(Job).filter(Job.id == job_id, Job.user_id == user.id).first()
-    if not job or not job.csv_path or not os.path.exists(job.csv_path):
+        job = db.query(Job).filter(Job.id == job_id, Job.user_id == user.id).first()
+        if not job or not job.csv_path or not os.path.exists(job.csv_path):
             print(f"❌ [JOB] CSV not found - ID: {job_id}")
-        raise HTTPException(status_code=404, detail="CSV not found")
+            raise HTTPException(status_code=404, detail="CSV not found")
         
         print(f"✅ [JOB] Job found - ID: {job.id}, Status: {job.status}, User: {user.email}")
         
