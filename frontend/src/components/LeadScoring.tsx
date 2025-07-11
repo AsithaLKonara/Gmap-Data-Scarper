@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   VStack,
@@ -45,8 +45,8 @@ import {
   ExternalLinkIcon,
   PhoneIcon,
   EmailIcon,
-  GlobeIcon,
 } from '@chakra-ui/icons';
+import { FiGlobe } from 'react-icons/fi';
 import * as api from '../api';
 
 interface Lead {
@@ -276,7 +276,7 @@ const LeadScoring: React.FC<LeadScoringProps> = ({ leads, onLeadUpdate }) => {
                         <HStack spacing={2}>
                           {lead.email && <Icon as={EmailIcon} color="blue.500" />}
                           {lead.phone && <Icon as={PhoneIcon} color="green.500" />}
-                          {lead.website && <Icon as={GlobeIcon} color="purple.500" />}
+                          {lead.website && <Icon as={FiGlobe} color="purple.500" />}
                         </HStack>
                       </VStack>
                     </Td>
@@ -410,4 +410,4 @@ const LeadScoring: React.FC<LeadScoringProps> = ({ leads, onLeadUpdate }) => {
   );
 };
 
-export default LeadScoring; 
+export default LeadScoring;

@@ -49,17 +49,13 @@ import {
   AccordionIcon,
 } from '@chakra-ui/react';
 import {
-  ShieldIcon,
   LockIcon,
-  UserIcon,
-  EyeIcon,
-  EyeOffIcon,
-  QrCodeIcon,
   DownloadIcon,
-  RefreshIcon,
   CheckIcon,
   CloseIcon,
 } from '@chakra-ui/icons';
+import { FiEye, FiEyeOff, FiRefreshCw, FiShield, FiUser } from 'react-icons/fi';
+import { MdQrCode } from 'react-icons/md';
 import * as api from '../api';
 
 interface SecuritySettings {
@@ -379,7 +375,7 @@ const SecuritySettings: React.FC = () => {
                     <Td>
                       <HStack spacing={1}>
                         <Tooltip label="Edit Role">
-                          <IconButton size="xs" aria-label="Edit" icon={<EyeIcon />} />
+                          <IconButton size="xs" aria-label="Edit" icon={<FiEye />} />
                         </Tooltip>
                         <Tooltip label="Delete Role">
                           <IconButton size="xs" aria-label="Delete" icon={<CloseIcon />} />
@@ -514,7 +510,7 @@ const SecuritySettings: React.FC = () => {
               </Alert>
 
               <Box textAlign="center" p={4} border="1px" borderColor={borderColor} borderRadius="md">
-                <QrCodeIcon boxSize={8} mb={2} />
+                <MdQrCode boxSize={8} mb={2} />
                 <Text fontSize="sm" color="gray.600">
                   QR Code will appear here
                 </Text>

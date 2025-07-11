@@ -78,7 +78,7 @@ const features = [
           transformOrigin="center center"
         >
           <Image
-            src="/2150499233"
+            src="/2150499233.jpg"
             alt="LeadTap Hero Animation"
             width="100%"
             height="100%"
@@ -161,7 +161,7 @@ const features = [
           transformOrigin="center center"
         >
           <Image
-            src="/2150499233"
+            src="/2150499233.jpg"
             alt="LeadTap Background"
             width="100%"
             height="100%"
