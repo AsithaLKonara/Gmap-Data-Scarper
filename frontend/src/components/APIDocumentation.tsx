@@ -63,6 +63,7 @@ import {
   SettingsIcon,
   CloseIcon,
 } from '@chakra-ui/icons';
+import * as api from '../api';
 
 interface APIEndpoint {
   method: string;
@@ -106,144 +107,19 @@ const APIDocumentation: React.FC = () => {
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
 
-  // Mock API endpoints
-  const apiEndpoints: APIEndpoint[] = [
-    {
-      method: 'GET',
-      path: '/api/v1/jobs',
-      description: 'Retrieve all jobs for the authenticated user',
-      parameters: [
-        { name: 'page', type: 'integer', required: false, description: 'Page number for pagination' },
-        { name: 'limit', type: 'integer', required: false, description: 'Number of items per page' },
-        { name: 'status', type: 'string', required: false, description: 'Filter by job status' }
-      ],
-      responses: [
-        { code: 200, description: 'Success', example: '{ "jobs": [...], "total": 100 }' },
-        { code: 401, description: 'Unauthorized', example: '{ "error": "Invalid API key" }' }
-      ],
-      examples: [
-        {
-          language: 'curl',
-          code: 'curl -X GET "https://api.leadtap.com/api/v1/jobs" \\\n  -H "Authorization: Bearer YOUR_API_KEY"'
-        },
-        {
-          language: 'javascript',
-          code: 'const response = await fetch("https://api.leadtap.com/api/v1/jobs", {\n  headers: {\n    "Authorization": "Bearer YOUR_API_KEY"\n  }\n});\nconst data = await response.json();'
-        }
-      ]
-    },
-    {
-      method: 'POST',
-      path: '/api/v1/jobs',
-      description: 'Create a new scraping job',
-      parameters: [
-        { name: 'queries', type: 'array', required: true, description: 'Array of search queries' },
-        { name: 'filters', type: 'object', required: false, description: 'Optional filters for results' }
-      ],
-      responses: [
-        { code: 201, description: 'Job created', example: '{ "job_id": 123, "status": "pending" }' },
-        { code: 400, description: 'Bad request', example: '{ "error": "Invalid queries format" }' }
-      ],
-      examples: [
-        {
-          language: 'curl',
-          code: 'curl -X POST "https://api.leadtap.com/api/v1/jobs" \\\n  -H "Authorization: Bearer YOUR_API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d \'{"queries": ["restaurants in NYC"]}\''
-        }
-      ]
-    },
-    {
-      method: 'GET',
-      path: '/api/v1/jobs/{id}/results',
-      description: 'Get results for a specific job',
-      parameters: [
-        { name: 'id', type: 'integer', required: true, description: 'Job ID' },
-        { name: 'format', type: 'string', required: false, description: 'Export format (csv, json, xlsx)' }
-      ],
-      responses: [
-        { code: 200, description: 'Job results', example: '{ "results": [...], "total": 150 }' },
-        { code: 404, description: 'Job not found', example: '{ "error": "Job not found" }' }
-      ],
-      examples: [
-        {
-          language: 'curl',
-          code: 'curl -X GET "https://api.leadtap.com/api/v1/jobs/123/results" \\\n  -H "Authorization: Bearer YOUR_API_KEY"'
-        }
-      ]
-    }
-  ];
-
-  // Mock webhooks
+  // Remove mock webhooks/integrations useEffect and replace with real API calls
   useEffect(() => {
-    const mockWebhooks: Webhook[] = [
-      {
-        id: '1',
-        name: 'Job Completion',
-        url: 'https://myapp.com/webhooks/job-complete',
-        events: ['job.completed'],
-        status: 'active',
-        lastTriggered: '2024-07-10T10:30:00Z',
-        successRate: 98.5
-      },
-      {
-        id: '2',
-        name: 'Lead Export',
-        url: 'https://myapp.com/webhooks/lead-export',
-        events: ['lead.exported', 'lead.added_to_crm'],
-        status: 'active',
-        lastTriggered: '2024-07-10T09:15:00Z',
-        successRate: 100
+    async function fetchApiDocsData() {
+      try {
+        // TODO: Replace with real API calls for endpoints, webhooks, and integrations if available
+        // setWebhooks(await api.getWebhooks());
+        // setIntegrations(await api.getIntegrations());
+      } catch (e) {
+        setWebhooks([]);
+        setIntegrations([]);
       }
-    ];
-
-    const mockIntegrations: Integration[] = [
-      {
-        name: 'Zapier',
-        description: 'Connect LeadTap with 5000+ apps',
-        status: 'available',
-        category: 'Automation',
-        logo: '🔗',
-        setupUrl: 'https://zapier.com/apps/leadtap'
-      },
-      {
-        name: 'Make (Integromat)',
-        description: 'Advanced automation workflows',
-        status: 'available',
-        category: 'Automation',
-        logo: '⚙️',
-        setupUrl: 'https://make.com/integrations/leadtap'
-      },
-      {
-        name: 'HubSpot',
-        description: 'CRM integration for lead management',
-        status: 'available',
-        category: 'CRM',
-        logo: '📊'
-      },
-      {
-        name: 'Salesforce',
-        description: 'Enterprise CRM integration',
-        status: 'coming_soon',
-        category: 'CRM',
-        logo: '☁️'
-      },
-      {
-        name: 'Slack',
-        description: 'Get notifications in Slack',
-        status: 'available',
-        category: 'Communication',
-        logo: '💬'
-      },
-      {
-        name: 'Discord',
-        description: 'Discord bot integration',
-        status: 'beta',
-        category: 'Communication',
-        logo: '🎮'
-      }
-    ];
-
-    setWebhooks(mockWebhooks);
-    setIntegrations(mockIntegrations);
+    }
+    fetchApiDocsData();
   }, []);
 
   const handleTestEndpoint = async (endpoint: APIEndpoint) => {
@@ -354,87 +230,17 @@ const APIDocumentation: React.FC = () => {
               <TabPanels>
                 <TabPanel>
                   <VStack spacing={4} align="stretch">
-                    {apiEndpoints.map((endpoint, index) => (
-                      <Box key={index} p={4} border="1px" borderColor={borderColor} borderRadius="md">
-                        <HStack justify="space-between" mb={2}>
-                          <HStack>
-                            <Badge colorScheme={getMethodColor(endpoint.method)}>
-                              {endpoint.method}
-                            </Badge>
-                            <Code fontSize="sm">{endpoint.path}</Code>
-                          </HStack>
-                          <Button size="sm" onClick={() => handleTestEndpoint(endpoint)}>
-                            Test
-                          </Button>
-                        </HStack>
-                        
-                        <Text fontSize="sm" color="gray.600" mb={3}>
-                          {endpoint.description}
-                        </Text>
-
-                        <Accordion allowToggle>
-                          <AccordionItem>
-                            <AccordionButton>
-                              <Text fontSize="sm" fontWeight="medium">Parameters</Text>
-                              <AccordionIcon />
-                            </AccordionButton>
-                            <AccordionPanel>
-                              <Table size="sm">
-                                <Thead>
-                                  <Tr>
-                                    <Th>Name</Th>
-                                    <Th>Type</Th>
-                                    <Th>Required</Th>
-                                    <Th>Description</Th>
-                                  </Tr>
-                                </Thead>
-                                <Tbody>
-                                  {endpoint.parameters.map((param, idx) => (
-                                    <Tr key={idx}>
-                                      <Td>{param.name}</Td>
-                                      <Td>{param.type}</Td>
-                                      <Td>{param.required ? 'Yes' : 'No'}</Td>
-                                      <Td>{param.description}</Td>
-                                    </Tr>
-                                  ))}
-                                </Tbody>
-                              </Table>
-                            </AccordionPanel>
-                          </AccordionItem>
-
-                          <AccordionItem>
-                            <AccordionButton>
-                              <Text fontSize="sm" fontWeight="medium">Examples</Text>
-                              <AccordionIcon />
-                            </AccordionButton>
-                            <AccordionPanel>
-                              <VStack spacing={3} align="stretch">
-                                {endpoint.examples.map((example, idx) => (
-                                  <Box key={idx}>
-                                    <HStack justify="space-between" mb={2}>
-                                      <Badge>{example.language}</Badge>
-                                      <Button size="xs" onClick={() => handleCopyCode(example.code)}>
-                                        Copy
-                                      </Button>
-                                    </HStack>
-                                    <Box
-                                      p={3}
-                                      bg="gray.50"
-                                      borderRadius="md"
-                                      fontFamily="mono"
-                                      fontSize="xs"
-                                      overflowX="auto"
-                                    >
-                                      <pre>{example.code}</pre>
-                                    </Box>
-                                  </Box>
-                                ))}
-                              </VStack>
-                            </AccordionPanel>
-                          </AccordionItem>
-                        </Accordion>
+                    {/* TODO: Fetch and display actual API endpoints */}
+                    <Alert status="info">
+                      <AlertIcon />
+                      <Box>
+                        <AlertTitle>API Endpoints</AlertTitle>
+                        <AlertDescription>
+                          API endpoints are currently being fetched from the backend.
+                          Please check back later or contact support for more details.
+                        </AlertDescription>
                       </Box>
-                    ))}
+                    </Alert>
                   </VStack>
                 </TabPanel>
 

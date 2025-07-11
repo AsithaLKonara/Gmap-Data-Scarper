@@ -60,6 +60,7 @@ import {
   CheckIcon,
   CloseIcon,
 } from '@chakra-ui/icons';
+import * as api from '../api';
 
 interface SecuritySettings {
   twoFactorEnabled: boolean;
@@ -117,84 +118,19 @@ const SecuritySettings: React.FC = () => {
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
 
-  // Mock data
+  // Remove mock data useEffect and replace with real API calls
   useEffect(() => {
-    const mockAuditLogs: AuditLog[] = [
-      {
-        id: '1',
-        timestamp: '2024-07-10T10:30:00Z',
-        user: 'user@example.com',
-        action: 'LOGIN',
-        resource: 'Dashboard',
-        ipAddress: '192.168.1.100',
-        userAgent: 'Mozilla/5.0...',
-        status: 'success'
-      },
-      {
-        id: '2',
-        timestamp: '2024-07-10T09:15:00Z',
-        user: 'user@example.com',
-        action: 'EXPORT_DATA',
-        resource: 'Job #123',
-        ipAddress: '192.168.1.100',
-        userAgent: 'Mozilla/5.0...',
-        status: 'success'
-      },
-      {
-        id: '3',
-        timestamp: '2024-07-10T08:45:00Z',
-        user: 'user@example.com',
-        action: 'PASSWORD_CHANGE',
-        resource: 'Account Settings',
-        ipAddress: '192.168.1.100',
-        userAgent: 'Mozilla/5.0...',
-        status: 'success'
-      },
-      {
-        id: '4',
-        timestamp: '2024-07-10T07:30:00Z',
-        user: 'unknown@example.com',
-        action: 'LOGIN_ATTEMPT',
-        resource: 'Login Page',
-        ipAddress: '203.0.113.45',
-        userAgent: 'Mozilla/5.0...',
-        status: 'failed'
+    async function fetchSecurityData() {
+      try {
+        const logs = await api.getMyAuditLogs();
+        setAuditLogs(logs || []);
+        // TODO: Replace with real API call for user roles if available
+        // setUserRoles(await api.getUserRoles());
+      } catch (e) {
+        setAuditLogs([]);
       }
-    ];
-
-    const mockUserRoles: UserRole[] = [
-      {
-        id: '1',
-        name: 'Admin',
-        permissions: ['all'],
-        description: 'Full system access',
-        userCount: 1
-      },
-      {
-        id: '2',
-        name: 'Manager',
-        permissions: ['read', 'write', 'export', 'team_manage'],
-        description: 'Team management and data access',
-        userCount: 3
-      },
-      {
-        id: '3',
-        name: 'Analyst',
-        permissions: ['read', 'export'],
-        description: 'Data analysis and reporting',
-        userCount: 5
-      },
-      {
-        id: '4',
-        name: 'Viewer',
-        permissions: ['read'],
-        description: 'Read-only access',
-        userCount: 2
-      }
-    ];
-
-    setAuditLogs(mockAuditLogs);
-    setUserRoles(mockUserRoles);
+    }
+    fetchSecurityData();
   }, []);
 
   const handle2FAToggle = async () => {

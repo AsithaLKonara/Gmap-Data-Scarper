@@ -78,7 +78,7 @@ const features = [
           transformOrigin="center center"
         >
           <Image
-            src="/hero-animation.gif"
+            src="/2150499233"
             alt="LeadTap Hero Animation"
             width="100%"
             height="100%"
@@ -106,14 +106,10 @@ const features = [
           <VStack align="center" spacing={8} textAlign="center">
             <VStack align="center" spacing={6} maxW="800px">
                 <Heading size="4xl" className="gradient-text" lineHeight="1.1">
-                  Extract Google Maps
-                  <br />
-                  Data Like Never Before
+                  Collect Leads from Google Maps, Facebook, Instagram, and WhatsApp
                 </Heading>
                 <Text color="gray.200" fontSize="xl" lineHeight="1.6" maxW="600px">
-                  LeadTap is the most advanced Google Maps data extraction platform. 
-                  Get comprehensive business information, contact details, and location data 
-                  with our powerful and easy-to-use tools.
+                  LeadTap is the most advanced multi-source lead generation platform. Extract business and contact data from Google Maps, Facebook, Instagram, and WhatsApp—all in one dashboard.
                 </Text>
               </VStack>
 
@@ -165,7 +161,7 @@ const features = [
           transformOrigin="center center"
         >
           <Image
-            src="/hero-animation.gif"
+            src="/2150499233"
             alt="LeadTap Background"
             width="100%"
             height="100%"
@@ -220,34 +216,27 @@ const features = [
             </VStack>
 
             <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={8}>
-              {features.map((feature, index) => (
-                <Box
-                  key={index}
-                  className="card-modern"
-                  p={6}
-                  textAlign="center"
-                  transition="all 0.3s ease"
-                  _hover={{
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 12px 24px rgba(0, 0, 0, 0.15)'
-                  }}
-                >
-                  <Icon 
-                    as={feature.icon} 
-                    w={10} 
-                    h={10} 
-                    color="brand.400" 
-                    mb={4}
-                  />
-                  <Heading size="md" mb={3}>
-                    {feature.title}
-                  </Heading>
-                  <Text color="gray.400" lineHeight="1.6">
-                    {feature.description}
-      </Text>
-                </Box>
-        ))}
-      </SimpleGrid>
+              <Box className="card-modern" p={6} textAlign="center">
+                <Icon as={SearchIcon} w={10} h={10} color="brand.400" mb={4} />
+                <Heading size="md" mb={3}>Google Maps Leads</Heading>
+                <Text color="gray.400">Extract business data from Google Maps with advanced search and filtering.</Text>
+              </Box>
+              <Box className="card-modern" p={6} textAlign="center">
+                <Icon as={CheckCircleIcon} w={10} h={10} color="brand.400" mb={4} />
+                <Heading size="md" mb={3}>Facebook Leads</Heading>
+                <Text color="gray.400">Collect leads from Facebook pages and groups using keywords and location.</Text>
+              </Box>
+              <Box className="card-modern" p={6} textAlign="center">
+                <Icon as={CheckCircleIcon} w={10} h={10} color="brand.400" mb={4} />
+                <Heading size="md" mb={3}>Instagram Leads</Heading>
+                <Text color="gray.400">Find leads on Instagram using hashtags and location targeting.</Text>
+              </Box>
+              <Box className="card-modern" p={6} textAlign="center">
+                <Icon as={CheckCircleIcon} w={10} h={10} color="brand.400" mb={4} />
+                <Heading size="md" mb={3}>WhatsApp Leads</Heading>
+                <Text color="gray.400">Extract WhatsApp leads using phone numbers and keywords for outreach.</Text>
+              </Box>
+            </SimpleGrid>
 
             <VStack spacing={6} pt={8}>
               <Button

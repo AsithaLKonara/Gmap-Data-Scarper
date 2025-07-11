@@ -29,7 +29,6 @@ const KnowledgeBase: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      // TODO: Replace with real API call when backend is ready
       const response = await api.getFaqs();
       setFaqs(response);
     } catch (err: any) {

@@ -64,6 +64,7 @@ import {
   DownloadIcon,
   SettingsIcon,
 } from '@chakra-ui/icons';
+import * as api from '../api';
 
 interface AnalyticsData {
   period: string;
@@ -111,62 +112,22 @@ const EnhancedAnalytics: React.FC = () => {
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
 
-  // Mock data for demonstration
+  // Remove mock data useEffect and replace with real API call
   useEffect(() => {
-    const mockAnalyticsData: AnalyticsData[] = [
-      { period: 'Jan', jobsCreated: 45, leadsGenerated: 1200, exportsCompleted: 38, crmLeads: 850, conversionRate: 0.08, revenue: 6800, goalProgress: 75 },
-      { period: 'Feb', jobsCreated: 52, leadsGenerated: 1400, exportsCompleted: 45, crmLeads: 980, conversionRate: 0.09, revenue: 7840, goalProgress: 82 },
-      { period: 'Mar', jobsCreated: 48, leadsGenerated: 1300, exportsCompleted: 42, crmLeads: 920, conversionRate: 0.085, revenue: 7360, goalProgress: 78 },
-      { period: 'Apr', jobsCreated: 60, leadsGenerated: 1600, exportsCompleted: 55, crmLeads: 1120, conversionRate: 0.095, revenue: 8960, goalProgress: 88 },
-      { period: 'May', jobsCreated: 65, leadsGenerated: 1800, exportsCompleted: 60, crmLeads: 1260, conversionRate: 0.10, revenue: 10080, goalProgress: 92 },
-      { period: 'Jun', jobsCreated: 70, leadsGenerated: 2000, exportsCompleted: 65, crmLeads: 1400, conversionRate: 0.105, revenue: 11200, goalProgress: 95 },
-    ];
-
-    const mockGoals: Goal[] = [
-      {
-        id: '1',
-        name: 'Generate 2000 leads this month',
-        target: 2000,
-        current: 1800,
-        period: 'monthly',
-        type: 'leads',
-        deadline: '2024-06-30',
-        completed: false
-      },
-      {
-        id: '2',
-        name: 'Achieve $10K revenue',
-        target: 10000,
-        current: 9200,
-        period: 'monthly',
-        type: 'revenue',
-        deadline: '2024-06-30',
-        completed: false
-      },
-      {
-        id: '3',
-        name: 'Complete 50 jobs this week',
-        target: 50,
-        current: 45,
-        period: 'weekly',
-        type: 'jobs',
-        deadline: '2024-06-07',
-        completed: false
+    async function fetchAnalytics() {
+      try {
+        const analytics = await api.getAnalytics(selectedPeriod);
+        setAnalyticsData(analytics.data || []);
+        // TODO: Replace with real API calls for goals and funnel data if available
+        // setGoals(await api.getGoals());
+        // setFunnelData(await api.getFunnelData());
+      } catch (e) {
+        setAnalyticsData([]);
+        // Optionally show error toast
       }
-    ];
-
-    const mockFunnelData: FunnelData[] = [
-      { stage: 'Jobs Created', count: 70, conversionRate: 100, color: '#3182CE' },
-      { stage: 'Leads Generated', count: 2000, conversionRate: 100, color: '#38A169' },
-      { stage: 'CRM Added', count: 1400, conversionRate: 70, color: '#D69E2E' },
-      { stage: 'Exported', count: 65, conversionRate: 4.6, color: '#E53E3E' },
-      { stage: 'Converted', count: 147, conversionRate: 7.35, color: '#805AD5' }
-    ];
-
-    setAnalyticsData(mockAnalyticsData);
-    setGoals(mockGoals);
-    setFunnelData(mockFunnelData);
-  }, []);
+    }
+    fetchAnalytics();
+  }, [selectedPeriod]);
 
   const currentMonth = analyticsData[analyticsData.length - 1];
   const previousMonth = analyticsData[analyticsData.length - 2];

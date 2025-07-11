@@ -47,6 +47,7 @@ import {
   EmailIcon,
   GlobeIcon,
 } from '@chakra-ui/icons';
+import * as api from '../api';
 
 interface Lead {
   id: number;
@@ -130,34 +131,13 @@ const LeadScoring: React.FC<LeadScoringProps> = ({ leads, onLeadUpdate }) => {
   const enrichLead = async (leadId: number) => {
     setEnriching(leadId);
     try {
-      // Simulate API call for lead enrichment
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Mock enriched data
-      const enrichedData = {
-        company_info: {
-          industry: 'Technology',
-          size: '50-200 employees',
-          revenue: '$10M-50M',
-          founded: '2015'
-        },
-        social_profiles: {
-          linkedin: 'linkedin.com/company/example',
-          twitter: '@examplecompany'
-        },
-        contact_verification: {
-          email_verified: true,
-          phone_verified: true,
-          website_active: true
-        }
-      };
-
+      const enriched = await api.enrichLead(leadId);
       onLeadUpdate(leadId, {
         enriched: true,
         score: calculateLeadScore({ ...leads.find(l => l.id === leadId)!, enriched: true }),
-        tags: [...(leads.find(l => l.id === leadId)?.tags || []), 'enriched', 'verified']
+        tags: [...(leads.find(l => l.id === leadId)?.tags || []), 'enriched', 'verified'],
+        ...enriched
       });
-
     } catch (error) {
       console.error('Lead enrichment failed:', error);
     } finally {

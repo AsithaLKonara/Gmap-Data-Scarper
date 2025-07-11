@@ -76,43 +76,11 @@ const EnhancedOnboarding: React.FC<OnboardingProps> = ({ isOpen, onClose, onComp
           // Create a demo job with sample data
           const demoQueries = ['restaurants in New York', 'coffee shops in San Francisco'];
           const response = await api.createJob(demoQueries);
-          
-          // Simulate results for demo
-          const mockResults = [
-            {
-              business_name: 'Joe\'s Pizza',
-              address: '123 Main St, New York, NY',
-              phone: '+1-555-0123',
-              website: 'www.joespizza.com',
-              rating: 4.5,
-              reviews: 150,
-              category: 'Restaurant'
-            },
-            {
-              business_name: 'Starbucks Coffee',
-              address: '456 Market St, San Francisco, CA',
-              phone: '+1-555-0456',
-              website: 'www.starbucks.com',
-              rating: 4.2,
-              reviews: 89,
-              category: 'Coffee Shop'
-            },
-            {
-              business_name: 'Blue Bottle Coffee',
-              address: '789 Mission St, San Francisco, CA',
-              phone: '+1-555-0789',
-              website: 'www.bluebottlecoffee.com',
-              rating: 4.7,
-              reviews: 234,
-              category: 'Coffee Shop'
-            }
-          ];
-          
-          setDemoResults(mockResults);
+          // Optionally fetch real job results here if needed
           setDemoJobCreated(true);
           toast({
             title: 'Demo Job Created!',
-            description: 'Your sample job has been created with realistic data.',
+            description: 'Your sample job has been created.',
             status: 'success',
             duration: 3000,
           });

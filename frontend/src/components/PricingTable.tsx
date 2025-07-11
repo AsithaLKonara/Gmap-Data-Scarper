@@ -78,6 +78,85 @@ const PricingTable = () => {
             <Th border="none" color="gray.400" fontSize="md">Features</Th>
             <Th border="none" color="gray.400" fontSize="md">Action</Th>
           </Tr>
+          <Tr>
+            <Th border="none"></Th>
+            <Th border="none" colSpan={4}>
+              <HStack spacing={8} justify="center">
+                <HStack spacing={2}><Text fontWeight="bold">Google Maps</Text></HStack>
+                <HStack spacing={2}><Text fontWeight="bold">Facebook</Text></HStack>
+                <HStack spacing={2}><Text fontWeight="bold">Instagram</Text></HStack>
+                <HStack spacing={2}><Text fontWeight="bold">WhatsApp</Text></HStack>
+              </HStack>
+            </Th>
+          </Tr>
+          <Tr>
+            <Th border="none"></Th>
+            <Td border="none" colSpan={4}>
+              <HStack spacing={8} justify="center">
+                {/* Free */}
+                <HStack spacing={2}>
+                  <Icon as={CheckIcon} color="green.400" />
+                  <Text color="gray.400" fontSize="sm">Included</Text>
+                </HStack>
+                <HStack spacing={2}>
+                  <Text color="gray.400" fontSize="sm">-</Text>
+                </HStack>
+                <HStack spacing={2}>
+                  <Text color="gray.400" fontSize="sm">-</Text>
+                </HStack>
+                <HStack spacing={2}>
+                  <Text color="gray.400" fontSize="sm">-</Text>
+                </HStack>
+              </HStack>
+            </Td>
+          </Tr>
+          <Tr>
+            <Th border="none"></Th>
+            <Td border="none" colSpan={4}>
+              <HStack spacing={8} justify="center">
+                {/* Pro */}
+                <HStack spacing={2}>
+                  <Icon as={CheckIcon} color="green.400" />
+                  <Text color="gray.400" fontSize="sm">Included</Text>
+                </HStack>
+                <HStack spacing={2}>
+                  <Icon as={CheckIcon} color="green.400" />
+                  <Text color="gray.400" fontSize="sm">Included</Text>
+                </HStack>
+                <HStack spacing={2}>
+                  <Icon as={CheckIcon} color="green.400" />
+                  <Text color="gray.400" fontSize="sm">Included</Text>
+                </HStack>
+                <HStack spacing={2}>
+                  <Text color="gray.400" fontSize="sm">-</Text>
+                </HStack>
+              </HStack>
+            </Td>
+          </Tr>
+          <Tr>
+            <Th border="none"></Th>
+            <Td border="none" colSpan={4}>
+              <HStack spacing={8} justify="center">
+                {/* Business */}
+                <HStack spacing={2}>
+                  <Icon as={CheckIcon} color="green.400" />
+                  <Text color="gray.400" fontSize="sm">Included</Text>
+                </HStack>
+                <HStack spacing={2}>
+                  <Icon as={CheckIcon} color="green.400" />
+                  <Text color="gray.400" fontSize="sm">Included</Text>
+                </HStack>
+                <HStack spacing={2}>
+                  <Icon as={CheckIcon} color="green.400" />
+                  <Text color="gray.400" fontSize="sm">Included</Text>
+                </HStack>
+                <HStack spacing={2}>
+                  <Icon as={CheckIcon} color="green.400" />
+                  <Text color="gray.400" fontSize="sm">Included</Text>
+                </HStack>
+              </HStack>
+            </Td>
+          </Tr>
         </Thead>
         <Tbody>
           {plans.map((plan, index) => (

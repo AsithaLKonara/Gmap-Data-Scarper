@@ -56,6 +56,7 @@ import {
 } from '@chakra-ui/react';
 import { AddIcon, EditIcon, DeleteIcon, ViewIcon, SearchIcon } from '@chakra-ui/icons';
 import * as api from '../api';
+import { useAuth } from '../hooks/useAuth';
 
 interface LeadSource {
   id: number;
@@ -138,6 +139,7 @@ const LeadCollection: React.FC = () => {
   const toast = useToast();
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
+  const { user } = useAuth();
 
   useEffect(() => {
     loadSources();
@@ -337,16 +339,28 @@ const LeadCollection: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
+  // Plan-based gating logic
+  const canAccessFacebook = user && (user.plan === 'pro' || user.plan === 'business');
+  const canAccessInstagram = user && (user.plan === 'pro' || user.plan === 'business');
+  const canAccessWhatsApp = user && user.plan === 'business';
+  const handleTabChange = (index: number) => {
+    if ((index === 0 && !canAccessFacebook) || (index === 1 && !canAccessInstagram) || (index === 2 && !canAccessWhatsApp)) {
+      toast({ title: 'Upgrade Required', description: 'Upgrade your plan to access this lead source.', status: 'info' });
+      return false;
+    }
+    return true;
+  };
+
   return (
     <Box minH="100vh" bg={useColorModeValue('gray.100', 'gray.800')}>
       <Container maxW="container.xl" py={8}>
         <Heading size="lg" mb={6} className="gradient-text">Multi-Source Lead Collection</Heading>
         
-        <Tabs variant="enclosed" mb={8}>
+        <Tabs variant="enclosed" mb={8} onChange={handleTabChange}>
           <TabList>
-            <Tab>Facebook</Tab>
-            <Tab>Instagram</Tab>
-            <Tab>WhatsApp</Tab>
+            <Tab isDisabled={!canAccessFacebook}>Facebook {canAccessFacebook ? '' : <Badge ml={2} colorScheme="blue">Pro</Badge>}</Tab>
+            <Tab isDisabled={!canAccessInstagram}>Instagram {canAccessInstagram ? '' : <Badge ml={2} colorScheme="blue">Pro</Badge>}</Tab>
+            <Tab isDisabled={!canAccessWhatsApp}>WhatsApp {canAccessWhatsApp ? '' : <Badge ml={2} colorScheme="green">Business</Badge>}</Tab>
             <Tab>Collections</Tab>
             <Tab>Leads</Tab>
           </TabList>

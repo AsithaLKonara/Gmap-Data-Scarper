@@ -123,7 +123,6 @@ const Profile: React.FC = () => {
   const loadUserStats = async () => {
     setStatsLoading(true);
     try {
-      // TODO: Replace with real API call when backend is ready
       const response = await api.getUserStats();
       setUserStats(response);
     } catch (error: any) {
