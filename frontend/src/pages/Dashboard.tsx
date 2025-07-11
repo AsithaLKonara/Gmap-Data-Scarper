@@ -24,14 +24,10 @@ import {
   MenuList,
   MenuItem,
   IconButton,
-  Divider,
-  Collapse,
-  useDisclosure,
   Flex,
   Input,
   Tag,
   TagLabel,
-  TagCloseButton,
   Tooltip,
   Alert,
   AlertIcon,
@@ -51,10 +47,20 @@ import {
   StatHelpText,
   StatArrow,
   Select,
+  Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
+  useDisclosure,
 } from '@chakra-ui/react';
 import { HamburgerIcon, ChevronDownIcon, CopyIcon } from '@chakra-ui/icons';
 import * as api from '../api';
 import { getSupportOptions, submitSupportRequest, getSavedQueries, createSavedQuery, updateSavedQuery, deleteSavedQuery, bulkDeleteJobs, bulkDeleteLeads, bulkAddLeads, getNotifications, markNotificationRead, enrichLead, shareJob, unshareJob, shareLead, unshareLead, getCRMStatus } from '../api';
+import { Suspense, lazy } from 'react';
+
+const CRM = lazy(() => import('./CRM'));
+const Analytics = lazy(() => import('./Analytics'));
 
 interface Job {
   id: number;
@@ -477,7 +483,6 @@ const Dashboard: React.FC = () => {
       <VStack align="stretch" spacing={2} pt={6} px={sidebarOpen ? 4 : 1}>
         <Button variant="ghost" justifyContent={sidebarOpen ? 'flex-start' : 'center'} leftIcon={<span>🏠</span>} size="lg" data-tour="dashboard-sidebar-dashboard">{sidebarOpen && 'Dashboard'}</Button>
         <Button variant="ghost" justifyContent={sidebarOpen ? 'flex-start' : 'center'} leftIcon={<span>📄</span>} size="lg" data-tour="dashboard-sidebar-jobs">{sidebarOpen && 'My Jobs'}</Button>
-        <Button variant="ghost" justifyContent={sidebarOpen ? 'flex-start' : 'center'} leftIcon={<span>🗂️</span>} size="lg" data-tour="dashboard-sidebar-crm">{sidebarOpen && 'CRM'}</Button>
         {/* Team Management link for Pro/Business plans */}
         {user && (user.plan === 'pro' || user.plan === 'business') && (
           <Button as={Link} href="/teams" variant="ghost" justifyContent={sidebarOpen ? 'flex-start' : 'center'} leftIcon={<span>👥</span>} size="lg" data-tour="dashboard-sidebar-teams">{sidebarOpen && 'Team Management'}</Button>
@@ -725,376 +730,329 @@ const Dashboard: React.FC = () => {
       {header}
       <Box pl={sidebarOpen ? 280 : 64} transition="pl 0.3s cubic-bezier(.4,0,.2,1)">
         <Container maxW="container.xl" py={8} data-tour="dashboard-content">
-          {/* Plan Status Alert */}
-          {planLimits && planLimits.queries_remaining_today <= 0 && (
-            <Alert status="warning" mb={6}>
-              <AlertIcon />
-              <AlertTitle>Daily Limit Reached!</AlertTitle>
-              <AlertDescription>
-                You've reached your daily query limit. <Button size="sm" colorScheme="blue" ml={2} onClick={() => setShowUpgradeModal(true)}>Upgrade Plan</Button>
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Stats Cards */}
-          {planLimits && (
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={6} mb={8}>
-              <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md">
-                <Stat>
-                  <StatLabel>Queries Today</StatLabel>
-                  <StatNumber>{planLimits.queries_used_today}</StatNumber>
-                  <StatHelpText>of {planLimits.max_queries_per_day}</StatHelpText>
-                </Stat>
-              </Box>
-              <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md">
-                <Stat>
-                  <StatLabel>Total Jobs</StatLabel>
-                  <StatNumber>{jobs.length}</StatNumber>
-                  <StatHelpText>created</StatHelpText>
-                </Stat>
-              </Box>
-              <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md">
-                <Stat>
-                  <StatLabel>CRM Leads</StatLabel>
-                  <StatNumber>{leads.length}</StatNumber>
-                  <StatHelpText>total leads</StatHelpText>
-                </Stat>
-              </Box>
-              <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md">
-                <Stat>
-                  <StatLabel>Plan</StatLabel>
-                  <StatNumber>{planLimits.plan_name.toUpperCase()}</StatNumber>
-                  <StatHelpText>{planLimits.subscription_status}</StatHelpText>
-                </Stat>
-              </Box>
-            </SimpleGrid>
-          )}
-
-          {/* API Key Management (Pro/Business) */}
-          {user && (user.plan === 'pro' || user.plan === 'business') && (
-            <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" mb={8}>
-              <Heading size="md" mb={2}>API Key Management</Heading>
-              <Text fontSize="sm" color="gray.600" mb={4}>
-                Use your API key to access programmatic endpoints. Keep it secret! You can generate or revoke your key at any time.
-              </Text>
-              {apiKeyLoading ? (
-                <Spinner />
-              ) : (
-                <VStack align="start" spacing={4}>
-                  {newApiKey && (
-                    <Box bg="yellow.100" p={3} borderRadius="md" w="100%">
-                      <Text fontWeight="bold">Your new API key:</Text>
-                      <HStack>
-                        <Text fontFamily="mono" fontSize="sm">{newApiKey}</Text>
-                        <Button size="xs" onClick={() => {navigator.clipboard.writeText(newApiKey); toast({ title: 'Copied to clipboard', status: 'success' });}} leftIcon={<CopyIcon />}>Copy</Button>
-                      </HStack>
-                      <Text fontSize="xs" color="red.500">Copy and save this key now. It will not be shown again.</Text>
-                    </Box>
+          <Tabs isFitted variant="enclosed" colorScheme="blue">
+            <TabList mb="1em">
+              <Tab>Dashboard</Tab>
+              <Tab>CRM</Tab>
+              <Tab>Analytics</Tab>
+            </TabList>
+            <TabPanels>
+              <TabPanel>
+                <Box className="fade-in-up">
+                  {/* Plan Status Alert */}
+                  {planLimits && planLimits.queries_remaining_today <= 0 && (
+                    <Alert status="warning" mb={6} className="card-modern">
+                      <AlertIcon />
+                      <AlertTitle>Daily Limit Reached!</AlertTitle>
+                      <AlertDescription>
+                        You've reached your daily query limit. <Button size="sm" className="btn-modern" ml={2} onClick={() => setShowUpgradeModal(true)}>Upgrade Plan</Button>
+                      </AlertDescription>
+                    </Alert>
                   )}
-                  {apiKeyInfo && apiKeyInfo.has_api_key && !newApiKey && (
-                    <Box>
-                      <Text fontWeight="bold">API key is active.</Text>
-                      <Text fontSize="xs" color="gray.500">Created: {apiKeyInfo.created_at ? new Date(apiKeyInfo.created_at).toLocaleString() : '-'}</Text>
-                      <Text fontSize="xs" color="gray.500">Last used: {apiKeyInfo.last_used ? new Date(apiKeyInfo.last_used).toLocaleString() : '-'}</Text>
-                    </Box>
-                  )}
-                  {!apiKeyInfo?.has_api_key && !newApiKey && (
-                    <Text color="gray.500">No API key generated yet.</Text>
-                  )}
-                  <HStack>
-                    <Button colorScheme="blue" size="sm" onClick={handleCreateApiKey} isLoading={apiKeyLoading} isDisabled={!!apiKeyInfo?.has_api_key}>Generate API Key</Button>
-                    <Button colorScheme="red" size="sm" onClick={handleRevokeApiKey} isLoading={apiKeyLoading} isDisabled={!apiKeyInfo?.has_api_key}>Revoke API Key</Button>
-                  </HStack>
-                </VStack>
-              )}
-            </Box>
-          )}
 
-          {/* Support/Contact Section */}
-          <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" mb={8}>
-            <HStack justify="space-between" mb={2}>
-              <Heading size="md">Support & Contact</Heading>
-              <Button size="sm" colorScheme="blue" onClick={() => setSupportModalOpen(true)}>
-                Contact Support
-              </Button>
-            </HStack>
-            {supportLoading ? <Spinner /> : (
-              <VStack align="start" spacing={2}>
-                <Text fontSize="sm" color="gray.600">Available support options for your plan:</Text>
-                <HStack>
-                  {supportOptions?.support?.map((opt: string) => (
-                    <Badge key={opt} colorScheme={opt === 'phone' ? 'green' : opt === 'email' ? 'blue' : 'purple'}>{opt.replace('_', ' ').toUpperCase()}</Badge>
-                  ))}
-                </HStack>
-                {supportOptions?.priority && <Badge colorScheme="red">Priority</Badge>}
-              </VStack>
-            )}
-          </Box>
-
-          {/* Saved Searches Section */}
-          <Box bg={bgColor} p={4} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" mb={6}>
-            <HStack justify="space-between" mb={2}>
-              <Heading size="sm">Saved Searches</Heading>
-              <Button size="xs" colorScheme="blue" onClick={() => setSavedQueryModalOpen(true)}>Save Current as Template</Button>
-            </HStack>
-            {savedQueries.length === 0 ? (
-              <Text color="gray.500">No saved searches yet.</Text>
-            ) : (
-              <VStack align="stretch" spacing={2}>
-                {savedQueries.map((q) => (
-                  <HStack key={q.id} spacing={2}>
-                    <Button size="xs" variant="ghost" onClick={() => handleUseTemplate(q)}>{q.name}</Button>
-                    <Button size="xs" colorScheme="yellow" variant="outline" onClick={() => { setEditingQuery(q); setTemplateName(q.name); setQueries(q.queries.join('\n')); setSavedQueryModalOpen(true); }}>Edit</Button>
-                    <Button size="xs" colorScheme="red" variant="outline" onClick={() => handleDeleteTemplate(q.id)}>Delete</Button>
-                  </HStack>
-                ))}
-              </VStack>
-            )}
-          </Box>
-
-          <HStack align="start" spacing={8}>
-            {/* Left: Jobs List and Create Job */}
-            <Box flex="1" minW="320px">
-              <VStack spacing={8} align="stretch">
-                <Box>
-                  <Heading size="lg" mb={4}>Dashboard</Heading>
-                  <Text color="gray.600">Create and monitor your Google Maps scraping jobs</Text>
-                </Box>
-                <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md">
-                  <VStack spacing={4} align="stretch">
-                    <Heading size="md">Create New Job</Heading>
-                    <Text fontSize="sm" color="gray.600">
-                      Enter your search queries (one per line)
-                    </Text>
-                    <textarea
-                      value={queries}
-                      onChange={(e) => setQueries(e.target.value)}
-                      placeholder="e.g., restaurants in New York\ncoffee shops in San Francisco"
-                      style={{
-                        width: '100%',
-                        minHeight: '120px',
-                        padding: '12px',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        fontFamily: 'inherit',
-                        fontSize: '14px',
-                        resize: 'vertical',
-                        background: useColorModeValue('white', 'gray.900'),
-                      }}
-                      disabled={planLimits ? planLimits.queries_remaining_today <= 0 : false}
-                    />
-                    <Button
-                      colorScheme="blue"
-                      onClick={createJob}
-                      isLoading={loading}
-                      loadingText="Creating Job"
-                      isDisabled={planLimits ? planLimits.queries_remaining_today <= 0 : false}
-                    >
-                      {planLimits && planLimits.queries_remaining_today <= 0 
-                        ? `Daily limit reached (${planLimits.max_queries_per_day})` 
-                        : 'Create Job'}
-                    </Button>
-                  </VStack>
-                </Box>
-                <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md">
-                  <Heading size="md" mb={4}>Your Jobs</Heading>
-                  {jobs.length === 0 ? (
-                    <Text color="gray.500">No jobs created yet. Create your first job above!</Text>
-                  ) : (
-                    <VStack spacing={4} align="stretch">
-                      {/* Bulk Actions for Jobs */}
-                      {jobs.length > 0 && (
-                        <HStack mb={2}>
-                          <Button size="xs" onClick={toggleAllJobs}>{selectedJobIds.length === jobs.length ? 'Unselect All' : 'Select All'}</Button>
-                          <Button size="xs" colorScheme="green" onClick={() => handleBulkExportJobs('csv')}>Export CSV</Button>
-                          <Button size="xs" colorScheme="blue" onClick={() => handleBulkExportJobs('json')}>Export JSON</Button>
-                          <Button size="xs" colorScheme="red" onClick={handleBulkDeleteJobs}>Delete</Button>
-                        </HStack>
-                      )}
-                      {jobs.map((job) => (
-                        <Box
-                          key={job.id}
-                          p={4}
-                          border="1px"
-                          borderColor={borderColor}
-                          borderRadius="md"
-                          bg={selectedJob?.id === job.id ? 'blue.50' : 'transparent'}
-                          cursor="pointer"
-                          onClick={() => {
-                            setSelectedJob(job);
-                            fetchJobResults(Number(job.id));
-                          }}
-                          _hover={{ bg: 'blue.100' }}
-                          transition="background 0.2s"
-                        >
-                          <HStack justify="space-between" mb={2}>
-                            <Text fontWeight="bold">Job #{job.id}</Text>
-                            <Badge colorScheme={getStatusColor(job.status)}>
-                              {job.status}
-                            </Badge>
-                          </HStack>
-                          <Text fontSize="sm" color="gray.600" mb={2}>
-                            Queries: {job.queries?.length || 0}
-                          </Text>
-                          <Text fontSize="sm" color="gray.600" mb={2}>
-                            Created: {new Date(job.created_at).toLocaleString()}
-                          </Text>
-                          <Button size="xs" colorScheme="blue" onClick={(e) => { e.stopPropagation(); handleShareJob(job); }}>Share</Button>
-                        </Box>
-                      ))}
-                    </VStack>
+                  {/* Stats Cards */}
+                  {planLimits && (
+                    <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={8} mb={10}>
+                      <Box className="card-modern glass">
+                        <Stat>
+                          <StatLabel className="gradient-text">Queries Today</StatLabel>
+                          <StatNumber>{planLimits.queries_used_today}</StatNumber>
+                          <StatHelpText>of {planLimits.max_queries_per_day}</StatHelpText>
+                        </Stat>
+                      </Box>
+                      <Box className="card-modern glass">
+                        <Stat>
+                          <StatLabel className="gradient-text">Total Jobs</StatLabel>
+                          <StatNumber>{jobs.length}</StatNumber>
+                          <StatHelpText>created</StatHelpText>
+                        </Stat>
+                      </Box>
+                      <Box className="card-modern glass">
+                        <Stat>
+                          <StatLabel className="gradient-text">CRM Leads</StatLabel>
+                          <StatNumber>{leads.length}</StatNumber>
+                          <StatHelpText>total leads</StatHelpText>
+                        </Stat>
+                      </Box>
+                      <Box className="card-modern glass">
+                        <Stat>
+                          <StatLabel className="gradient-text">Plan</StatLabel>
+                          <StatNumber>{planLimits.plan_name.toUpperCase()}</StatNumber>
+                          <StatHelpText>{planLimits.subscription_status}</StatHelpText>
+                        </Stat>
+                      </Box>
+                    </SimpleGrid>
                   )}
-                </Box>
-              </VStack>
-            </Box>
-            {/* Right: GMap and Results */}
-            <Box flex="2" minW="400px">
-              <VStack spacing={6} align="stretch">
-                {/* GMap Iframe */}
-                <Box borderRadius="lg" overflow="hidden" border="1px" borderColor={borderColor} minH="320px" boxShadow="md">
-                  {selectedJob && selectedJob.queries && selectedJob.queries.length > 0 ? (
-                    <iframe
-                      title="Google Map"
-                      src={getGMapUrl(selectedJob)}
-                      width="100%"
-                      height="320"
-                      style={{ border: 0 }}
-                      allowFullScreen
-                      loading="lazy"
-                      referrerPolicy="no-referrer-when-downgrade"
-                    />
-                  ) : (
-                    <Text color="gray.500" p={8} textAlign="center">No query to show on map.</Text>
-                  )}
-                </Box>
-                {/* Results Table */}
-                <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md">
-                  <Heading size="md" mb={4}>Search Results</Heading>
-                  {/* Advanced Filters (Pro/Business only) */}
+
+                  {/* API Key Management (Pro/Business) */}
                   {user && (user.plan === 'pro' || user.plan === 'business') && (
-                    <Box mb={4}>
-                      <HStack spacing={4} mb={2}>
-                        <Text fontSize="sm" color="gray.600">Advanced Filters:</Text>
-                        <Select placeholder="Status" size="sm" w="120px" value={filters.status} onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}>
-                          <option value="completed">Completed</option>
-                          <option value="pending">Pending</option>
-                          <option value="failed">Failed</option>
-                        </Select>
-                        <Input placeholder="Company" size="sm" w="160px" value={filters.company} onChange={e => setFilters(f => ({ ...f, company: e.target.value }))} />
-                        <Input type="date" size="sm" w="140px" value={filters.dateFrom} onChange={e => setFilters(f => ({ ...f, dateFrom: e.target.value }))} />
-                        <Input type="date" size="sm" w="140px" value={filters.dateTo} onChange={e => setFilters(f => ({ ...f, dateTo: e.target.value }))} />
-                        <Button size="sm" colorScheme="blue" onClick={() => selectedJob && fetchJobResults(Number(selectedJob.id), filters)}>Apply</Button>
-                        <Button size="sm" variant="ghost" onClick={() => { setFilters({ status: '', company: '', dateFrom: '', dateTo: '' }); selectedJob && fetchJobResults(Number(selectedJob.id), {}); }}>Reset</Button>
-                      </HStack>
+                    <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" mb={8} className="card-modern glass">
+                      <Heading size="md" mb={2} className="gradient-text">API Key Management</Heading>
+                      <Text fontSize="sm" color="gray.600" mb={4}>
+                        Use your API key to access programmatic endpoints. Keep it secret! You can generate or revoke your key at any time.
+                      </Text>
+                      {apiKeyLoading ? (
+                        <Spinner />
+                      ) : (
+                        <VStack align="start" spacing={4}>
+                          {newApiKey && (
+                            <Box bg="yellow.100" p={3} borderRadius="md" w="100%" className="glass">
+                              <Text fontWeight="bold">Your new API key:</Text>
+                              <HStack>
+                                <Text fontFamily="mono" fontSize="sm">{newApiKey}</Text>
+                                <Button size="xs" onClick={() => {navigator.clipboard.writeText(newApiKey); toast({ title: 'Copied to clipboard', status: 'success' });}} leftIcon={<CopyIcon />}>Copy</Button>
+                              </HStack>
+                              <Text fontSize="xs" color="red.500">Copy and save this key now. It will not be shown again.</Text>
+                            </Box>
+                          )}
+                          {apiKeyInfo && apiKeyInfo.has_api_key && !newApiKey && (
+                            <Box className="glass">
+                              <Text fontWeight="bold">API key is active.</Text>
+                              <Text fontSize="xs" color="gray.500">Created: {apiKeyInfo.created_at ? new Date(apiKeyInfo.created_at).toLocaleString() : '-'}</Text>
+                              <Text fontSize="xs" color="gray.500">Last used: {apiKeyInfo.last_used ? new Date(apiKeyInfo.last_used).toLocaleString() : '-'}</Text>
+                            </Box>
+                          )}
+                          {!apiKeyInfo?.has_api_key && !newApiKey && (
+                            <Text color="gray.500">No API key generated yet.</Text>
+                          )}
+                          <HStack>
+                            <Button colorScheme="blue" size="sm" onClick={handleCreateApiKey} isLoading={apiKeyLoading} isDisabled={!!apiKeyInfo?.has_api_key}>Generate API Key</Button>
+                            <Button colorScheme="red" size="sm" onClick={handleRevokeApiKey} isLoading={apiKeyLoading} isDisabled={!apiKeyInfo?.has_api_key}>Revoke API Key</Button>
+                          </HStack>
+                        </VStack>
+                      )}
                     </Box>
                   )}
-                  {resultsLoading ? (
-                    <Spinner />
-                  ) : jobResults.length === 0 ? (
-                    <Text color="gray.500">No results to display.</Text>
-                  ) : (
-                    <Table size="sm">
-                      <Thead>
-                        <Tr>
-                          <Th><input type="checkbox" checked={selectedJobIds.length === jobs.length} onChange={toggleAllJobs} /></Th>
-                          {Object.keys(jobResults[0]).map((key) => (
-                            <Th key={key}>{key}</Th>
+
+                  {/* Support/Contact Section */}
+                  <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" mb={8} className="card-modern glass">
+                    <HStack justify="space-between" mb={2}>
+                      <Heading size="md" className="gradient-text">Support & Contact</Heading>
+                      <Button size="sm" colorScheme="blue" onClick={() => setSupportModalOpen(true)}>
+                        Contact Support
+                      </Button>
+                    </HStack>
+                    {supportLoading ? <Spinner /> : (
+                      <VStack align="start" spacing={2}>
+                        <Text fontSize="sm" color="gray.600">Available support options for your plan:</Text>
+                        <HStack>
+                          {supportOptions?.support?.map((opt: string) => (
+                            <Badge key={opt} colorScheme={opt === 'phone' ? 'green' : opt === 'email' ? 'blue' : 'purple'}>{opt.replace('_', ' ').toUpperCase()}</Badge>
                           ))}
-                          <Th>Actions</Th>
-                        </Tr>
-                      </Thead>
-                      <Tbody>
-                        {jobResults.map((row, idx) => (
-                          <Tr key={idx} _hover={{ bg: 'gray.100' }} transition="background 0.2s">
-                            <Td><input type="checkbox" checked={selectedJobIds.includes(row.job_id)} onChange={() => toggleJobSelection(row.job_id)} /></Td>
-                            {Object.values(row).map((val, i) => (
-                              <Td key={i}>{String(val)}</Td>
-                            ))}
-                            <Td>
-                              <Tooltip label="Add to CRM" aria-label="Add to CRM">
-                                <Button size="xs" onClick={() => addLeadToCRM(row)}>
-                                  ➕
+                        </HStack>
+                        {supportOptions?.priority && <Badge colorScheme="red">Priority</Badge>}
+                      </VStack>
+                    )}
+                  </Box>
+
+                  {/* Saved Searches Section */}
+                  <Box bg={bgColor} p={4} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" mb={6} className="card-modern glass">
+                    <HStack justify="space-between" mb={2}>
+                      <Heading size="sm" className="gradient-text">Saved Searches</Heading>
+                      <Button size="xs" colorScheme="blue" onClick={() => setSavedQueryModalOpen(true)}>Save Current as Template</Button>
+                    </HStack>
+                    {savedQueries.length === 0 ? (
+                      <Text color="gray.500">No saved searches yet.</Text>
+                    ) : (
+                      <VStack align="stretch" spacing={2}>
+                        {savedQueries.map((q) => (
+                          <HStack key={q.id} spacing={2}>
+                            <Button size="xs" variant="ghost" onClick={() => handleUseTemplate(q)}>{q.name}</Button>
+                            <Button size="xs" colorScheme="yellow" variant="outline" onClick={() => { setEditingQuery(q); setTemplateName(q.name); setQueries(q.queries.join('\n')); setSavedQueryModalOpen(true); }}>Edit</Button>
+                            <Button size="xs" colorScheme="red" variant="outline" onClick={() => handleDeleteTemplate(q.id)}>Delete</Button>
+                          </HStack>
+                        ))}
+                      </VStack>
+                    )}
+                  </Box>
+
+                  <HStack align="start" spacing={8}>
+                    {/* Left: Jobs List and Create Job */}
+                    <Box flex="1" minW="320px">
+                      <VStack spacing={8} align="stretch">
+                        <Box>
+                          <Heading size="lg" mb={4} className="gradient-text">Dashboard</Heading>
+                          <Text color="gray.600">Create and monitor your Google Maps scraping jobs</Text>
+                        </Box>
+                        <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" className="card-modern glass">
+                          <VStack spacing={4} align="stretch">
+                            <Heading size="md" className="gradient-text">Create New Job</Heading>
+                            <Text fontSize="sm" color="gray.600">
+                              Enter your search queries (one per line)
+                            </Text>
+                            <textarea
+                              value={queries}
+                              onChange={(e) => setQueries(e.target.value)}
+                              placeholder="e.g., restaurants in New York\ncoffee shops in San Francisco"
+                              className="input-modern"
+                              style={{ width: '100%', minHeight: '120px', resize: 'vertical', marginBottom: 16 }}
+                              disabled={planLimits ? planLimits.queries_remaining_today <= 0 : false}
+                            />
+                            <Button
+                              colorScheme="blue"
+                              onClick={createJob}
+                              isLoading={loading}
+                              loadingText="Creating Job"
+                              isDisabled={planLimits ? planLimits.queries_remaining_today <= 0 : false}
+                              className="btn-modern"
+                            >
+                              {planLimits && planLimits.queries_remaining_today <= 0 
+                                ? `Daily limit reached (${planLimits.max_queries_per_day})` 
+                                : 'Create Job'}
+                            </Button>
+                          </VStack>
+                        </Box>
+                        <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" className="card-modern glass">
+                          <Heading size="md" mb={4} className="gradient-text">Your Jobs</Heading>
+                          {jobs.length === 0 ? (
+                            <Text color="gray.500">No jobs created yet. Create your first job above!</Text>
+                          ) : (
+                            <VStack spacing={4} align="stretch">
+                              {/* Bulk Actions for Jobs */}
+                              {jobs.length > 0 && (
+                                <HStack mb={2}>
+                                  <Button size="xs" className="btn-modern" variant="outline" onClick={toggleAllJobs}>{selectedJobIds.length === jobs.length ? 'Unselect All' : 'Select All'}</Button>
+                                  <Button size="xs" className="btn-modern" onClick={() => handleBulkExportJobs('csv')}>Export CSV</Button>
+                                  <Button size="xs" className="btn-modern" onClick={() => handleBulkExportJobs('json')}>Export JSON</Button>
+                                  <Button size="xs" className="btn-modern" colorScheme="red" onClick={handleBulkDeleteJobs}>Delete</Button>
+                                </HStack>
+                              )}
+                              {jobs.map((job) => (
+                                <Box
+                                  key={job.id}
+                                  p={4}
+                                  border="1px"
+                                  borderColor={borderColor}
+                                  borderRadius="md"
+                                  bg={selectedJob?.id === job.id ? 'blue.50' : 'transparent'}
+                                  cursor="pointer"
+                                  onClick={() => {
+                                    setSelectedJob(job);
+                                    fetchJobResults(Number(job.id));
+                                  }}
+                                  _hover={{ bg: 'blue.100' }}
+                                  transition="background 0.2s"
+                                  className="glass"
+                                >
+                                  <HStack justify="space-between" mb={2}>
+                                    <Text fontWeight="bold">Job #{job.id}</Text>
+                                    <Badge colorScheme={getStatusColor(job.status)}>{job.status}</Badge>
+                                  </HStack>
+                                  <Text color="gray.400" fontSize="sm">{job.queries.join(', ')}</Text>
+                                </Box>
+                              ))}
+                            </VStack>
+                          )}
+                        </Box>
+                      </VStack>
+                    </Box>
+                    {/* Right: GMap and Results */}
+                    <Box flex="2" minW="400px">
+                      <VStack spacing={6} align="stretch">
+                        {/* GMap Iframe */}
+                        <Box borderRadius="lg" overflow="hidden" border="1px" borderColor={borderColor} minH="320px" boxShadow="md" mb={6} className="glass">
+                          {selectedJob && selectedJob.queries && selectedJob.queries.length > 0 ? (
+                            <iframe
+                              title="Google Map"
+                              src={getGMapUrl(selectedJob)}
+                              width="100%"
+                              height="320"
+                              style={{ border: 0 }}
+                              allowFullScreen
+                              loading="lazy"
+                              referrerPolicy="no-referrer-when-downgrade"
+                            />
+                          ) : (
+                            <Text color="gray.500" p={8} textAlign="center">No query to show on map.</Text>
+                          )}
+                        </Box>
+                        {/* Results Table */}
+                        <Box overflowX="auto" className="glass">
+                          <Heading size="md" mb={4} className="gradient-text">Search Results</Heading>
+                          {/* Advanced Filters (Pro/Business only) */}
+                          {user && (user.plan === 'pro' || user.plan === 'business') && (
+                            <Box mb={4}>
+                              <HStack spacing={4} mb={2}>
+                                <Text fontSize="sm" color="gray.600">Advanced Filters:</Text>
+                                <Select placeholder="Status" size="sm" w="120px" value={filters.status} onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}>
+                                  <option value="completed">Completed</option>
+                                  <option value="pending">Pending</option>
+                                  <option value="failed">Failed</option>
+                                </Select>
+                                <Input placeholder="Company" size="sm" w="160px" value={filters.company} onChange={e => setFilters(f => ({ ...f, company: e.target.value }))} />
+                                <Input type="date" size="sm" w="140px" value={filters.dateFrom} onChange={e => setFilters(f => ({ ...f, dateFrom: e.target.value }))} />
+                                <Input type="date" size="sm" w="140px" value={filters.dateTo} onChange={e => setFilters(f => ({ ...f, dateTo: e.target.value }))} />
+                                <Button size="sm" colorScheme="blue" onClick={() => selectedJob && fetchJobResults(Number(selectedJob.id), filters)}>Apply</Button>
+                                <Button size="sm" variant="ghost" onClick={() => { setFilters({ status: '', company: '', dateFrom: '', dateTo: '' }); selectedJob && fetchJobResults(Number(selectedJob.id), {}); }}>Reset</Button>
+                              </HStack>
+                            </Box>
+                          )}
+                          {resultsLoading ? (
+                            <Spinner />
+                          ) : jobResults.length === 0 ? (
+                            <Text color="gray.500">No results to display.</Text>
+                          ) : (
+                            <Table size="sm">
+                              <Thead>
+                                <Tr>
+                                  <Th><input type="checkbox" checked={selectedJobIds.length === jobs.length} onChange={toggleAllJobs} /></Th>
+                                  {Object.keys(jobResults[0]).map((key) => (
+                                    <Th key={key}>{key}</Th>
+                                  ))}
+                                  <Th>Actions</Th>
+                                </Tr>
+                              </Thead>
+                              <Tbody>
+                                {jobResults.map((row, idx) => (
+                                  <Tr key={idx} _hover={{ bg: 'gray.100' }} transition="background 0.2s">
+                                    <Td><input type="checkbox" checked={selectedJobIds.includes(row.job_id)} onChange={() => toggleJobSelection(row.job_id)} /></Td>
+                                    {Object.values(row).map((val, i) => (
+                                      <Td key={i}>{String(val)}</Td>
+                                    ))}
+                                    <Td>
+                                      <Tooltip label="Add to CRM" aria-label="Add to CRM">
+                                        <Button size="xs" onClick={() => addLeadToCRM(row)}>
+                                          ➕
+                                        </Button>
+                                      </Tooltip>
+                                    </Td>
+                                  </Tr>
+                                ))}
+                              </Tbody>
+                            </Table>
+                          )}
+                          {/* Export Buttons by Plan */}
+                          {selectedJob && selectedJob.status === 'completed' && (
+                            <HStack mt={4} spacing={2}>
+                              {getAllowedExportFormats().map((format) => (
+                                <Button
+                                  key={format}
+                                  colorScheme={format === 'csv' ? 'green' : format === 'json' ? 'blue' : format === 'xlsx' ? 'purple' : 'orange'}
+                                  onClick={() => handleExport(format)}
+                                >
+                                  Export {format.toUpperCase()}
                                 </Button>
-                              </Tooltip>
-                            </Td>
-                          </Tr>
-                        ))}
-                      </Tbody>
-                    </Table>
-                  )}
-                  {/* Export Buttons by Plan */}
-                  {selectedJob && selectedJob.status === 'completed' && (
-                    <HStack mt={4} spacing={2}>
-                      {getAllowedExportFormats().map((format) => (
-                        <Button
-                          key={format}
-                          colorScheme={format === 'csv' ? 'green' : format === 'json' ? 'blue' : format === 'xlsx' ? 'purple' : 'orange'}
-                          onClick={() => handleExport(format)}
-                        >
-                          Export {format.toUpperCase()}
-                        </Button>
-                      ))}
-                    </HStack>
-                  )}
-                </Box>
-                {/* CRM Leads Section */}
-                <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md">
-                  <HStack justify="space-between" mb={4}>
-                    <Heading size="md">CRM Leads</Heading>
-                    <Button size="sm" colorScheme="blue" onClick={() => setLeadModalOpen(true)}>
-                      Add Lead
-                    </Button>
+                              ))}
+                            </HStack>
+                          )}
+                        </Box>
+                      </VStack>
+                    </Box>
                   </HStack>
-                  {/* Bulk Actions for Leads */}
-                  {leads.length > 0 && (
-                    <HStack mb={2}>
-                      <Button size="xs" onClick={toggleAllLeads}>{selectedLeadIds.length === leads.length ? 'Unselect All' : 'Select All'}</Button>
-                      <Button size="xs" colorScheme="blue" onClick={handleBulkAddLeadsToCRM}>Add to CRM</Button>
-                      <Button size="xs" colorScheme="red" onClick={handleBulkDeleteLeads}>Delete</Button>
-                    </HStack>
-                  )}
-                  {leads.length === 0 ? (
-                    <Text color="gray.500">No leads yet. Add leads from results or manually.</Text>
-                  ) : (
-                    <Table size="sm">
-                      <Thead>
-                        <Tr>
-                          <Th><input type="checkbox" checked={selectedLeadIds.length === leads.length} onChange={toggleAllLeads} /></Th>
-                          <Th>Name</Th>
-                          <Th>Email</Th>
-                          <Th>Company</Th>
-                          <Th>Status</Th>
-                          <Th>Source</Th>
-                          <Th>Actions</Th>
-                        </Tr>
-                      </Thead>
-                      <Tbody>
-                        {leads.slice(0, 5).map((lead) => (
-                          <Tr key={lead.id} _hover={{ bg: 'gray.100' }}>
-                            <Td><input type="checkbox" checked={selectedLeadIds.includes(lead.id)} onChange={() => toggleLeadSelection(lead.id)} /></Td>
-                            <Td>{lead.name}</Td>
-                            <Td>{lead.email}</Td>
-                            <Td>{lead.company || '-'}</Td>
-                            <Td>
-                              <Badge colorScheme={lead.status === 'new' ? 'blue' : 'green'}>
-                                {lead.status}
-                              </Badge>
-                            </Td>
-                            <Td>{lead.source}</Td>
-                            <Td>
-                              <Button size="xs" colorScheme="purple" onClick={() => handleEnrichLead(lead.id)}>Enrich</Button>
-                              <Button size="xs" colorScheme="blue" onClick={(e) => { e.stopPropagation(); handleShareLead(lead); }}>Share</Button>
-                              <Button size="xs" colorScheme="teal" onClick={() => handlePushToCRM(lead.id)} isDisabled={!crmConnected}>Push to CRM</Button>
-                            </Td>
-                          </Tr>
-                        ))}
-                      </Tbody>
-                    </Table>
-                  )}
                 </Box>
-              </VStack>
-            </Box>
-          </HStack>
+              </TabPanel>
+              <TabPanel>
+                <Suspense fallback={<Spinner />}>
+                  <CRM />
+                </Suspense>
+              </TabPanel>
+              <TabPanel>
+                <Suspense fallback={<Spinner />}>
+                  <Analytics />
+                </Suspense>
+              </TabPanel>
+            </TabPanels>
+          </Tabs>
         </Container>
       </Box>
 
@@ -1107,18 +1065,18 @@ const Dashboard: React.FC = () => {
           <ModalBody>
             <Text mb={4}>Choose the plan that fits your needs. Unlock more features and higher limits:</Text>
             <VStack spacing={4} align="stretch">
-              <Box p={4} border="1px" borderColor="gray.200" borderRadius="md" bg="gray.50">
-                <Heading size="sm" mb={2}>Free Plan - $0/month</Heading>
+              <Box p={4} border="1px" borderColor="gray.200" borderRadius="md" bg="gray.50" className="card-modern glass">
+                <Heading size="sm" mb={2} className="gradient-text">Free Plan - $0/month</Heading>
                 <Text fontSize="sm">10 queries/day, CSV export, Email support, Basic search filters</Text>
                 <Text fontSize="xs" color="gray.500">Included with every account</Text>
               </Box>
-              <Box p={4} border="2px" borderColor="blue.400" borderRadius="md" bg="blue.50">
-                <Heading size="sm" mb={2}>Pro Plan - $29/month</Heading>
+              <Box p={4} border="2px" borderColor="blue.400" borderRadius="md" bg="blue.50" className="card-modern glass">
+                <Heading size="sm" mb={2} className="gradient-text">Pro Plan - $29/month</Heading>
                 <Text fontSize="sm">100 queries/day, CSV/JSON/Excel export, Priority email support, Advanced filters, API access, Data validation</Text>
                 <Text fontSize="xs" color="gray.500">Best for professionals and small teams</Text>
               </Box>
-              <Box p={4} border="2px" borderColor="green.400" borderRadius="md" bg="green.50">
-                <Heading size="sm" mb={2}>Business Plan - $99/month</Heading>
+              <Box p={4} border="2px" borderColor="green.400" borderRadius="md" bg="green.50" className="card-modern glass">
+                <Heading size="sm" mb={2} className="gradient-text">Business Plan - $99/month</Heading>
                 <Text fontSize="sm">1000+ queries/day, All export formats, 24/7 phone support, Custom integrations, White-label, Dedicated manager</Text>
                 <Text fontSize="xs" color="gray.500">For enterprises and advanced users</Text>
               </Box>
@@ -1147,27 +1105,32 @@ const Dashboard: React.FC = () => {
                 placeholder="Name"
                 value={newLead.name}
                 onChange={(e) => setNewLead({...newLead, name: e.target.value})}
+                className="input-modern"
               />
               <Input
                 placeholder="Email"
                 type="email"
                 value={newLead.email}
                 onChange={(e) => setNewLead({...newLead, email: e.target.value})}
+                className="input-modern"
               />
               <Input
                 placeholder="Phone"
                 value={newLead.phone}
                 onChange={(e) => setNewLead({...newLead, phone: e.target.value})}
+                className="input-modern"
               />
               <Input
                 placeholder="Company"
                 value={newLead.company}
                 onChange={(e) => setNewLead({...newLead, company: e.target.value})}
+                className="input-modern"
               />
               <Input
                 placeholder="Website"
                 value={newLead.website}
                 onChange={(e) => setNewLead({...newLead, website: e.target.value})}
+                className="input-modern"
               />
               <textarea
                 placeholder="Notes"
@@ -1180,6 +1143,7 @@ const Dashboard: React.FC = () => {
                   border: '1px solid #e2e8f0',
                   borderRadius: '4px',
                 }}
+                className="input-modern"
               />
             </VStack>
           </ModalBody>
@@ -1206,18 +1170,21 @@ const Dashboard: React.FC = () => {
                 placeholder="Subject"
                 value={supportForm.subject}
                 onChange={e => setSupportForm({ ...supportForm, subject: e.target.value })}
+                className="input-modern"
               />
               <textarea
                 placeholder="Message"
                 value={supportForm.message}
                 onChange={e => setSupportForm({ ...supportForm, message: e.target.value })}
                 style={{ width: '100%', minHeight: '100px', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '4px' }}
+                className="input-modern"
               />
               {supportOptions?.support?.includes('phone') && (
                 <Input
                   placeholder="Phone (optional)"
                   value={supportForm.phone}
                   onChange={e => setSupportForm({ ...supportForm, phone: e.target.value })}
+                  className="input-modern"
                 />
               )}
             </VStack>
@@ -1241,12 +1208,13 @@ const Dashboard: React.FC = () => {
           <ModalCloseButton />
           <ModalBody>
             <VStack spacing={4}>
-              <Input placeholder="Template Name" value={templateName} onChange={e => setTemplateName(e.target.value)} />
+              <Input placeholder="Template Name" value={templateName} onChange={e => setTemplateName(e.target.value)} className="input-modern" />
               <textarea
                 value={queries}
                 onChange={e => setQueries(e.target.value)}
                 placeholder="Enter queries, one per line"
                 style={{ width: '100%', minHeight: '120px', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontFamily: 'inherit', fontSize: '14px', resize: 'vertical', background: useColorModeValue('white', 'gray.900') }}
+                className="input-modern"
               />
             </VStack>
           </ModalBody>

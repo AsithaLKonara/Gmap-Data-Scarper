@@ -122,19 +122,9 @@ function App() {
                       <AdminDashboard />
                     </ProtectedRoute>
                   } />
-                  <Route path="/crm" element={
-                    <ProtectedRoute>
-                      <CRM />
-                    </ProtectedRoute>
-                  } />
                   <Route path="/profile" element={
                     <ProtectedRoute>
                       <Profile />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/analytics" element={
-                    <ProtectedRoute requiredPlan="pro">
-                      <Analytics />
                     </ProtectedRoute>
                   } />
                   <Route path="/teams" element={

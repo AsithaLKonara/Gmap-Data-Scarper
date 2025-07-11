@@ -25,6 +25,7 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [tenant, setTenant] = useState('');
   const [ssoEnabled, setSsoEnabled] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const { login } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
@@ -42,6 +43,7 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setFormError(null);
 
     try {
       if (!tenant) throw new Error('Tenant/Organization is required');
@@ -56,9 +58,12 @@ const Login = () => {
       });
       navigate('/dashboard');
     } catch (error) {
+      let message = 'Invalid credentials';
+      if (error instanceof Error) message = error.message;
+      setFormError(message);
       toast({
         title: 'Login failed',
-        description: error instanceof Error ? error.message : 'Invalid credentials',
+        description: message,
         status: 'error',
         duration: 5000,
         isClosable: true,
@@ -84,6 +89,10 @@ const Login = () => {
           <Card className="card-modern" w="full">
             <CardBody>
               <form onSubmit={handleSubmit}>
+                {/* Show form error if present */}
+                {formError && (
+                  <Text color="red.400" fontSize="sm" textAlign="center">{formError}</Text>
+                )}
                 <VStack spacing={6}>
                   <FormControl isRequired>
                     <FormLabel color="white">Email</FormLabel>
