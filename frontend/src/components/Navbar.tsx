@@ -1,177 +1,215 @@
-import React from 'react';
-import { Link as RouterLink } from 'react-router-dom';
-import { 
-  Box, 
-  Flex, 
-  HStack, 
-  Link, 
-  Button, 
-  useColorMode, 
-  Spacer, 
-  Text,
-  Avatar,
-  Menu,
-  MenuButton,
-  MenuList,
-  MenuItem,
-  IconButton,
-  useColorModeValue
-} from '@chakra-ui/react';
-import { MoonIcon, SunIcon, ChevronDownIcon } from '@chakra-ui/icons';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { useState } from 'react';
+import { ThemeToggle } from './ui/theme-toggle';
+import { Button } from './ui/button';
+import { Menu, X, User, LogOut, Settings } from 'lucide-react';
 
 const Navbar = () => {
-  const { colorMode, toggleColorMode } = useColorMode();
   const { user, logout } = useAuth();
-  const bg = useColorModeValue('rgba(255, 255, 255, 0.1)', 'rgba(0, 0, 0, 0.2)');
-  const borderColor = useColorModeValue('rgba(255, 255, 255, 0.2)', 'rgba(255, 255, 255, 0.1)');
-  const [restartTour, setRestartTour] = useState(false);
+  const location = useLocation();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  const handleRestartTour = () => {
-    localStorage.removeItem('onboarding_complete');
-    setRestartTour(true);
-    window.location.reload();
+  const isActive = (path: string) => location.pathname === path;
+
+  const navItems = [
+    { path: '/dashboard', label: 'Dashboard' },
+    { path: '/lead-collection', label: 'Leads' },
+    { path: '/crm', label: 'CRM' },
+    { path: '/analytics', label: 'Analytics' },
+    { path: '/teams', label: 'Teams' },
+  ];
+
+  const adminItems = [
+    { path: '/admin', label: 'Admin' },
+    { path: '/audit-log', label: 'Audit Log' },
+  ];
+
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [location]);
+
+  const handleLogout = () => {
+    logout();
+    setIsDropdownOpen(false);
   };
 
   return (
-    <Box 
-      as="nav" 
-      position="fixed"
-      top={0}
-      left={0}
-      right={0}
-      zIndex={1000}
-      bg={bg}
-      backdropFilter="blur(20px)"
-      borderBottom="1px solid"
-      borderColor={borderColor}
-      px={6}
-      py={4}
-    >
-      <Flex align="center" maxW="1200px" mx="auto">
-        <HStack spacing={8}>
-          <Link 
-            as={RouterLink} 
-            to="/" 
-            fontWeight="bold" 
-            fontSize="xl"
-            className="gradient-text"
-            _hover={{ textDecoration: 'none' }}
-          >
-            🚀 LeadTap
-          </Link>
-          <HStack spacing={6}>
-            {user && (
-              <>
-                <Link as={RouterLink} to="/dashboard" px={3} py={2} rounded="md" _hover={{ textDecoration: 'none', bg: 'rgba(255, 255, 255, 0.1)' }}>
-                  Dashboard
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          {/* Logo */}
+          <div className="flex-shrink-0">
+            <Link to="/" className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                <span className="text-primary-foreground font-bold text-sm">L</span>
+              </div>
+              <span className="text-xl font-bold text-foreground">LeadTap</span>
+            </Link>
+          </div>
+
+          {/* Desktop Navigation */}
+          <div className="hidden md:block">
+            <div className="ml-10 flex items-baseline space-x-4">
+              {navItems.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    isActive(item.path)
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                  }`}
+                >
+                  {item.label}
                 </Link>
-                <Link as={RouterLink} to="/crm" px={3} py={2} rounded="md" _hover={{ textDecoration: 'none', bg: 'rgba(255, 255, 255, 0.1)' }}>
-                  CRM
+              ))}
+              {user?.role === 'admin' && adminItems.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    isActive(item.path)
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                  }`}
+                >
+                  {item.label}
                 </Link>
-                {user.plan === 'pro' || user.plan === 'business' ? (
-                  <Link as={RouterLink} to="/lead-collection" px={3} py={2} rounded="md" _hover={{ textDecoration: 'none', bg: 'rgba(255, 255, 255, 0.1)' }}>
-                    Lead Collection
-                  </Link>
-                ) : null}
-                {user.plan === 'pro' || user.plan === 'business' ? (
-                  <Link as={RouterLink} to="/analytics" px={3} py={2} rounded="md" _hover={{ textDecoration: 'none', bg: 'rgba(255, 255, 255, 0.1)' }}>
-                    Analytics
-                  </Link>
-                ) : null}
-                {user.plan === 'pro' || user.plan === 'business' ? (
-                  <Link as={RouterLink} to="/teams" px={3} py={2} rounded="md" _hover={{ textDecoration: 'none', bg: 'rgba(255, 255, 255, 0.1)' }}>
-                    Teams
-                  </Link>
-                ) : null}
-                {user.plan === 'business' ? (
-                  <Link as={RouterLink} to="/admin" px={3} py={2} rounded="md" _hover={{ textDecoration: 'none', bg: 'rgba(255, 255, 255, 0.1)' }}>
-                    Admin
-                  </Link>
-                ) : null}
-              </>
+              ))}
+            </div>
+          </div>
+
+          {/* Right side items */}
+          <div className="hidden md:flex items-center space-x-4">
+            <ThemeToggle />
+            
+            {user ? (
+              <div className="relative">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="flex items-center space-x-2"
+                >
+                  <User className="h-4 w-4" />
+                  <span>{user.email}</span>
+                </Button>
+                
+                {isDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-md shadow-lg py-1 z-50">
+                    <Link
+                      to="/profile"
+                      className="flex items-center px-4 py-2 text-sm text-foreground hover:bg-accent"
+                      onClick={() => setIsDropdownOpen(false)}
+                    >
+                      <Settings className="h-4 w-4 mr-2" />
+                      Settings
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center w-full px-4 py-2 text-sm text-foreground hover:bg-accent"
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <Link to="/login">
+                  <Button variant="ghost" size="sm">
+                    Login
+                  </Button>
+                </Link>
+                <Link to="/register">
+                  <Button size="sm">
+                    Sign Up
+                  </Button>
+                </Link>
+              </div>
             )}
-            <Button size="sm" colorScheme="blue" variant="outline" onClick={handleRestartTour}>
-              Restart Tour
+          </div>
+
+          {/* Mobile menu button */}
+          <div className="md:hidden">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
+              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
-          </HStack>
-        </HStack>
-        
-        <Spacer />
-        
-        <HStack spacing={4}>
-          <IconButton
-            aria-label="Toggle color mode"
-            icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
-            onClick={toggleColorMode}
-            variant="ghost"
-            size="sm"
-            color="gray.300"
-            _hover={{ color: 'brand.400', bg: 'rgba(255, 255, 255, 0.1)' }}
-          />
-          
-          {user ? (
-            <Menu>
-              <MenuButton
-                as={Button}
-                rightIcon={<ChevronDownIcon />}
-                variant="ghost"
-                size="sm"
-                color="gray.300"
-                _hover={{ color: 'brand.400', bg: 'rgba(255, 255, 255, 0.1)' }}
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile menu */}
+      {isMenuOpen && (
+        <div className="md:hidden bg-card border-t border-border">
+          <div className="px-2 pt-2 pb-3 space-y-1">
+            {navItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                  isActive(item.path)
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                }`}
               >
-                <HStack spacing={2}>
-                  <Avatar size="xs" name={user.email} />
-                  <Text fontSize="sm">{user.email}</Text>
-                </HStack>
-              </MenuButton>
-              <MenuList bg="dark.800" border="1px solid" borderColor="gray.600">
-                <MenuItem 
-                  as={RouterLink}
+                {item.label}
+              </Link>
+            ))}
+            {user?.role === 'admin' && adminItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
+                  isActive(item.path)
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+            
+            {user ? (
+              <div className="pt-4 border-t border-border">
+                <Link
                   to="/profile"
-                  bg="transparent"
-                  _hover={{ bg: 'rgba(255, 255, 255, 0.1)' }}
-                  color="gray.300"
+                  className="block px-3 py-2 text-base font-medium text-muted-foreground hover:text-foreground hover:bg-accent"
                 >
-                  Profile
-                </MenuItem>
-                <MenuItem 
-                  bg="transparent"
-                  _hover={{ bg: 'rgba(255, 255, 255, 0.1)' }}
-                  color="gray.300"
-                >
-                  Plan: {user.plan}
-                </MenuItem>
-                <MenuItem 
-                  onClick={logout}
-                  bg="transparent"
-                  _hover={{ bg: 'error.red', color: 'white' }}
-                  color="gray.300"
+                  Settings
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="block w-full text-left px-3 py-2 text-base font-medium text-muted-foreground hover:text-foreground hover:bg-accent"
                 >
                   Logout
-                </MenuItem>
-              </MenuList>
-            </Menu>
-          ) : (
-            <Button 
-              as={RouterLink} 
-              to="/login" 
-              size="sm" 
-              variant="solid"
-              bg="linear-gradient(135deg, brand.500 0%, brand.600 100%)"
-              _hover={{
-                bg: 'linear-gradient(135deg, brand.600 0%, brand.700 100%)',
-                transform: 'translateY(-2px)',
-                boxShadow: '0 8px 25px rgba(99, 102, 241, 0.4)'
-              }}
-            >
-              Login
-            </Button>
-          )}
-        </HStack>
-      </Flex>
-    </Box>
+                </button>
+              </div>
+            ) : (
+              <div className="pt-4 border-t border-border space-y-2">
+                <Link to="/login">
+                  <Button variant="ghost" className="w-full justify-start">
+                    Login
+                  </Button>
+                </Link>
+                <Link to="/register">
+                  <Button className="w-full justify-start">
+                    Sign Up
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </nav>
   );
 };
 

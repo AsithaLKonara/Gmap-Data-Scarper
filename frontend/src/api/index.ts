@@ -762,4 +762,94 @@ export async function updateTenant(tenantId: string, data: any) {
 // Analytics
 export async function getAnalytics(timeRange: string = '30') {
   return apiFetch(`/api/analytics?timeRange=${timeRange}`);
+}
+
+// Social Media Scraping API
+export async function scrapeSocialMedia(data: {
+  platform: string;
+  keywords: string[];
+  location?: string;
+  max_results: number;
+  filters?: {
+    min_followers?: number;
+    max_followers?: number;
+    has_email?: boolean;
+    has_phone?: boolean;
+    has_website?: boolean;
+    verified_only?: boolean;
+  };
+  include_engagement: boolean;
+  include_contact_info: boolean;
+}) {
+  return apiFetch('/api/social-scraper/scrape', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getSocialLeads(params?: {
+  platform?: string;
+  status?: string;
+  page?: number;
+  page_size?: number;
+}) {
+  const queryParams = new URLSearchParams();
+  if (params?.platform) queryParams.append('platform', params.platform);
+  if (params?.status) queryParams.append('status', params.status);
+  if (params?.page) queryParams.append('page', String(params.page));
+  if (params?.page_size) queryParams.append('page_size', String(params.page_size));
+  
+  const queryString = queryParams.toString();
+  return apiFetch(`/api/social-scraper/leads${queryString ? `?${queryString}` : ''}`);
+}
+
+export async function getSocialAnalytics() {
+  return apiFetch('/api/social-scraper/analytics');
+}
+
+// WhatsApp Workflow API
+export async function getWhatsAppWorkflows() {
+  return apiFetch('/api/whatsapp-workflow/workflows');
+}
+
+export async function createWhatsAppWorkflow(data: {
+  name: string;
+  description?: string;
+  trigger_type: string;
+  trigger_conditions?: any;
+  steps: Array<{
+    name: string;
+    step_type: string;
+    content?: string;
+    delay_minutes?: number;
+    conditions?: any;
+    actions?: string[];
+    order: number;
+  }>;
+  is_active: boolean;
+}) {
+  return apiFetch('/api/whatsapp-workflow/workflows', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getWhatsAppWorkflowTemplates() {
+  return apiFetch('/api/whatsapp-workflow/templates');
+}
+
+export async function executeWhatsAppWorkflow(data: {
+  workflow_id: number;
+  lead_id?: number;
+  social_lead_id?: number;
+  execution_data?: any;
+}) {
+  return apiFetch('/api/whatsapp-workflow/execute', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getWhatsAppWorkflowAnalytics() {
+  return apiFetch('/api/whatsapp-workflow/analytics');
 } 

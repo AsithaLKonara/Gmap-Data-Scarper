@@ -510,7 +510,7 @@ const SecuritySettings: React.FC = () => {
               </Alert>
 
               <Box textAlign="center" p={4} border="1px" borderColor={borderColor} borderRadius="md">
-                <MdQrCode boxSize={8} mb={2} />
+                <MdQrCode boxSize={8}; mb={2} />
                 <Text fontSize="sm" color="gray.600">
                   QR Code will appear here
                 </Text>
