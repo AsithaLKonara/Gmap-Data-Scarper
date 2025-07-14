@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from './components/ui/theme-provider';
+import { Toaster } from './components/ui/toaster';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Landing from './pages/Landing';
@@ -148,6 +149,7 @@ function App() {
             </main>
             <Footer />
           </Router>
+          <Toaster />
         </div>
       </AuthProvider>
     </ThemeProvider>
