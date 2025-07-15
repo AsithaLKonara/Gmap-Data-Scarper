@@ -18,8 +18,10 @@ import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { EmailIcon, LockIcon } from '@chakra-ui/icons';
 import { getTenantSsoConfig } from '../api';
+import { useTranslation } from 'react-i18next';
 
 const Login = () => {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -46,23 +48,23 @@ const Login = () => {
     setFormError(null);
 
     try {
-      if (!tenant) throw new Error('Tenant/Organization is required');
+      if (!tenant) throw new Error(t('login.error.tenantRequired', 'Tenant/Organization is required'));
       localStorage.setItem('tenantSlug', tenant);
       await login(email, password);
       toast({
-        title: 'Login successful!',
-        description: 'Welcome back to LeadTap',
+        title: t('login.success', 'Login successful!'),
+        description: t('login.welcome', 'Welcome back to LeadTap'),
         status: 'success',
         duration: 3000,
         isClosable: true,
       });
       navigate('/dashboard');
     } catch (error) {
-      let message = 'Invalid credentials';
+      let message = t('login.error.invalidCredentials', 'Invalid credentials');
       if (error instanceof Error) message = error.message;
       setFormError(message);
       toast({
-        title: 'Login failed',
+        title: t('login.failed', 'Login failed'),
         description: message,
         status: 'error',
         duration: 5000,
@@ -79,10 +81,10 @@ const Login = () => {
         <VStack spacing={8}>
           <VStack spacing={4} textAlign="center">
             <Heading size="2xl" className="gradient-text">
-              Welcome Back
+              {t('login.heading', 'Welcome Back')}
             </Heading>
             <Text color="gray.400" fontSize="lg">
-              Sign in to your LeadTap account
+              {t('login.subtitle', 'Sign in to your LeadTap account')}
             </Text>
           </VStack>
 
@@ -95,33 +97,33 @@ const Login = () => {
                 )}
                 <VStack spacing={6}>
                   <FormControl isRequired>
-                    <FormLabel color="white">Email</FormLabel>
+                    <FormLabel color="white">{t('login.email', 'Email')}</FormLabel>
                     <Input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter your email"
+                      placeholder={t('login.emailPlaceholder', 'Enter your email')}
                       className="input-modern"
                     />
                   </FormControl>
 
                   <FormControl isRequired>
-                    <FormLabel color="white">Password</FormLabel>
+                    <FormLabel color="white">{t('login.password', 'Password')}</FormLabel>
                     <Input
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your password"
+                      placeholder={t('login.passwordPlaceholder', 'Enter your password')}
                       className="input-modern"
                     />
                   </FormControl>
 
                   <FormControl isRequired>
-                    <FormLabel color="white">Organization/Tenant</FormLabel>
+                    <FormLabel color="white">{t('login.tenant', 'Organization/Tenant')}</FormLabel>
                     <Input
                       value={tenant}
                       onChange={(e) => setTenant(e.target.value)}
-                      placeholder="Enter your organization/tenant slug"
+                      placeholder={t('login.tenantPlaceholder', 'Enter your organization/tenant slug')}
                       className="input-modern"
                     />
                   </FormControl>
@@ -132,7 +134,7 @@ const Login = () => {
                       colorScheme="purple"
                       onClick={() => window.location.href = `/api/auth/sso/login?tenant=${tenant}`}
                     >
-                      Sign in with SSO
+                      {t('login.sso', 'Sign in with SSO')}
                     </Button>
                   )}
 
@@ -142,9 +144,9 @@ const Login = () => {
                     w="full"
                     size="lg"
                     isLoading={isLoading}
-                    loadingText="Signing in..."
+                    loadingText={t('login.signingIn', 'Signing in...')}
                   >
-                    Sign In
+                    {t('login.signIn', 'Sign In')}
                   </Button>
       </VStack>
               </form>
@@ -152,11 +154,11 @@ const Login = () => {
           </Card>
 
           <Text color="gray.400" textAlign="center">
-        Don't have an account?{' '}
+            {t('login.noAccount', "Don't have an account?")}{' '}
             <Link as={RouterLink} to="/register" color="brand.400" fontWeight="semibold">
-              Sign up here
+              {t('login.signUpHere', 'Sign up here')}
             </Link>
-      </Text>
+          </Text>
         </VStack>
       </Container>
     </Box>
