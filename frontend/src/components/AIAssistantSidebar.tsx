@@ -20,6 +20,12 @@ const smartRecommendations = [
   { name: 'Carol Jones', reason: 'Scored as Hot Lead' },
 ];
 
+const predictiveAnalytics = [
+  { name: 'Alice Smith', churn: 'Low', conversion: 'High' },
+  { name: 'Bob Lee', churn: 'Medium', conversion: 'Medium' },
+  { name: 'Carol Jones', churn: 'High', conversion: 'Low' },
+];
+
 const leadsList = [
   { id: '1', name: 'Alice Smith' },
   { id: '2', name: 'Bob Lee' },
@@ -67,6 +73,18 @@ export const AIAssistantSidebar: React.FC = () => {
             {smartRecommendations.map((rec, i) => (
               <div key={i} className="bg-muted rounded p-2 text-sm">
                 <span className="font-medium">{rec.name}</span> <span className="text-muted-foreground">- {rec.reason}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="mb-4">
+          <div className="font-semibold mb-1">Predictive Analytics</div>
+          <div className="space-y-1">
+            {predictiveAnalytics.map((p, i) => (
+              <div key={i} className="bg-muted rounded p-2 text-sm flex items-center gap-2">
+                <span className="font-medium">{p.name}</span>
+                <span className={`text-xs rounded px-2 py-0.5 ${p.churn === 'High' ? 'bg-red-200 text-red-800' : p.churn === 'Medium' ? 'bg-yellow-200 text-yellow-800' : 'bg-green-200 text-green-800'}`}>Churn: {p.churn}</span>
+                <span className={`text-xs rounded px-2 py-0.5 ${p.conversion === 'High' ? 'bg-green-200 text-green-800' : p.conversion === 'Medium' ? 'bg-yellow-200 text-yellow-800' : 'bg-red-200 text-red-800'}`}>Conversion: {p.conversion}</span>
               </div>
             ))}
           </div>
