@@ -5,8 +5,10 @@ import {
 import {
   getTeams, createTeam, inviteToTeam, listTeamMembers, removeTeamMember, changeTeamMemberRole, transferTeamOwnership, acceptTeamInvite, declineTeamInvite, getUser
 } from '../api';
+import { useTranslation } from 'react-i18next';
 
 const TeamManagement: React.FC = () => {
+  const { t } = useTranslation();
   const [teams, setTeams] = useState<any[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<any>(null);
   const [members, setMembers] = useState<any[]>([]);
@@ -38,8 +40,8 @@ const TeamManagement: React.FC = () => {
         loadMembers(data[0].id);
       }
     } catch (e: any) {
-      setError(e.message || 'Failed to load teams');
-      toast({ title: 'Error', description: e.message, status: 'error' });
+      setError(e.message || t('teamManagement.error.failedToLoadTeams', 'Failed to load teams'));
+      toast({ title: t('error', 'Error'), description: e.message, status: 'error' });
     } finally {
       setLoading(false);
     }
@@ -52,8 +54,8 @@ const TeamManagement: React.FC = () => {
       const data = await listTeamMembers(teamId);
       setMembers(data);
     } catch (e: any) {
-      setError(e.message || 'Failed to load members');
-      toast({ title: 'Error', description: e.message, status: 'error' });
+      setError(e.message || t('teamManagement.error.failedToLoadMembers', 'Failed to load members'));
+      toast({ title: t('error', 'Error'), description: e.message, status: 'error' });
     } finally {
       setLoading(false);
     }
@@ -67,10 +69,10 @@ const TeamManagement: React.FC = () => {
       await createTeam({ name: teamName });
       setTeamName('');
       loadTeams();
-      toast({ title: 'Team created', status: 'success' });
+      toast({ title: t('teamManagement.success.teamCreated', 'Team created'), status: 'success' });
     } catch (e: any) {
-      setError(e.message || 'Failed to create team');
-      toast({ title: 'Error', description: e.message, status: 'error' });
+      setError(e.message || t('teamManagement.error.failedToCreateTeam', 'Failed to create team'));
+      toast({ title: t('error', 'Error'), description: e.message, status: 'error' });
     } finally {
       setLoading(false);
     }
@@ -85,10 +87,10 @@ const TeamManagement: React.FC = () => {
       setInviteEmail('');
       setInviteRole('member');
       loadMembers(selectedTeam.id);
-      toast({ title: 'User invited', status: 'success' });
+      toast({ title: t('teamManagement.success.userInvited', 'User invited'), status: 'success' });
     } catch (e: any) {
-      setError(e.message || 'Failed to invite user');
-      toast({ title: 'Error', description: e.message, status: 'error' });
+      setError(e.message || t('teamManagement.error.failedToInviteUser', 'Failed to invite user'));
+      toast({ title: t('error', 'Error'), description: e.message, status: 'error' });
     } finally {
       setLoading(false);
     }
@@ -100,10 +102,10 @@ const TeamManagement: React.FC = () => {
     try {
       await removeTeamMember(selectedTeam.id, memberId);
       loadMembers(selectedTeam.id);
-      toast({ title: 'Member removed', status: 'info' });
+      toast({ title: t('teamManagement.info.memberRemoved', 'Member removed'), status: 'info' });
     } catch (e: any) {
-      setError(e.message || 'Failed to remove member');
-      toast({ title: 'Error', description: e.message, status: 'error' });
+      setError(e.message || t('teamManagement.error.failedToRemoveMember', 'Failed to remove member'));
+      toast({ title: t('error', 'Error'), description: e.message, status: 'error' });
     } finally {
       setLoading(false);
     }
@@ -115,10 +117,10 @@ const TeamManagement: React.FC = () => {
     try {
       await changeTeamMemberRole(selectedTeam.id, memberId, role);
       loadMembers(selectedTeam.id);
-      toast({ title: 'Role updated', status: 'success' });
+      toast({ title: t('teamManagement.success.roleUpdated', 'Role updated'), status: 'success' });
     } catch (e: any) {
-      setError(e.message || 'Failed to update role');
-      toast({ title: 'Error', description: e.message, status: 'error' });
+      setError(e.message || t('teamManagement.error.failedToUpdateRole', 'Failed to update role'));
+      toast({ title: t('error', 'Error'), description: e.message, status: 'error' });
     } finally {
       setLoading(false);
     }
@@ -132,10 +134,10 @@ const TeamManagement: React.FC = () => {
       await transferTeamOwnership(selectedTeam.id, Number(transferUserId));
       setModalOpen(false);
       loadTeams();
-      toast({ title: 'Ownership transferred', status: 'success' });
+      toast({ title: t('teamManagement.success.ownershipTransferred', 'Ownership transferred'), status: 'success' });
     } catch (e: any) {
-      setError(e.message || 'Failed to transfer ownership');
-      toast({ title: 'Error', description: e.message, status: 'error' });
+      setError(e.message || t('teamManagement.error.failedToTransferOwnership', 'Failed to transfer ownership'));
+      toast({ title: t('error', 'Error'), description: e.message, status: 'error' });
     } finally {
       setLoading(false);
     }
@@ -147,10 +149,10 @@ const TeamManagement: React.FC = () => {
     try {
       await acceptTeamInvite(membershipId);
       loadTeams();
-      toast({ title: 'Invite accepted', status: 'success' });
+      toast({ title: t('teamManagement.success.inviteAccepted', 'Invite accepted'), status: 'success' });
     } catch (e: any) {
-      setError(e.message || 'Failed to accept invite');
-      toast({ title: 'Error', description: e.message, status: 'error' });
+      setError(e.message || t('teamManagement.error.failedToAcceptInvite', 'Failed to accept invite'));
+      toast({ title: t('error', 'Error'), description: e.message, status: 'error' });
     } finally {
       setLoading(false);
     }
@@ -162,10 +164,10 @@ const TeamManagement: React.FC = () => {
     try {
       await declineTeamInvite(membershipId);
       loadTeams();
-      toast({ title: 'Invite declined', status: 'info' });
+      toast({ title: t('teamManagement.info.inviteDeclined', 'Invite declined'), status: 'info' });
     } catch (e: any) {
-      setError(e.message || 'Failed to decline invite');
-      toast({ title: 'Error', description: e.message, status: 'error' });
+      setError(e.message || t('teamManagement.error.failedToDeclineInvite', 'Failed to decline invite'));
+      toast({ title: t('error', 'Error'), description: e.message, status: 'error' });
     } finally {
       setLoading(false);
     }
@@ -174,23 +176,23 @@ const TeamManagement: React.FC = () => {
   if (user && user.plan !== 'pro' && user.plan !== 'business') {
     return (
       <Box p={8}>
-        <Heading size="lg" mb={6}>Team Management</Heading>
-        <Text color="red.500" mb={4}>Team features are only available on Pro and Business plans.</Text>
-        <Button colorScheme="blue" href="/upgrade">Upgrade Plan</Button>
+        <Heading size="lg" mb={6}>{t('teamManagement.heading', 'Team Management')}</Heading>
+        <Text color="red.500" mb={4}>{t('teamManagement.proOnly', 'Team features are only available on Pro and Business plans.')}</Text>
+        <Button colorScheme="blue" href="/upgrade">{t('teamManagement.upgradePlan', 'Upgrade Plan')}</Button>
       </Box>
     );
   }
 
   return (
     <Box p={8} data-tour="team-main">
-      <Heading size="lg" mb={6} data-tour="team-title">Team Management</Heading>
+      <Heading size="lg" mb={6} data-tour="team-title">{t('teamManagement.heading', 'Team Management')}</Heading>
       {loading && <Spinner data-tour="team-loading" />}
       {error && <Text color="red.500" data-tour="team-error">{error}</Text>}
       <VStack align="stretch" spacing={6} data-tour="team-content">
         <Box data-tour="team-create">
           <HStack>
-            <Input placeholder="New team name" value={teamName} onChange={e => setTeamName(e.target.value)} data-tour="team-name-input" />
-            <Button colorScheme="blue" onClick={handleCreateTeam} isLoading={loading} data-tour="team-create-btn">Create Team</Button>
+            <Input placeholder={t('teamManagement.newTeamName', 'New team name')} value={teamName} onChange={e => setTeamName(e.target.value)} data-tour="team-name-input" />
+            <Button colorScheme="blue" onClick={handleCreateTeam} isLoading={loading} data-tour="team-create-btn">{t('teamManagement.createTeam', 'Create Team')}</Button>
           </HStack>
         </Box>
         <Box data-tour="team-select">
@@ -198,21 +200,21 @@ const TeamManagement: React.FC = () => {
             const t = teams.find(t => t.id === Number(e.target.value));
             setSelectedTeam(t);
             loadMembers(t.id);
-          }} placeholder="Select a team" data-tour="team-select-dropdown">
+          }} placeholder={t('teamManagement.selectTeam', 'Select a team')} data-tour="team-select-dropdown">
             {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
           </Select>
         </Box>
         {invites.length > 0 && (
           <Box>
-            <Heading size="sm" mb={2}>Pending Invites</Heading>
+            <Heading size="sm" mb={2}>{t('teamManagement.pendingInvites', 'Pending Invites')}</Heading>
             <Table size="sm">
               <Thead>
                 <Tr>
-                  <Th>Team</Th>
-                  <Th>Role</Th>
-                  <Th>Status</Th>
-                  <Th>Invited At</Th>
-                  <Th>Actions</Th>
+                  <Th>{t('teamManagement.team', 'Team')}</Th>
+                  <Th>{t('teamManagement.role', 'Role')}</Th>
+                  <Th>{t('teamManagement.status', 'Status')}</Th>
+                  <Th>{t('teamManagement.invitedAt', 'Invited At')}</Th>
+                  <Th>{t('teamManagement.actions', 'Actions')}</Th>
                 </Tr>
               </Thead>
               <Tbody>
@@ -225,8 +227,8 @@ const TeamManagement: React.FC = () => {
                     <Td>
                       {invite.status === 'invited' && (
                         <>
-                          <Button size="xs" colorScheme="green" onClick={() => handleAcceptInvite(invite.id)}>Accept</Button>
-                          <Button size="xs" colorScheme="red" onClick={() => handleDeclineInvite(invite.id)}>Decline</Button>
+                          <Button size="xs" colorScheme="green" onClick={() => handleAcceptInvite(invite.id)}>{t('teamManagement.acceptInvite', 'Accept')}</Button>
+                          <Button size="xs" colorScheme="red" onClick={() => handleDeclineInvite(invite.id)}>{t('teamManagement.declineInvite', 'Decline')}</Button>
                         </>
                       )}
                     </Td>
@@ -238,31 +240,31 @@ const TeamManagement: React.FC = () => {
         )}
         {selectedTeam && (
           <Box>
-            <Heading size="md" mb={4}>Members</Heading>
+            <Heading size="md" mb={4}>{t('teamManagement.members', 'Members')}</Heading>
             {members.length === 0 ? (
-              <Text color="gray.500">No members yet.</Text>
+              <Text color="gray.500">{t('teamManagement.noMembers', 'No members yet.')}</Text>
             ) : (
               <Table size="sm">
                 <Thead>
                   <Tr>
-                    <Th>User ID</Th>
-                    <Th>Email</Th>
-                    <Th>Role</Th>
-                    <Th>Status</Th>
-                    <Th>Invited At</Th>
-                    <Th>Actions</Th>
+                    <Th>{t('teamManagement.userId', 'User ID')}</Th>
+                    <Th>{t('teamManagement.email', 'Email')}</Th>
+                    <Th>{t('teamManagement.role', 'Role')}</Th>
+                    <Th>{t('teamManagement.status', 'Status')}</Th>
+                    <Th>{t('teamManagement.invitedAt', 'Invited At')}</Th>
+                    <Th>{t('teamManagement.actions', 'Actions')}</Th>
                   </Tr>
                 </Thead>
                 <Tbody>
                   {members.map(m => (
                     <Tr key={m.id} bg={m.user_id === selectedTeam.owner_id ? 'yellow.50' : undefined}>
-                      <Td>{m.user_id}{m.user_id === selectedTeam.owner_id && <Badge ml={2} colorScheme="yellow">Owner</Badge>}</Td>
+                      <Td>{m.user_id}{m.user_id === selectedTeam.owner_id && <Badge ml={2} colorScheme="yellow">{t('teamManagement.owner', 'Owner')}</Badge>}</Td>
                       <Td>{m.email || '-'}</Td>
                       <Td><Badge colorScheme={m.role === 'admin' ? 'blue' : m.role === 'member' ? 'green' : 'gray'}>{m.role}</Badge></Td>
                       <Td>{m.status}</Td>
                       <Td>{new Date(m.invited_at).toLocaleString()}</Td>
                       <Td>
-                        <Button size="xs" colorScheme="red" onClick={() => handleRemove(m.user_id)} isDisabled={m.user_id === selectedTeam.owner_id}>Remove</Button>
+                        <Button size="xs" colorScheme="red" onClick={() => handleRemove(m.user_id)} isDisabled={m.user_id === selectedTeam.owner_id}>{t('teamManagement.removeMember', 'Remove')}</Button>
                       </Td>
                     </Tr>
                   ))}
@@ -270,30 +272,30 @@ const TeamManagement: React.FC = () => {
               </Table>
             )}
             <HStack mt={4}>
-              <Input placeholder="Invite email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} />
+              <Input placeholder={t('teamManagement.inviteEmail', 'Invite email')} value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} />
               <Select value={inviteRole} onChange={e => setInviteRole(e.target.value)} w="120px">
-                <option value="member">Member</option>
-                <option value="admin">Admin</option>
-                <option value="viewer">Viewer</option>
+                <option value="member">{t('teamManagement.roleMember', 'Member')}</option>
+                <option value="admin">{t('teamManagement.roleAdmin', 'Admin')}</option>
+                <option value="viewer">{t('teamManagement.roleViewer', 'Viewer')}</option>
               </Select>
-              <Button colorScheme="blue" onClick={handleInvite} isLoading={loading}>Invite</Button>
+              <Button colorScheme="blue" onClick={handleInvite} isLoading={loading}>{t('teamManagement.inviteUser', 'Invite')}</Button>
             </HStack>
-            <Button mt={4} colorScheme="yellow" onClick={() => setModalOpen(true)}>Transfer Ownership</Button>
+            <Button mt={4} colorScheme="yellow" onClick={() => setModalOpen(true)}>{t('teamManagement.transferOwnership', 'Transfer Ownership')}</Button>
             <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)}>
               <ModalOverlay />
               <ModalContent>
-                <ModalHeader>Transfer Ownership</ModalHeader>
+                <ModalHeader>{t('teamManagement.transferOwnership', 'Transfer Ownership')}</ModalHeader>
                 <ModalCloseButton />
                 <ModalBody>
-                  <Select placeholder="Select new owner" value={transferUserId} onChange={e => setTransferUserId(e.target.value)}>
+                  <Select placeholder={t('teamManagement.selectNewOwner', 'Select new owner')} value={transferUserId} onChange={e => setTransferUserId(e.target.value)}>
                     {members.filter(m => m.user_id !== selectedTeam.owner_id).map(m => (
                       <option key={m.user_id} value={m.user_id}>{m.user_id}</option>
                     ))}
                   </Select>
                 </ModalBody>
                 <ModalFooter>
-                  <Button variant="ghost" mr={3} onClick={() => setModalOpen(false)}>Cancel</Button>
-                  <Button colorScheme="yellow" onClick={handleTransferOwnership} isLoading={loading}>Transfer</Button>
+                  <Button variant="ghost" mr={3} onClick={() => setModalOpen(false)}>{t('teamManagement.cancel', 'Cancel')}</Button>
+                  <Button colorScheme="yellow" onClick={handleTransferOwnership} isLoading={loading}>{t('teamManagement.transfer', 'Transfer')}</Button>
                 </ModalFooter>
               </ModalContent>
             </Modal>
