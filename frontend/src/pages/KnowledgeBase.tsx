@@ -14,8 +14,10 @@ import {
   useColorModeValue,
 } from '@chakra-ui/react';
 import * as api from '../api';
+import { useTranslation } from 'react-i18next';
 
 const KnowledgeBase: React.FC = () => {
+  const { t } = useTranslation();
   const [faqs, setFaqs] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -32,7 +34,7 @@ const KnowledgeBase: React.FC = () => {
       const response = await api.getFaqs();
       setFaqs(response);
     } catch (err: any) {
-      setError('Failed to load FAQs');
+      setError(t('knowledgeBase.error.failedToLoad', 'Failed to load FAQs'));
     } finally {
       setLoading(false);
     }
@@ -43,15 +45,15 @@ const KnowledgeBase: React.FC = () => {
     faq.answer.toLowerCase().includes(search.toLowerCase())
   );
 
-  if (loading) return <Box p={8}><Text>Loading FAQs...</Text></Box>;
+  if (loading) return <Box p={8}><Text>{t('knowledgeBase.loading', 'Loading FAQs...')}</Text></Box>;
   if (error) return <Box p={8}><Text color="red.500">{error}</Text></Box>;
 
   return (
     <Box minH="100vh" bg={useColorModeValue('gray.100', 'gray.800')} data-tour="knowledge-base-main">
       <Container maxW="container.md" py={8} data-tour="knowledge-base-content">
-        <Heading size="lg" mb={6} className="gradient-text" data-tour="knowledge-base-title">Knowledge Base & FAQ</Heading>
+        <Heading size="lg" mb={6} className="gradient-text" data-tour="knowledge-base-title">{t('knowledgeBase.heading', 'Knowledge Base & FAQ')}</Heading>
         <Input
-          placeholder="Search FAQs..."
+          placeholder={t('knowledgeBase.searchPlaceholder', 'Search FAQs...')}
           value={search}
           onChange={e => setSearch(e.target.value)}
           mb={6}
