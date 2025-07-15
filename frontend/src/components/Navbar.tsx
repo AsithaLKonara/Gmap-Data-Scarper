@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { ThemeToggle } from './ui/theme-toggle';
 import { Button } from './ui/button';
 import { Menu, X, User, LogOut, Settings } from 'lucide-react';
+import { NotificationCenter } from './ui/notification-center';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -83,6 +84,7 @@ const Navbar = () => {
 
           {/* Right side items */}
           <div className="hidden md:flex items-center space-x-4">
+            <NotificationCenter />
             <ThemeToggle />
             
             {user ? (
