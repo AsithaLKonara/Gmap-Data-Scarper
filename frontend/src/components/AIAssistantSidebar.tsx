@@ -13,6 +13,12 @@ const examplePrompts = [
   'Who should I contact next?'
 ];
 
+const smartRecommendations = [
+  { name: 'Alice Smith', reason: 'High engagement, not contacted in 7 days' },
+  { name: 'Bob Lee', reason: 'Recently opened your email' },
+  { name: 'Carol Jones', reason: 'Scored as Hot Lead' },
+];
+
 export const AIAssistantSidebar: React.FC = () => {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<{ role: 'user' | 'ai'; text: string }[]>([]);
@@ -36,6 +42,16 @@ export const AIAssistantSidebar: React.FC = () => {
         <Badge variant="secondary">AI</Badge>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col gap-2">
+        <div className="mb-4">
+          <div className="font-semibold mb-1">Smart Recommendations</div>
+          <div className="space-y-1">
+            {smartRecommendations.map((rec, i) => (
+              <div key={i} className="bg-muted rounded p-2 text-sm">
+                <span className="font-medium">{rec.name}</span> <span className="text-muted-foreground">- {rec.reason}</span>
+              </div>
+            ))}
+          </div>
+        </div>
         <div className="flex flex-col gap-2 mb-2">
           {examplePrompts.map((p, i) => (
             <Button key={i} variant="outline" size="sm" onClick={() => sendPrompt(p)}>{p}</Button>
