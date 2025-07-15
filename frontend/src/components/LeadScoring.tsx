@@ -48,6 +48,7 @@ import {
 } from '@chakra-ui/icons';
 import { FiGlobe } from 'react-icons/fi';
 import * as api from '../api';
+import { LeadScoringCriteriaBuilder, ScoringRule } from './LeadScoringCriteriaBuilder';
 
 interface Lead {
   id: number;
@@ -77,45 +78,35 @@ const LeadScoring: React.FC<LeadScoringProps> = ({ leads, onLeadUpdate }) => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [enriching, setEnriching] = useState<number | null>(null);
   const [filter, setFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
+  const [scoringRules, setScoringRules] = useState<ScoringRule[]>([
+    { id: 'email', field: 'email', label: 'Has Email', points: 15 },
+    { id: 'phone', field: 'phone', label: 'Has Phone', points: 10 },
+    { id: 'website', field: 'website', label: 'Has Website', points: 5 },
+    { id: 'company', field: 'company', label: 'Has Company', points: 10 },
+    { id: 'enriched', field: 'enriched', label: 'Is Enriched', points: 15 },
+  ]);
 
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
 
-  // Calculate lead score based on multiple factors
+  // Calculate lead score based on user-defined rules
   const calculateLeadScore = (lead: Lead): number => {
     let score = 0;
-
-    // Source scoring (different sources have different conversion rates)
-    const sourceScores = {
-      'google_maps': 80,
-      'facebook': 70,
-      'instagram': 65,
-      'whatsapp': 75,
-      'manual': 60,
-      'import': 50
-    };
-    score += sourceScores[lead.source as keyof typeof sourceScores] || 50;
-
-    // Contact information completeness
-    if (lead.email) score += 15;
-    if (lead.phone) score += 10;
-    if (lead.website) score += 5;
-    if (lead.company) score += 10;
-
-    // Engagement level
-    const engagementScores = { high: 20, medium: 10, low: 0 };
-    score += engagementScores[lead.engagement_level];
-
-    // Enrichment status
-    if (lead.enriched) score += 15;
-
-    // Recent contact
-    if (lead.last_contacted) {
-      const daysSince = Math.floor((Date.now() - new Date(lead.last_contacted).getTime()) / (1000 * 60 * 60 * 24));
-      if (daysSince <= 7) score += 20;
-      else if (daysSince <= 30) score += 10;
-    }
-
+    scoringRules.forEach(rule => {
+      if (rule.field === 'email' && lead.email) score += rule.points;
+      if (rule.field === 'phone' && lead.phone) score += rule.points;
+      if (rule.field === 'website' && lead.website) score += rule.points;
+      if (rule.field === 'company' && lead.company) score += rule.points;
+      if (rule.field === 'enriched' && lead.enriched) score += rule.points;
+      if (rule.field === 'recent_contact' && lead.last_contacted) {
+        const daysSince = Math.floor((Date.now() - new Date(lead.last_contacted).getTime()) / (1000 * 60 * 60 * 24));
+        if (daysSince <= 7) score += rule.points;
+      }
+      if (rule.field === 'engagement_high' && lead.engagement_level === 'high') score += rule.points;
+      if (rule.field === 'source_facebook' && lead.source === 'facebook') score += rule.points;
+      if (rule.field === 'source_gmaps' && lead.source === 'google_maps') score += rule.points;
+      if (rule.field === 'source_whatsapp' && lead.source === 'whatsapp') score += rule.points;
+    });
     return Math.min(score, 100);
   };
 
@@ -169,6 +160,7 @@ const LeadScoring: React.FC<LeadScoringProps> = ({ leads, onLeadUpdate }) => {
 
   return (
     <Box>
+      <LeadScoringCriteriaBuilder rules={scoringRules} onChange={setScoringRules} />
       {/* Statistics Cards */}
       <SimpleGrid columns={{ base: 1, md: 4 }} spacing={4} mb={6}>
         <Card bg={bgColor} border="1px" borderColor={borderColor}>
