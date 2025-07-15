@@ -57,6 +57,7 @@ import {
 import { AddIcon, EditIcon, DeleteIcon, ViewIcon, SearchIcon } from '@chakra-ui/icons';
 import * as api from '../api';
 import { useAuth } from '../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 
 interface LeadSource {
   id: number;
@@ -103,6 +104,7 @@ interface SocialMediaLead {
 }
 
 const LeadCollection: React.FC = () => {
+  const { t } = useTranslation();
   const [sources, setSources] = useState<LeadSource[]>([]);
   const [collections, setCollections] = useState<LeadCollection[]>([]);
   const [leads, setLeads] = useState<SocialMediaLead[]>([]);
@@ -155,7 +157,7 @@ const LeadCollection: React.FC = () => {
     } catch (error: any) {
       console.error(error);
       toast({
-        title: 'Error',
+        title: t('error', 'Error'),
         description: error.message,
         status: 'error',
         duration: 3000,
@@ -173,7 +175,7 @@ const LeadCollection: React.FC = () => {
     } catch (error: any) {
       console.error(error);
       toast({
-        title: 'Error',
+        title: t('error', 'Error'),
         description: error.message,
         status: 'error',
         duration: 3000,
@@ -194,7 +196,7 @@ const LeadCollection: React.FC = () => {
     } catch (error: any) {
       console.error(error);
       toast({
-        title: 'Error',
+        title: t('error', 'Error'),
         description: error.message,
         status: 'error',
         duration: 3000,
@@ -207,8 +209,8 @@ const LeadCollection: React.FC = () => {
   const handleFacebookCollection = async () => {
     if (!facebookForm.keywords.trim()) {
       toast({
-        title: 'Error',
-        description: 'Please enter keywords',
+        title: t('error', 'Error'),
+        description: t('leadCollection.facebook.keywordsError', 'Please enter keywords'),
         status: 'error',
         duration: 3000,
       });
@@ -225,8 +227,8 @@ const LeadCollection: React.FC = () => {
       });
       
       toast({
-        title: 'Collection Started',
-        description: 'Facebook lead collection has been started',
+        title: t('leadCollection.collectionStarted', 'Collection Started'),
+        description: t('leadCollection.facebook.collectionStartedDescription', 'Facebook lead collection has been started'),
         status: 'success',
         duration: 3000,
       });
@@ -235,7 +237,7 @@ const LeadCollection: React.FC = () => {
       loadCollections();
     } catch (error: any) {
       toast({
-        title: 'Error',
+        title: t('error', 'Error'),
         description: error.message,
         status: 'error',
         duration: 3000,
@@ -248,8 +250,8 @@ const LeadCollection: React.FC = () => {
   const handleInstagramCollection = async () => {
     if (!instagramForm.hashtags.trim()) {
       toast({
-        title: 'Error',
-        description: 'Please enter hashtags',
+        title: t('error', 'Error'),
+        description: t('leadCollection.instagram.hashtagsError', 'Please enter hashtags'),
         status: 'error',
         duration: 3000,
       });
@@ -266,8 +268,8 @@ const LeadCollection: React.FC = () => {
       });
       
       toast({
-        title: 'Collection Started',
-        description: 'Instagram lead collection has been started',
+        title: t('leadCollection.collectionStarted', 'Collection Started'),
+        description: t('leadCollection.instagram.collectionStartedDescription', 'Instagram lead collection has been started'),
         status: 'success',
         duration: 3000,
       });
@@ -276,7 +278,7 @@ const LeadCollection: React.FC = () => {
       loadCollections();
     } catch (error: any) {
       toast({
-        title: 'Error',
+        title: t('error', 'Error'),
         description: error.message,
         status: 'error',
         duration: 3000,
@@ -289,8 +291,8 @@ const LeadCollection: React.FC = () => {
   const handleWhatsAppCollection = async () => {
     if (!whatsappForm.keywords.trim() || !whatsappForm.phone_numbers.trim()) {
       toast({
-        title: 'Error',
-        description: 'Please enter both keywords and phone numbers',
+        title: t('error', 'Error'),
+        description: t('leadCollection.whatsapp.keywordsError', 'Please enter both keywords and phone numbers'),
         status: 'error',
         duration: 3000,
       });
@@ -307,8 +309,8 @@ const LeadCollection: React.FC = () => {
       });
       
       toast({
-        title: 'Collection Started',
-        description: 'WhatsApp lead collection has been started',
+        title: t('leadCollection.collectionStarted', 'Collection Started'),
+        description: t('leadCollection.whatsapp.collectionStartedDescription', 'WhatsApp lead collection has been started'),
         status: 'success',
         duration: 3000,
       });
@@ -317,7 +319,7 @@ const LeadCollection: React.FC = () => {
       loadCollections();
     } catch (error: any) {
       toast({
-        title: 'Error',
+        title: t('error', 'Error'),
         description: error.message,
         status: 'error',
         duration: 3000,
@@ -345,7 +347,7 @@ const LeadCollection: React.FC = () => {
   const canAccessWhatsApp = user && user.plan === 'business';
   const handleTabChange = (index: number) => {
     if ((index === 0 && !canAccessFacebook) || (index === 1 && !canAccessInstagram) || (index === 2 && !canAccessWhatsApp)) {
-      toast({ title: 'Upgrade Required', description: 'Upgrade your plan to access this lead source.', status: 'info' });
+      toast({ title: t('leadCollection.upgradeRequired', 'Upgrade Required'), description: t('leadCollection.upgradeRequiredDescription', 'Upgrade your plan to access this lead source.'), status: 'info' });
       return false;
     }
     return true;
@@ -354,15 +356,15 @@ const LeadCollection: React.FC = () => {
   return (
     <Box minH="100vh" bg={useColorModeValue('gray.100', 'gray.800')}>
       <Container maxW="container.xl" py={8}>
-        <Heading size="lg" mb={6} className="gradient-text">Multi-Source Lead Collection</Heading>
+        <Heading size="lg" mb={6} className="gradient-text">{t('leadCollection.title', 'Multi-Source Lead Collection')}</Heading>
         
         <Tabs variant="enclosed" mb={8} onChange={handleTabChange}>
           <TabList>
-            <Tab isDisabled={!canAccessFacebook}>Facebook {canAccessFacebook ? '' : <Badge ml={2} colorScheme="blue">Pro</Badge>}</Tab>
-            <Tab isDisabled={!canAccessInstagram}>Instagram {canAccessInstagram ? '' : <Badge ml={2} colorScheme="blue">Pro</Badge>}</Tab>
-            <Tab isDisabled={!canAccessWhatsApp}>WhatsApp {canAccessWhatsApp ? '' : <Badge ml={2} colorScheme="green">Business</Badge>}</Tab>
-            <Tab>Collections</Tab>
-            <Tab>Leads</Tab>
+            <Tab isDisabled={!canAccessFacebook}>{t('leadCollection.tabs.facebook', 'Facebook')} {canAccessFacebook ? '' : <Badge ml={2} colorScheme="blue">{t('leadCollection.pro', 'Pro')}</Badge>}</Tab>
+            <Tab isDisabled={!canAccessInstagram}>{t('leadCollection.tabs.instagram', 'Instagram')} {canAccessInstagram ? '' : <Badge ml={2} colorScheme="blue">{t('leadCollection.pro', 'Pro')}</Badge>}</Tab>
+            <Tab isDisabled={!canAccessWhatsApp}>{t('leadCollection.tabs.whatsapp', 'WhatsApp')} {canAccessWhatsApp ? '' : <Badge ml={2} colorScheme="green">{t('leadCollection.business', 'Business')}</Badge>}</Tab>
+            <Tab>{t('leadCollection.tabs.collections', 'Collections')}</Tab>
+            <Tab>{t('leadCollection.tabs.leads', 'Leads')}</Tab>
           </TabList>
 
           <TabPanels>
@@ -370,32 +372,32 @@ const LeadCollection: React.FC = () => {
             <TabPanel>
               <Card bg={bgColor} border="1px" borderColor={borderColor}>
                 <CardBody>
-                  <Heading size="md" mb={4}>Facebook Lead Collection</Heading>
+                  <Heading size="md" mb={4}>{t('leadCollection.facebookLeadCollection', 'Facebook Lead Collection')}</Heading>
                   <Text fontSize="sm" color="gray.600" mb={6}>
-                    Collect leads from Facebook pages and groups based on keywords and location.
+                    {t('leadCollection.facebookLeadCollectionDescription', 'Collect leads from Facebook pages and groups based on keywords and location.')}
                   </Text>
                   
                   <VStack spacing={4} align="stretch">
                     <FormControl>
-                      <FormLabel>Keywords (comma-separated)</FormLabel>
+                      <FormLabel>{t('leadCollection.facebook.keywordsLabel', 'Keywords (comma-separated)')}</FormLabel>
                       <Input
-                        placeholder="restaurant, cafe, business"
+                        placeholder={t('leadCollection.facebook.keywordsPlaceholder', 'restaurant, cafe, business')}
                         value={facebookForm.keywords}
                         onChange={(e) => setFacebookForm({...facebookForm, keywords: e.target.value})}
                       />
                     </FormControl>
                     
                     <FormControl>
-                      <FormLabel>Location (optional)</FormLabel>
+                      <FormLabel>{t('leadCollection.facebook.locationLabel', 'Location (optional)')}</FormLabel>
                       <Input
-                        placeholder="New York, NY"
+                        placeholder={t('leadCollection.facebook.locationPlaceholder', 'New York, NY')}
                         value={facebookForm.location}
                         onChange={(e) => setFacebookForm({...facebookForm, location: e.target.value})}
                       />
                     </FormControl>
                     
                     <FormControl>
-                      <FormLabel>Max Results</FormLabel>
+                      <FormLabel>{t('leadCollection.facebook.maxResultsLabel', 'Max Results')}</FormLabel>
                       <Input
                         type="number"
                         value={facebookForm.max_results}
@@ -409,9 +411,9 @@ const LeadCollection: React.FC = () => {
                       colorScheme="blue"
                       onClick={handleFacebookCollection}
                       isLoading={collecting}
-                      loadingText="Collecting Leads"
+                      loadingText={t('leadCollection.facebook.collectingLeadsLoadingText', 'Collecting Leads')}
                     >
-                      Start Facebook Collection
+                      {t('leadCollection.facebook.startCollectionButton', 'Start Facebook Collection')}
                     </Button>
                   </VStack>
                 </CardBody>
@@ -422,32 +424,32 @@ const LeadCollection: React.FC = () => {
             <TabPanel>
               <Card bg={bgColor} border="1px" borderColor={borderColor}>
                 <CardBody>
-                  <Heading size="md" mb={4}>Instagram Lead Collection</Heading>
+                  <Heading size="md" mb={4}>{t('leadCollection.instagramLeadCollection', 'Instagram Lead Collection')}</Heading>
                   <Text fontSize="sm" color="gray.600" mb={6}>
-                    Collect leads from Instagram based on hashtags and location.
+                    {t('leadCollection.instagramLeadCollectionDescription', 'Collect leads from Instagram based on hashtags and location.')}
                   </Text>
                   
                   <VStack spacing={4} align="stretch">
                     <FormControl>
-                      <FormLabel>Hashtags (comma-separated)</FormLabel>
+                      <FormLabel>{t('leadCollection.instagram.hashtagsLabel', 'Hashtags (comma-separated)')}</FormLabel>
                       <Input
-                        placeholder="#business, #entrepreneur, #startup"
+                        placeholder={t('leadCollection.instagram.hashtagsPlaceholder', '#business, #entrepreneur, #startup')}
                         value={instagramForm.hashtags}
                         onChange={(e) => setInstagramForm({...instagramForm, hashtags: e.target.value})}
                       />
                     </FormControl>
                     
                     <FormControl>
-                      <FormLabel>Location (optional)</FormLabel>
+                      <FormLabel>{t('leadCollection.instagram.locationLabel', 'Location (optional)')}</FormLabel>
                       <Input
-                        placeholder="Los Angeles, CA"
+                        placeholder={t('leadCollection.instagram.locationPlaceholder', 'Los Angeles, CA')}
                         value={instagramForm.location}
                         onChange={(e) => setInstagramForm({...instagramForm, location: e.target.value})}
                       />
                     </FormControl>
                     
                     <FormControl>
-                      <FormLabel>Max Results</FormLabel>
+                      <FormLabel>{t('leadCollection.instagram.maxResultsLabel', 'Max Results')}</FormLabel>
                       <Input
                         type="number"
                         value={instagramForm.max_results}
@@ -461,9 +463,9 @@ const LeadCollection: React.FC = () => {
                       colorScheme="purple"
                       onClick={handleInstagramCollection}
                       isLoading={collecting}
-                      loadingText="Collecting Leads"
+                      loadingText={t('leadCollection.instagram.collectingLeadsLoadingText', 'Collecting Leads')}
                     >
-                      Start Instagram Collection
+                      {t('leadCollection.instagram.startCollectionButton', 'Start Instagram Collection')}
                     </Button>
                   </VStack>
                 </CardBody>
@@ -474,25 +476,25 @@ const LeadCollection: React.FC = () => {
             <TabPanel>
               <Card bg={bgColor} border="1px" borderColor={borderColor}>
                 <CardBody>
-                  <Heading size="md" mb={4}>WhatsApp Business Lead Collection</Heading>
+                  <Heading size="md" mb={4}>{t('leadCollection.whatsAppBusinessLeadCollection', 'WhatsApp Business Lead Collection')}</Heading>
                   <Text fontSize="sm" color="gray.600" mb={6}>
-                    Collect leads from WhatsApp Business accounts. Business plan required.
+                    {t('leadCollection.whatsAppBusinessLeadCollectionDescription', 'Collect leads from WhatsApp Business accounts. Business plan required.')}
                   </Text>
                   
                   <VStack spacing={4} align="stretch">
                     <FormControl>
-                      <FormLabel>Phone Numbers (comma-separated)</FormLabel>
+                      <FormLabel>{t('leadCollection.whatsApp.phoneNumbersLabel', 'Phone Numbers (comma-separated)')}</FormLabel>
                       <Input
-                        placeholder="+1234567890, +0987654321"
+                        placeholder={t('leadCollection.whatsApp.phoneNumbersPlaceholder', '+1234567890, +0987654321')}
                         value={whatsappForm.phone_numbers}
                         onChange={(e) => setWhatsappForm({...whatsappForm, phone_numbers: e.target.value})}
                       />
                     </FormControl>
                     
                     <FormControl>
-                      <FormLabel>Keywords (comma-separated)</FormLabel>
+                      <FormLabel>{t('leadCollection.whatsApp.keywordsLabel', 'Keywords (comma-separated)')}</FormLabel>
                       <Input
-                        placeholder="business, services, products"
+                        placeholder={t('leadCollection.whatsApp.keywordsPlaceholder', 'business, services, products')}
                         value={whatsappForm.keywords}
                         onChange={(e) => setWhatsappForm({...whatsappForm, keywords: e.target.value})}
                       />
@@ -502,9 +504,9 @@ const LeadCollection: React.FC = () => {
                       colorScheme="green"
                       onClick={handleWhatsAppCollection}
                       isLoading={collecting}
-                      loadingText="Collecting Leads"
+                      loadingText={t('leadCollection.whatsApp.collectingLeadsLoadingText', 'Collecting Leads')}
                     >
-                      Start WhatsApp Collection
+                      {t('leadCollection.whatsApp.startCollectionButton', 'Start WhatsApp Collection')}
                     </Button>
                   </VStack>
                 </CardBody>
@@ -516,40 +518,38 @@ const LeadCollection: React.FC = () => {
               <Card bg={bgColor} border="1px" borderColor={borderColor}>
                 <CardBody>
                   <HStack justify="space-between" mb={4}>
-                    <Heading size="md">Lead Collections</Heading>
-                    <Button size="sm" colorScheme="blue" onClick={() => setCollectionModalOpen(true)}>
-                      Create Collection
-                    </Button>
+                    <Heading size="md">{t('leadCollection.leadCollections', 'Lead Collections')}</Heading>
+                    <Button size="sm" colorScheme="blue" onClick={() => setCollectionModalOpen(true)}>{t('leadCollection.createCollection', 'Create Collection')}</Button>
                   </HStack>
                   
                   {collectionsLoading ? (
                     <Spinner />
                   ) : collections.length === 0 ? (
-                    <Text color="gray.500">No collections yet. Start collecting leads to see them here.</Text>
+                    <Text color="gray.500">{t('leadCollection.noCollectionsMessage', 'No collections yet. Start collecting leads to see them here.')}</Text>
                   ) : (
                     <Table size="sm">
                       <Thead>
                         <Tr>
-                          <Th>Name</Th>
-                          <Th>Source</Th>
-                          <Th>Status</Th>
-                          <Th>Last Run</Th>
-                          <Th>Actions</Th>
+                          <Th>{t('leadCollection.collectionName', 'Name')}</Th>
+                          <Th>{t('leadCollection.source', 'Source')}</Th>
+                          <Th>{t('leadCollection.status', 'Status')}</Th>
+                          <Th>{t('leadCollection.lastRun', 'Last Run')}</Th>
+                          <Th>{t('leadCollection.actions', 'Actions')}</Th>
                         </Tr>
                       </Thead>
                       <Tbody>
                         {collections.map((collection) => (
                           <Tr key={collection.id}>
                             <Td>{collection.name}</Td>
-                            <Td>{sources.find(s => s.id === collection.source_id)?.name || 'Unknown'}</Td>
+                            <Td>{sources.find(s => s.id === collection.source_id)?.name || t('leadCollection.unknownSource', 'Unknown')}</Td>
                             <Td>
                               <Badge colorScheme={collection.status === 'completed' ? 'green' : 'yellow'}>
                                 {collection.status}
                               </Badge>
                             </Td>
-                            <Td>{collection.last_run ? new Date(collection.last_run).toLocaleString() : 'Never'}</Td>
+                            <Td>{collection.last_run ? new Date(collection.last_run).toLocaleString() : t('leadCollection.neverRun', 'Never')}</Td>
                             <Td>
-                              <Button size="xs" colorScheme="blue">View</Button>
+                              <Button size="xs" colorScheme="blue">{t('leadCollection.view', 'View')}</Button>
                             </Td>
                           </Tr>
                         ))}
@@ -565,35 +565,35 @@ const LeadCollection: React.FC = () => {
               <Card bg={bgColor} border="1px" borderColor={borderColor}>
                 <CardBody>
                   <HStack justify="space-between" mb={4}>
-                    <Heading size="md">Collected Leads</Heading>
+                    <Heading size="md">{t('leadCollection.collectedLeads', 'Collected Leads')}</Heading>
                     <HStack spacing={2}>
                       <Select
-                        placeholder="All Platforms"
+                        placeholder={t('leadCollection.allPlatforms', 'All Platforms')}
                         value={selectedPlatform}
                         onChange={(e) => setSelectedPlatform(e.target.value)}
                         size="sm"
                         w="150px"
                       >
-                        <option value="all">All Platforms</option>
-                        <option value="facebook">Facebook</option>
-                        <option value="instagram">Instagram</option>
-                        <option value="whatsapp">WhatsApp</option>
+                        <option value="all">{t('leadCollection.allPlatforms', 'All Platforms')}</option>
+                        <option value="facebook">{t('leadCollection.facebook', 'Facebook')}</option>
+                        <option value="instagram">{t('leadCollection.instagram', 'Instagram')}</option>
+                        <option value="whatsapp">{t('leadCollection.whatsApp', 'WhatsApp')}</option>
                       </Select>
                       <Select
-                        placeholder="All Status"
+                        placeholder={t('leadCollection.allStatus', 'All Status')}
                         value={filterStatus}
                         onChange={(e) => setFilterStatus(e.target.value)}
                         size="sm"
                         w="120px"
                       >
-                        <option value="">All Status</option>
-                        <option value="new">New</option>
-                        <option value="contacted">Contacted</option>
-                        <option value="qualified">Qualified</option>
-                        <option value="converted">Converted</option>
+                        <option value="">{t('leadCollection.allStatus', 'All Status')}</option>
+                        <option value="new">{t('leadCollection.new', 'New')}</option>
+                        <option value="contacted">{t('leadCollection.contacted', 'Contacted')}</option>
+                        <option value="qualified">{t('leadCollection.qualified', 'Qualified')}</option>
+                        <option value="converted">{t('leadCollection.converted', 'Converted')}</option>
                       </Select>
                       <Input
-                        placeholder="Search leads..."
+                        placeholder={t('leadCollection.searchLeads', 'Search leads...')}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         size="sm"
@@ -605,18 +605,18 @@ const LeadCollection: React.FC = () => {
                   {leadsLoading ? (
                     <Spinner />
                   ) : filteredLeads.length === 0 ? (
-                    <Text color="gray.500">No leads found. Start collecting leads to see them here.</Text>
+                    <Text color="gray.500">{t('leadCollection.noLeadsFound', 'No leads found. Start collecting leads to see them here.')}</Text>
                   ) : (
                     <Table size="sm">
                       <Thead>
                         <Tr>
-                          <Th>Platform</Th>
-                          <Th>Name</Th>
-                          <Th>Contact</Th>
-                          <Th>Followers</Th>
-                          <Th>Location</Th>
-                          <Th>Status</Th>
-                          <Th>Actions</Th>
+                          <Th>{t('leadCollection.platform', 'Platform')}</Th>
+                          <Th>{t('leadCollection.name', 'Name')}</Th>
+                          <Th>{t('leadCollection.contact', 'Contact')}</Th>
+                          <Th>{t('leadCollection.followers', 'Followers')}</Th>
+                          <Th>{t('leadCollection.location', 'Location')}</Th>
+                          <Th>{t('leadCollection.status', 'Status')}</Th>
+                          <Th>{t('leadCollection.actions', 'Actions')}</Th>
                         </Tr>
                       </Thead>
                       <Tbody>
@@ -663,8 +663,8 @@ const LeadCollection: React.FC = () => {
                             </Td>
                             <Td>
                               <HStack spacing={1}>
-                                <Button size="xs" colorScheme="blue">View</Button>
-                                <Button size="xs" colorScheme="green">Add to CRM</Button>
+                                <Button size="xs" colorScheme="blue">{t('leadCollection.view', 'View')}</Button>
+                                <Button size="xs" colorScheme="green">{t('leadCollection.addToCrm', 'Add to CRM')}</Button>
                               </HStack>
                             </Td>
                           </Tr>
