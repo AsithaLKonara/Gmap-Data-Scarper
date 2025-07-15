@@ -34,6 +34,9 @@ from widgets import router as widgets_router
 from showcase import router as showcase_router
 from sso import router as sso_router
 from branding import router as branding_router
+from social_media_scraper import router as social_scraper_router
+from whatsapp_workflow import router as whatsapp_workflow_router
+from graphql import router as graphql_router
 
 # Sentry integration
 SENTRY_DSN = os.getenv("SENTRY_DSN")
@@ -98,6 +101,9 @@ app.include_router(widgets_router)
 app.include_router(showcase_router)
 app.include_router(sso_router)
 app.include_router(branding_router)
+app.include_router(social_scraper_router)
+app.include_router(whatsapp_workflow_router)
+app.include_router(graphql_router)
 
 @app.on_event("startup")
 def on_startup():
