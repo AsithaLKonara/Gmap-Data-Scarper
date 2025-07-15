@@ -60,6 +60,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer
 } from 'recharts';
+import { useTranslation } from 'react-i18next';
 
 interface User {
   id: number;
@@ -113,6 +114,7 @@ interface AnalyticsData {
 }
 
 const AdminDashboard: React.FC = () => {
+  const { t } = useTranslation();
   const [users, setUsers] = useState<User[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [stats, setStats] = useState<AdminStats | null>(null);
@@ -1477,7 +1479,7 @@ const AdminDashboard: React.FC = () => {
                   <HStack justify="space-between">
                     <VStack align="start" spacing={1}>
                       <Text color="gray.300" fontSize="sm">
-                        {notification.type === 'system' ? '🔔 System' : '📢 Notification'}
+                        {notification.type === 'system' ? t('adminDashboard.system', '🔔 System') : t('adminDashboard.notification', '📢 Notification')}
                       </Text>
                       <Text color="gray.200" fontSize="xs">
                         {notification.message}
@@ -1507,7 +1509,7 @@ const AdminDashboard: React.FC = () => {
                 variant="outline"
                 leftIcon={colorMode === 'dark' ? <span>☀️</span> : <span>🌙</span>}
               >
-                {colorMode === 'dark' ? 'Light' : 'Dark'} Mode
+                {colorMode === 'dark' ? t('adminDashboard.lightMode', 'Light') : t('adminDashboard.darkMode', 'Dark')} {t('adminDashboard.mode', 'Mode')}
               </Button>
               <Button
                 size="sm"
@@ -1515,7 +1517,7 @@ const AdminDashboard: React.FC = () => {
                 colorScheme="brand"
                 variant="outline"
               >
-                {dashboardLayout === 'default' ? 'Compact' : 'Default'} Layout
+                {dashboardLayout === 'default' ? t('adminDashboard.compactLayout', 'Compact') : t('adminDashboard.defaultLayout', 'Default')} {t('adminDashboard.layout', 'Layout')}
               </Button>
               <Button
                 size="sm"
@@ -1523,7 +1525,7 @@ const AdminDashboard: React.FC = () => {
                 colorScheme="brand"
                 variant="outline"
               >
-                {showAdvancedCharts ? 'Simple' : 'Advanced'} Charts
+                {showAdvancedCharts ? t('adminDashboard.simpleCharts', 'Simple') : t('adminDashboard.advancedCharts', 'Advanced')} {t('adminDashboard.charts', 'Charts')}
               </Button>
             </HStack>
             <Button
@@ -1533,7 +1535,7 @@ const AdminDashboard: React.FC = () => {
               variant="outline"
               leftIcon={<span>📊</span>}
             >
-              Export Dashboard
+              {t('adminDashboard.exportDashboard', 'Export Dashboard')}
             </Button>
           </HStack>
         </Box>
@@ -1543,19 +1545,19 @@ const AdminDashboard: React.FC = () => {
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
         <ModalContent bg="dark.800" border="1px solid" borderColor="gray.600">
-          <ModalHeader color="gray.300">Reset Password</ModalHeader>
+          <ModalHeader color="gray.300">{t('adminDashboard.resetPassword', 'Reset Password')}</ModalHeader>
           <ModalCloseButton color="gray.400" />
           <ModalBody>
             <Text color="gray.400" mb={4}>
-              Reset password for user: <strong>{selectedUser?.email}</strong>
+              {t('adminDashboard.resetPasswordForUser', 'Reset password for user:')} <strong>{selectedUser?.email}</strong>
             </Text>
             <FormControl>
-              <FormLabel color="gray.400">New Password</FormLabel>
+              <FormLabel color="gray.400">{t('adminDashboard.newPassword', 'New Password')}</FormLabel>
               <Input
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Enter new password"
+                placeholder={t('adminDashboard.enterNewPassword', 'Enter new password')}
                 bg="dark.700"
                 borderColor="gray.600"
                 color="gray.300"
@@ -1565,14 +1567,14 @@ const AdminDashboard: React.FC = () => {
           </ModalBody>
           <ModalFooter>
             <Button variant="ghost" mr={3} onClick={onClose} color="gray.400">
-              Cancel
+              {t('adminDashboard.cancel', 'Cancel')}
             </Button>
             <Button
               colorScheme="blue"
               onClick={handleResetPassword}
               isDisabled={!newPassword.trim()}
             >
-              Reset Password
+              {t('adminDashboard.resetPassword', 'Reset Password')}
             </Button>
           </ModalFooter>
         </ModalContent>
@@ -1587,26 +1589,25 @@ const AdminDashboard: React.FC = () => {
         <AlertDialogOverlay>
           <AlertDialogContent bg="dark.800" border="1px solid" borderColor="gray.600">
             <AlertDialogHeader color="gray.300">
-              {banDialogUser?.plan === 'banned' ? 'Unban User' : 'Ban User'}
+              {banDialogUser?.plan === 'banned' ? t('adminDashboard.unbanUser', 'Unban User') : t('adminDashboard.banUser', 'Ban User')}
             </AlertDialogHeader>
             <AlertDialogBody color="gray.300">
-              Are you sure you want to {banDialogUser?.plan === 'banned' ? 'unban' : 'ban'} user{' '}
-              <strong>{banDialogUser?.email}</strong>?
+              {t('adminDashboard.banConfirm', 'Are you sure you want to {{action}} user', { action: banDialogUser?.plan === 'banned' ? t('adminDashboard.unban', 'unban') : t('adminDashboard.ban', 'ban') })} <strong>{banDialogUser?.email}</strong>?
               {banDialogUser?.plan === 'banned' 
-                ? ' This will restore their access to the platform.'
-                : ' This will prevent them from accessing the platform.'
+                ? t('adminDashboard.restoreAccess', ' This will restore their access to the platform.')
+                : t('adminDashboard.preventAccess', ' This will prevent them from accessing the platform.')
               }
             </AlertDialogBody>
             <AlertDialogFooter>
               <Button ref={banDialogCancelRef} onClick={() => setIsBanDialogOpen(false)} color="gray.400">
-                Cancel
+                {t('adminDashboard.cancel', 'Cancel')}
               </Button>
               <Button 
                 colorScheme={banDialogUser?.plan === 'banned' ? 'green' : 'red'} 
                 onClick={confirmBan} 
                 ml={3}
               >
-                {banDialogUser?.plan === 'banned' ? 'Unban' : 'Ban'}
+                {banDialogUser?.plan === 'banned' ? t('adminDashboard.unban', 'Unban') : t('adminDashboard.ban', 'Ban')}
               </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -1621,19 +1622,18 @@ const AdminDashboard: React.FC = () => {
       >
         <AlertDialogOverlay>
           <AlertDialogContent bg="dark.800" border="1px solid" borderColor="gray.600">
-            <AlertDialogHeader color="gray.300">Reset Password</AlertDialogHeader>
+            <AlertDialogHeader color="gray.300">{t('adminDashboard.resetPassword', 'Reset Password')}</AlertDialogHeader>
             <AlertDialogBody color="gray.300">
               <Text mb={4}>
-                Are you sure you want to reset the password for user{' '}
-                <strong>{resetDialogUser?.email}</strong>?
+                {t('adminDashboard.resetPasswordConfirm', 'Are you sure you want to reset the password for user')} <strong>{resetDialogUser?.email}</strong>?
               </Text>
               <FormControl>
-                <FormLabel color="gray.400">New Password</FormLabel>
+                <FormLabel color="gray.400">{t('adminDashboard.newPassword', 'New Password')}</FormLabel>
                 <Input
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Enter new password"
+                  placeholder={t('adminDashboard.enterNewPassword', 'Enter new password')}
                   bg="dark.700"
                   borderColor="gray.600"
                   color="gray.300"
@@ -1643,7 +1643,7 @@ const AdminDashboard: React.FC = () => {
             </AlertDialogBody>
             <AlertDialogFooter>
               <Button ref={resetDialogCancelRef} onClick={() => setIsResetDialogOpen(false)} color="gray.400">
-                Cancel
+                {t('adminDashboard.cancel', 'Cancel')}
               </Button>
               <Button 
                 colorScheme="blue" 
@@ -1651,7 +1651,7 @@ const AdminDashboard: React.FC = () => {
                 ml={3}
                 isDisabled={!newPassword.trim()}
               >
-                Reset Password
+                {t('adminDashboard.resetPassword', 'Reset Password')}
               </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
