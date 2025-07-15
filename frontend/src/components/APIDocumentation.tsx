@@ -64,6 +64,7 @@ import {
   CloseIcon,
 } from '@chakra-ui/icons';
 import * as api from '../api';
+import { useTranslation } from 'react-i18next';
 
 interface APIEndpoint {
   method: string;
@@ -94,6 +95,7 @@ interface Integration {
 }
 
 const APIDocumentation: React.FC = () => {
+  const { t } = useTranslation();
   const [apiKey, setApiKey] = useState('sk_live_...');
   const [showWebhookModal, setShowWebhookModal] = useState(false);
   const [showTestModal, setShowTestModal] = useState(false);
@@ -192,356 +194,300 @@ const APIDocumentation: React.FC = () => {
   };
 
   return (
-    <Box>
-      <VStack spacing={6} align="stretch">
+    <div>
+      <div className="space-y-6">
         {/* API Key Section */}
-        <Card bg={bgColor} border="1px" borderColor={borderColor}>
-          <CardBody>
-            <HStack justify="space-between" mb={4}>
-              <Text fontSize="lg" fontWeight="bold">API Key</Text>
-              <Button size="sm" leftIcon={<CopyIcon />} onClick={() => handleCopyCode(apiKey)}>
-                Copy Key
-              </Button>
-            </HStack>
-            
-            <Box p={4} bg="gray.50" borderRadius="md" fontFamily="mono" fontSize="sm">
-              {apiKey}
-            </Box>
-            
-            <Text fontSize="sm" color="gray.600" mt={2}>
-              Use this API key in the Authorization header: <Code>Authorization: Bearer YOUR_API_KEY</Code>
-            </Text>
-          </CardBody>
-        </Card>
-
+        <div className="rounded-lg border bg-white dark:bg-gray-900 p-6 shadow">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-lg font-bold">API Key</span>
+            <button
+              className="inline-flex items-center px-3 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 text-sm"
+              onClick={() => handleCopyCode(apiKey)}
+            >
+              <span className="mr-2">📋</span>Copy Key
+            </button>
+          </div>
+          <div className="p-4 bg-gray-50 rounded font-mono text-sm">{apiKey}</div>
+          <span className="text-sm text-gray-600 mt-2 block">
+            Use this API key in the Authorization header: <code className="bg-gray-100 px-1 rounded">Authorization: Bearer YOUR_API_KEY</code>
+          </span>
+        </div>
         {/* API Documentation */}
-        <Card bg={bgColor} border="1px" borderColor={borderColor}>
-          <CardBody>
-            <Text fontSize="lg" fontWeight="bold" mb={4}>API Endpoints</Text>
-            
-            <Tabs>
-              <TabList>
-                <Tab>Jobs</Tab>
-                <Tab>Leads</Tab>
-                <Tab>Exports</Tab>
-                <Tab>Webhooks</Tab>
-              </TabList>
-
-              <TabPanels>
-                <TabPanel>
-                  <VStack spacing={4} align="stretch">
-                    {/* TODO: Fetch and display actual API endpoints */}
-                    <Alert status="info">
-                      <AlertIcon />
-                      <Box>
-                        <AlertTitle>API Endpoints</AlertTitle>
-                        <AlertDescription>
-                          API endpoints are currently being fetched from the backend.
-                          Please check back later or contact support for more details.
-                        </AlertDescription>
-                      </Box>
-                    </Alert>
-                  </VStack>
-                </TabPanel>
-
-                <TabPanel>
-                  <Text>Lead management endpoints coming soon...</Text>
-                </TabPanel>
-
-                <TabPanel>
-                  <Text>Export endpoints coming soon...</Text>
-                </TabPanel>
-
-                <TabPanel>
-                  <Text>Webhook endpoints coming soon...</Text>
-                </TabPanel>
-              </TabPanels>
-            </Tabs>
-          </CardBody>
-        </Card>
+        <div className="rounded-lg border bg-white dark:bg-gray-900 p-6 shadow">
+          <span className="text-lg font-bold mb-4 block">API Endpoints</span>
+          <div>
+            <div className="flex border-b border-gray-200 mb-4">
+              <button className="px-4 py-2 text-sm font-medium text-gray-700 border-b-2 border-primary">{t('apiDocs.jobs', 'Jobs')}</button>
+              <button className="px-4 py-2 text-sm font-medium text-gray-500">{t('apiDocs.leads', 'Leads')}</button>
+              <button className="px-4 py-2 text-sm font-medium text-gray-500">{t('apiDocs.exports', 'Exports')}</button>
+              <button className="px-4 py-2 text-sm font-medium text-gray-500">{t('apiDocs.webhooks', 'Webhooks')}</button>
+            </div>
+            <div>
+              {/* Jobs TabPanel */}
+              <div>
+                <div className="flex items-start p-4 bg-blue-50 border border-blue-200 rounded-md">
+                  <span className="text-blue-500 mr-2">ℹ️</span>
+                  <div>
+                    <span className="font-semibold block">{t('apiDocs.apiEndpoints', 'API Endpoints')}</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300 block">
+                      API endpoints are currently being fetched from the backend. Please check back later or contact support for more details.
+                    </span>
+                  </div>
+                </div>
+              </div>
+              {/* Leads TabPanel */}
+              <div className="hidden">
+                <span>{t('apiDocs.leadsComingSoon', 'Lead management endpoints coming soon...')}</span>
+              </div>
+              {/* Exports TabPanel */}
+              <div className="hidden">
+                <span>{t('apiDocs.exportsComingSoon', 'Export endpoints coming soon...')}</span>
+              </div>
+              {/* Webhooks TabPanel */}
+              <div className="hidden">
+                <span>{t('apiDocs.webhooksComingSoon', 'Webhook endpoints coming soon...')}</span>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Webhooks */}
-        <Card bg={bgColor} border="1px" borderColor={borderColor}>
-          <CardBody>
-            <HStack justify="space-between" mb={4}>
-              <Text fontSize="lg" fontWeight="bold">Webhooks</Text>
-              <Button size="sm" onClick={() => setShowWebhookModal(true)}>
-                Create Webhook
-              </Button>
-            </HStack>
-            
-            {webhooks.length === 0 ? (
-              <Text color="gray.500">No webhooks configured yet.</Text>
-            ) : (
-              <Table variant="simple" size="sm">
-                <Thead>
-                  <Tr>
-                    <Th>Name</Th>
-                    <Th>URL</Th>
-                    <Th>Events</Th>
-                    <Th>Status</Th>
-                    <Th>Success Rate</Th>
-                    <Th>Last Triggered</Th>
-                    <Th>Actions</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
+        <div className="rounded-lg border bg-white dark:bg-gray-900 p-6 shadow">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-lg font-bold">{t('apiDocs.webhooks', 'Webhooks')}</span>
+            <button
+              className="inline-flex items-center px-3 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 text-sm"
+              onClick={() => setShowWebhookModal(true)}
+            >
+              {t('apiDocs.createWebhook', 'Create Webhook')}
+            </button>
+          </div>
+          {webhooks.length === 0 ? (
+            <span className="text-gray-500">{t('apiDocs.noWebhooksConfigured', 'No webhooks configured yet.')}</span>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm border-separate border-spacing-y-2">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-2 py-1 font-medium text-gray-700 text-left">{t('apiDocs.name', 'Name')}</th>
+                    <th className="px-2 py-1 font-medium text-gray-700 text-left">{t('apiDocs.url', 'URL')}</th>
+                    <th className="px-2 py-1 font-medium text-gray-700 text-left">{t('apiDocs.events', 'Events')}</th>
+                    <th className="px-2 py-1 font-medium text-gray-700 text-left">{t('apiDocs.status', 'Status')}</th>
+                    <th className="px-2 py-1 font-medium text-gray-700 text-left">{t('apiDocs.successRate', 'Success Rate')}</th>
+                    <th className="px-2 py-1 font-medium text-gray-700 text-left">{t('apiDocs.lastTriggered', 'Last Triggered')}</th>
+                    <th className="px-2 py-1 font-medium text-gray-700 text-left">{t('apiDocs.actions', 'Actions')}</th>
+                  </tr>
+                </thead>
+                <tbody>
                   {webhooks.map((webhook) => (
-                    <Tr key={webhook.id}>
-                      <Td>{webhook.name}</Td>
-                      <Td>
-                        <Text fontSize="xs" maxW="200px" isTruncated>
-                          {webhook.url}
-                        </Text>
-                      </Td>
-                      <Td>
-                        <HStack spacing={1}>
+                    <tr key={webhook.id} className="even:bg-gray-50">
+                      <td className="px-2 py-1">{webhook.name}</td>
+                      <td className="px-2 py-1 max-w-[200px] truncate text-xs">{webhook.url}</td>
+                      <td className="px-2 py-1">
+                        <div className="flex flex-wrap gap-1">
                           {webhook.events.map((event) => (
-                            <Badge key={event} size="sm" colorScheme="blue">
-                              {event}
-                            </Badge>
+                            <span key={event} className="inline-flex items-center px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-xs font-semibold">{event}</span>
                           ))}
-                        </HStack>
-                      </Td>
-                      <Td>
-                        <Badge colorScheme={getStatusColor(webhook.status)}>
-                          {webhook.status}
-                        </Badge>
-                      </Td>
-                      <Td>{webhook.successRate}%</Td>
-                      <Td fontSize="xs">
-                        {webhook.lastTriggered ? new Date(webhook.lastTriggered).toLocaleString() : 'Never'}
-                      </Td>
-                      <Td>
-                        <HStack spacing={1}>
-                          <Tooltip label="Edit">
-                            <IconButton size="xs" aria-label="Edit" icon={<SettingsIcon />} />
-                          </Tooltip>
-                          <Tooltip label="Delete">
-                            <IconButton size="xs" aria-label="Delete" icon={<CloseIcon />} />
-                          </Tooltip>
-                        </HStack>
-                      </Td>
-                    </Tr>
+                        </div>
+                      </td>
+                      <td className="px-2 py-1">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${getStatusColor(webhook.status) === 'green' ? 'bg-green-100 text-green-700' : getStatusColor(webhook.status) === 'red' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{webhook.status}</span>
+                      </td>
+                      <td className="px-2 py-1">{webhook.successRate}%</td>
+                      <td className="px-2 py-1 text-xs">{webhook.lastTriggered ? new Date(webhook.lastTriggered).toLocaleString() : 'Never'}</td>
+                      <td className="px-2 py-1">
+                        <div className="flex items-center space-x-1">
+                          <button aria-label={t('apiDocs.edit', 'Edit')} className="p-1 rounded hover:bg-gray-200" title={t('apiDocs.edit', 'Edit')}>
+                            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z" /></svg>
+                          </button>
+                          <button aria-label={t('apiDocs.delete', 'Delete')} className="p-1 rounded hover:bg-gray-200" title={t('apiDocs.delete', 'Delete')}>
+                            <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M3 6h18M9 6v12a2 2 0 002 2h2a2 2 0 002-2V6" /></svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
                   ))}
-                </Tbody>
-              </Table>
-            )}
-          </CardBody>
-        </Card>
-
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
         {/* Integrations */}
-        <Card bg={bgColor} border="1px" borderColor={borderColor}>
-          <CardBody>
-            <Text fontSize="lg" fontWeight="bold" mb={4}>Integrations</Text>
-            
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
-              {integrations.map((integration) => (
-                <Box
-                  key={integration.name}
-                  p={4}
-                  border="1px"
-                  borderColor={borderColor}
-                  borderRadius="md"
-                  _hover={{ shadow: 'md' }}
-                  transition="all 0.2s"
-                >
-                  <HStack justify="space-between" mb={2}>
-                    <Text fontSize="lg">{integration.logo}</Text>
-                    <Badge
-                      colorScheme={
-                        integration.status === 'available' ? 'green' :
-                        integration.status === 'coming_soon' ? 'yellow' : 'blue'
-                      }
-                    >
-                      {integration.status}
-                    </Badge>
-                  </HStack>
-                  
-                  <Text fontWeight="medium" mb={1}>{integration.name}</Text>
-                  <Text fontSize="sm" color="gray.600" mb={3}>
-                    {integration.description}
-                  </Text>
-                  
-                  <Badge size="sm" colorScheme="gray" mb={3}>
-                    {integration.category}
-                  </Badge>
-                  
-                  {integration.setupUrl && integration.status === 'available' && (
-                    <Button
-                      size="sm"
-                      rightIcon={<ExternalLinkIcon />}
-                      onClick={() => window.open(integration.setupUrl, '_blank')}
-                    >
-                      Setup
-                    </Button>
-                  )}
-                </Box>
-              ))}
-            </SimpleGrid>
-          </CardBody>
-        </Card>
-
+        <div className="rounded-lg border bg-white dark:bg-gray-900 p-6 shadow">
+          <span className="text-lg font-bold mb-4 block">{t('apiDocs.integrations', 'Integrations')}</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {integrations.map((integration) => (
+              <div
+                key={integration.name}
+                className="p-4 border rounded-md hover:shadow-md transition-all"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-lg">{integration.logo}</span>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${integration.status === 'available' ? 'bg-green-100 text-green-700' : integration.status === 'coming_soon' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'}`}>{integration.status}</span>
+                </div>
+                <span className="font-medium block mb-1">{integration.name}</span>
+                <span className="text-sm text-gray-600 block mb-3">{integration.description}</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs font-semibold mb-3">{integration.category}</span>
+                {integration.setupUrl && integration.status === 'available' && (
+                  <button
+                    className="inline-flex items-center px-3 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 text-sm"
+                    onClick={() => window.open(integration.setupUrl, '_blank')}
+                  >
+                    {t('apiDocs.setup', 'Setup')}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
         {/* SDKs & Libraries */}
-        <Card bg={bgColor} border="1px" borderColor={borderColor}>
-          <CardBody>
-            <Text fontSize="lg" fontWeight="bold" mb={4}>SDKs & Libraries</Text>
-            
-            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-              <Box p={4} border="1px" borderColor={borderColor} borderRadius="md">
-                <Text fontWeight="medium" mb={2}>JavaScript/Node.js</Text>
-                <Code fontSize="sm">npm install leadtap-sdk</Code>
-                <Button size="sm" mt={2} onClick={() => handleCopyCode('npm install leadtap-sdk')}>
-                  Copy
-                </Button>
-              </Box>
-              
-              <Box p={4} border="1px" borderColor={borderColor} borderRadius="md">
-                <Text fontWeight="medium" mb={2}>Python</Text>
-                <Code fontSize="sm">pip install leadtap-python</Code>
-                <Button size="sm" mt={2} onClick={() => handleCopyCode('pip install leadtap-python')}>
-                  Copy
-                </Button>
-              </Box>
-              
-              <Box p={4} border="1px" borderColor={borderColor} borderRadius="md">
-                <Text fontWeight="medium" mb={2}>PHP</Text>
-                <Code fontSize="sm">composer require leadtap/php-sdk</Code>
-                <Button size="sm" mt={2} onClick={() => handleCopyCode('composer require leadtap/php-sdk')}>
-                  Copy
-                </Button>
-              </Box>
-              
-              <Box p={4} border="1px" borderColor={borderColor} borderRadius="md">
-                <Text fontWeight="medium" mb={2}>Postman Collection</Text>
-                <Button size="sm" rightIcon={<DownloadIcon />}>
-                  Download
-                </Button>
-              </Box>
-            </SimpleGrid>
-          </CardBody>
-        </Card>
-      </VStack>
-
+        <div className="rounded-lg border bg-white dark:bg-gray-900 p-6 shadow">
+          <span className="text-lg font-bold mb-4 block">{t('apiDocs.sdksLibraries', 'SDKs & Libraries')}</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 border rounded-md">
+              <span className="font-medium block mb-2">{t('apiDocs.javascriptNodejs', 'JavaScript/Node.js')}</span>
+              <span className="bg-gray-100 px-2 py-1 rounded font-mono text-sm block">npm install leadtap-sdk</span>
+              <button className="inline-flex items-center px-3 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 text-sm mt-2" onClick={() => handleCopyCode('npm install leadtap-sdk')}>
+                {t('apiDocs.copy', 'Copy')}
+              </button>
+            </div>
+            <div className="p-4 border rounded-md">
+              <span className="font-medium block mb-2">{t('apiDocs.python', 'Python')}</span>
+              <span className="bg-gray-100 px-2 py-1 rounded font-mono text-sm block">pip install leadtap-python</span>
+              <button className="inline-flex items-center px-3 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 text-sm mt-2" onClick={() => handleCopyCode('pip install leadtap-python')}>
+                {t('apiDocs.copy', 'Copy')}
+              </button>
+            </div>
+            <div className="p-4 border rounded-md">
+              <span className="font-medium block mb-2">{t('apiDocs.php', 'PHP')}</span>
+              <span className="bg-gray-100 px-2 py-1 rounded font-mono text-sm block">composer require leadtap/php-sdk</span>
+              <button className="inline-flex items-center px-3 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 text-sm mt-2" onClick={() => handleCopyCode('composer require leadtap/php-sdk')}>
+                {t('apiDocs.copy', 'Copy')}
+              </button>
+            </div>
+            <div className="p-4 border rounded-md">
+              <span className="font-medium block mb-2">{t('apiDocs.postmanCollection', 'Postman Collection')}</span>
+              <button className="inline-flex items-center px-3 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 text-sm mt-2">
+                {t('apiDocs.download', 'Download')}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
       {/* Test Endpoint Modal */}
-      <Modal isOpen={showTestModal} onClose={() => setShowTestModal(false)} size="xl">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Test API Endpoint</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            {selectedEndpoint && (
-              <VStack spacing={4}>
-                <HStack>
-                  <Badge colorScheme={getMethodColor(selectedEndpoint.method)}>
-                    {selectedEndpoint.method}
-                  </Badge>
-                  <Code>{selectedEndpoint.path}</Code>
-                </HStack>
-                
-                <Text fontSize="sm" color="gray.600">
-                  {selectedEndpoint.description}
-                </Text>
-
-                <FormControl>
-                  <FormLabel>Request URL</FormLabel>
-                  <Input
-                    value={`https://api.leadtap.com${selectedEndpoint.path}`}
-                    isReadOnly
-                  />
-                </FormControl>
-
-                <FormControl>
-                  <FormLabel>Headers</FormLabel>
-                  <Textarea
-                    value={`Authorization: Bearer ${apiKey}\nContent-Type: application/json`}
-                    isReadOnly
-                    rows={3}
-                  />
-                </FormControl>
-
-                {selectedEndpoint.method === 'POST' && (
-                  <FormControl>
-                    <FormLabel>Request Body</FormLabel>
-                    <Textarea
-                      placeholder="Enter JSON payload..."
-                      rows={5}
+      {showTestModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-xl mx-4 animate-fade-in">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <span className="text-lg font-bold">{t('apiDocs.testApiEndpoint', 'Test API Endpoint')}</span>
+              <button onClick={() => setShowTestModal(false)} className="text-gray-400 hover:text-gray-600">&times;</button>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              {selectedEndpoint && (
+                <>
+                  <div className="flex items-center space-x-2">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${getMethodColor(selectedEndpoint.method) === 'green' ? 'bg-green-100 text-green-700' : getMethodColor(selectedEndpoint.method) === 'blue' ? 'bg-blue-100 text-blue-700' : getMethodColor(selectedEndpoint.method) === 'yellow' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{selectedEndpoint.method}</span>
+                    <span className="bg-gray-100 px-2 py-1 rounded font-mono text-xs">{selectedEndpoint.path}</span>
+                  </div>
+                  <span className="text-sm text-gray-600 block">{selectedEndpoint.description}</span>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('apiDocs.requestUrl', 'Request URL')}</label>
+                    <input
+                      value={`https://api.leadtap.com${selectedEndpoint.path}`}
+                      readOnly
+                      className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
                     />
-                  </FormControl>
-                )}
-
-                <Button
-                  colorScheme="blue"
-                  leftIcon={<PlayIcon />}
-                  onClick={() => {
-                    setTestResponse('{"status": "success", "message": "Test completed successfully"}');
-                    toast({
-                      title: 'Test Completed',
-                      description: 'API call was successful',
-                      status: 'success',
-                      duration: 3000,
-                    });
-                  }}
-                >
-                  Send Test Request
-                </Button>
-
-                {testResponse && (
-                  <FormControl>
-                    <FormLabel>Response</FormLabel>
-                    <Textarea
-                      value={testResponse}
-                      isReadOnly
-                      rows={5}
-                      fontFamily="mono"
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('apiDocs.headers', 'Headers')}</label>
+                    <textarea
+                      value={`Authorization: Bearer ${apiKey}\nContent-Type: application/json`}
+                      readOnly
+                      rows={3}
+                      className="w-full rounded-md border border-gray-300 p-2 text-sm font-mono focus:ring-2 focus:ring-primary focus:border-primary"
                     />
-                  </FormControl>
-                )}
-              </VStack>
-            )}
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={() => setShowTestModal(false)}>
-              Close
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+                  </div>
+                  {selectedEndpoint.method === 'POST' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('apiDocs.requestBody', 'Request Body')}</label>
+                      <textarea
+                        placeholder={t('apiDocs.enterJsonPayload', 'Enter JSON payload...')}
+                        rows={5}
+                        className="w-full rounded-md border border-gray-300 p-2 text-sm font-mono focus:ring-2 focus:ring-primary focus:border-primary"
+                      />
+                    </div>
+                  )}
+                  <button
+                    className="inline-flex items-center px-4 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    onClick={() => {
+                      setTestResponse('{"status": "success", "message": "Test completed successfully"}');
+                      toast({
+                        title: t('apiDocs.testCompleted', 'Test Completed'),
+                        description: t('apiDocs.apiCallSuccess', 'API call was successful'),
+                        status: 'success',
+                        duration: 3000,
+                      });
+                    }}
+                  >
+                    {t('apiDocs.sendTestRequest', 'Send Test Request')}
+                  </button>
+                  {testResponse && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('apiDocs.response', 'Response')}</label>
+                      <textarea
+                        value={testResponse}
+                        readOnly
+                        rows={5}
+                        className="w-full rounded-md border border-gray-300 p-2 text-sm font-mono focus:ring-2 focus:ring-primary focus:border-primary"
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            <div className="flex items-center justify-end px-6 py-4 border-t border-gray-200 dark:border-gray-700 space-x-2">
+              <button onClick={() => setShowTestModal(false)} className="inline-flex items-center px-4 py-2 rounded-md bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200 font-medium">
+                {t('apiDocs.close', 'Close')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create Webhook Modal */}
       <Modal isOpen={showWebhookModal} onClose={() => setShowWebhookModal(false)}>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Create Webhook</ModalHeader>
+          <ModalHeader>{t('apiDocs.createWebhook', 'Create Webhook')}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <VStack spacing={4}>
               <FormControl>
-                <FormLabel>Webhook Name</FormLabel>
-                <Input placeholder="e.g., Job Completion Notifications" />
+                <FormLabel>{t('apiDocs.webhookName', 'Webhook Name')}</FormLabel>
+                <Input placeholder={t('apiDocs.webhookNamePlaceholder', 'e.g., Job Completion Notifications')} />
               </FormControl>
 
               <FormControl>
-                <FormLabel>Webhook URL</FormLabel>
-                <Input placeholder="https://your-app.com/webhooks/leadtap" />
+                <FormLabel>{t('apiDocs.webhookUrl', 'Webhook URL')}</FormLabel>
+                <Input placeholder={t('apiDocs.webhookUrlPlaceholder', 'https://your-app.com/webhooks/leadtap')} />
               </FormControl>
 
               <FormControl>
-                <FormLabel>Events</FormLabel>
-                <Select placeholder="Select events">
-                  <option value="job.completed">Job Completed</option>
-                  <option value="job.failed">Job Failed</option>
-                  <option value="lead.exported">Lead Exported</option>
-                  <option value="lead.added_to_crm">Lead Added to CRM</option>
+                <FormLabel>{t('apiDocs.events', 'Events')}</FormLabel>
+                <Select placeholder={t('apiDocs.selectEvents', 'Select events')}>
+                  <option value="job.completed">{t('apiDocs.jobCompleted', 'Job Completed')}</option>
+                  <option value="job.failed">{t('apiDocs.jobFailed', 'Job Failed')}</option>
+                  <option value="lead.exported">{t('apiDocs.leadExported', 'Lead Exported')}</option>
+                  <option value="lead.added_to_crm">{t('apiDocs.leadAddedToCrm', 'Lead Added to CRM')}</option>
                 </Select>
               </FormControl>
 
               <Alert status="info">
                 <AlertIcon />
                 <Box>
-                  <AlertTitle>Webhook Format</AlertTitle>
+                  <AlertTitle>{t('apiDocs.webhookFormat', 'Webhook Format')}</AlertTitle>
                   <AlertDescription>
-                    Webhooks will send POST requests with JSON payloads to your specified URL.
+                    {t('apiDocs.webhookFormatDescription', 'Webhooks will send POST requests with JSON payloads to your specified URL.')}
                   </AlertDescription>
                 </Box>
               </Alert>
@@ -549,19 +495,19 @@ const APIDocumentation: React.FC = () => {
           </ModalBody>
           <ModalFooter>
             <Button variant="ghost" mr={3} onClick={() => setShowWebhookModal(false)}>
-              Cancel
+              {t('apiDocs.cancel', 'Cancel')}
             </Button>
             <Button
               colorScheme="blue"
               onClick={() => handleCreateWebhook({ name: 'Test', url: 'https://test.com', events: ['job.completed'] })}
               isLoading={loading}
             >
-              Create Webhook
+              {t('apiDocs.createWebhook', 'Create Webhook')}
             </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
-    </Box>
+    </div>
   );
 };
 

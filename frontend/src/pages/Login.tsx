@@ -1,22 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Container,
-  VStack,
-  Heading,
-  FormControl,
-  FormLabel,
-  Input,
-  Button,
-  Text,
-  Link,
-  useToast,
-  Card,
-  CardBody
-} from '@chakra-ui/react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { EmailIcon, LockIcon } from '@chakra-ui/icons';
 import { getTenantSsoConfig } from '../api';
 import { useTranslation } from 'react-i18next';
 
@@ -30,7 +14,6 @@ const Login = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const { login } = useAuth();
   const navigate = useNavigate();
-  const toast = useToast();
 
   useEffect(() => {
     if (tenant) {
@@ -46,122 +29,98 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
     setFormError(null);
-
     try {
       if (!tenant) throw new Error(t('login.error.tenantRequired', 'Tenant/Organization is required'));
       localStorage.setItem('tenantSlug', tenant);
       await login(email, password);
-      toast({
-        title: t('login.success', 'Login successful!'),
-        description: t('login.welcome', 'Welcome back to LeadTap'),
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
+      // Show success toast (implement with your toast system if needed)
       navigate('/dashboard');
     } catch (error) {
       let message = t('login.error.invalidCredentials', 'Invalid credentials');
       if (error instanceof Error) message = error.message;
       setFormError(message);
-      toast({
-        title: t('login.failed', 'Login failed'),
-        description: message,
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
+      // Show error toast (implement with your toast system if needed)
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <Box minH="calc(100vh - 64px)" py={20}>
-      <Container maxW="md">
-        <VStack spacing={8}>
-          <VStack spacing={4} textAlign="center">
-            <Heading size="2xl" className="gradient-text">
-              {t('login.heading', 'Welcome Back')}
-            </Heading>
-            <Text color="gray.400" fontSize="lg">
-              {t('login.subtitle', 'Sign in to your LeadTap account')}
-            </Text>
-          </VStack>
-
-          <Card className="card-modern" w="full">
-            <CardBody>
-              <form onSubmit={handleSubmit}>
-                {/* Show form error if present */}
-                {formError && (
-                  <Text color="red.400" fontSize="sm" textAlign="center">{formError}</Text>
-                )}
-                <VStack spacing={6}>
-                  <FormControl isRequired>
-                    <FormLabel color="white">{t('login.email', 'Email')}</FormLabel>
-                    <Input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder={t('login.emailPlaceholder', 'Enter your email')}
-                      className="input-modern"
-                    />
-                  </FormControl>
-
-                  <FormControl isRequired>
-                    <FormLabel color="white">{t('login.password', 'Password')}</FormLabel>
-                    <Input
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder={t('login.passwordPlaceholder', 'Enter your password')}
-                      className="input-modern"
-                    />
-                  </FormControl>
-
-                  <FormControl isRequired>
-                    <FormLabel color="white">{t('login.tenant', 'Organization/Tenant')}</FormLabel>
-                    <Input
-                      value={tenant}
-                      onChange={(e) => setTenant(e.target.value)}
-                      placeholder={t('login.tenantPlaceholder', 'Enter your organization/tenant slug')}
-                      className="input-modern"
-                    />
-                  </FormControl>
-
-                  {ssoEnabled && (
-                    <Button
-                      w="full"
-                      colorScheme="purple"
-                      onClick={() => window.location.href = `/api/auth/sso/login?tenant=${tenant}`}
-                    >
-                      {t('login.sso', 'Sign in with SSO')}
-                    </Button>
-                  )}
-
-                  <Button
-                    type="submit"
-                    className="btn-modern"
-                    w="full"
-                    size="lg"
-                    isLoading={isLoading}
-                    loadingText={t('login.signingIn', 'Signing in...')}
-                  >
-                    {t('login.signIn', 'Sign In')}
-                  </Button>
-      </VStack>
-              </form>
-            </CardBody>
-          </Card>
-
-          <Text color="gray.400" textAlign="center">
-            {t('login.noAccount', "Don't have an account?")}{' '}
-            <Link as={RouterLink} to="/register" color="brand.400" fontWeight="semibold">
-              {t('login.signUpHere', 'Sign up here')}
-            </Link>
-          </Text>
-        </VStack>
-      </Container>
-    </Box>
+    <div className="min-h-[calc(100vh-64px)] py-20 bg-gray-100 dark:bg-gray-900">
+      <div className="max-w-md mx-auto">
+        <div className="flex flex-col items-center space-y-4 text-center mb-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+            {t('login.heading', 'Welcome Back')}
+          </h1>
+          <p className="text-gray-400 text-lg">
+            {t('login.subtitle', 'Sign in to your LeadTap account')}
+          </p>
+        </div>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 w-full">
+          <form onSubmit={handleSubmit}>
+            {formError && (
+              <div className="text-red-500 text-sm text-center mb-4">{formError}</div>
+            )}
+            <div className="flex flex-col space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('login.email', 'Email')}</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder={t('login.emailPlaceholder', 'Enter your email')}
+                  className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-900"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('login.password', 'Password')}</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={t('login.passwordPlaceholder', 'Enter your password')}
+                  className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-900"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('login.tenant', 'Organization/Tenant')}</label>
+                <input
+                  value={tenant}
+                  onChange={(e) => setTenant(e.target.value)}
+                  placeholder={t('login.tenantPlaceholder', 'Enter your organization/tenant slug')}
+                  className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary bg-gray-50 dark:bg-gray-900"
+                  required
+                />
+              </div>
+              {ssoEnabled && (
+                <button
+                  type="button"
+                  className="w-full inline-flex items-center justify-center rounded-md bg-purple-600 px-4 py-2 text-sm font-medium text-white shadow transition-colors hover:bg-purple-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2"
+                  onClick={() => window.location.href = `/api/auth/sso/login?tenant=${tenant}`}
+                >
+                  {t('login.sso', 'Sign in with SSO')}
+                </button>
+              )}
+              <button
+                type="submit"
+                className="w-full inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-lg font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
+                disabled={isLoading}
+              >
+                {isLoading ? t('login.signingIn', 'Signing in...') : t('login.signIn', 'Sign In')}
+              </button>
+            </div>
+          </form>
+        </div>
+        <div className="text-gray-400 text-center mt-6">
+          {t('login.noAccount', "Don't have an account?")}{' '}
+          <RouterLink to="/register" className="text-primary font-semibold hover:underline">
+            {t('login.signUpHere', 'Sign up here')}
+          </RouterLink>
+        </div>
+      </div>
+    </div>
   );
 };
 

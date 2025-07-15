@@ -235,19 +235,19 @@ const SecuritySettings: React.FC = () => {
   const securityScore = getSecurityScore();
 
   return (
-    <Box>
-      <VStack spacing={6} align="stretch">
+    <div>
+      <div className="space-y-6">
         {/* Security Overview */}
-        <Card bg={bgColor} border="1px" borderColor={borderColor}>
-          <CardBody>
-            <HStack justify="space-between" mb={4}>
-              <Text fontSize="lg" fontWeight="bold">Security Overview</Text>
-              <Badge colorScheme={securityScore >= 80 ? 'green' : securityScore >= 60 ? 'yellow' : 'red'}>
-                Score: {securityScore}/100
-              </Badge>
-            </HStack>
-            
-            <Progress value={securityScore} colorScheme={securityScore >= 80 ? 'green' : securityScore >= 60 ? 'yellow' : 'red'} mb={4} />
+        <div className="rounded-lg border bg-white dark:bg-gray-900 p-6 shadow">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-lg font-bold">Security Overview</span>
+            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${securityScore >= 80 ? 'bg-green-100 text-green-700' : securityScore >= 60 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
+              Score: {securityScore}/100
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+            <div className={`${securityScore >= 80 ? 'bg-green-600' : securityScore >= 60 ? 'bg-yellow-500' : 'bg-red-600'} h-2.5 rounded-full transition-all`} style={{ width: `${securityScore}%` }} />
+          </div>
             
             <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
               <Stat>
@@ -266,338 +266,247 @@ const SecuritySettings: React.FC = () => {
                 <StatHelpText>Auto-logout</StatHelpText>
               </Stat>
             </SimpleGrid>
-          </CardBody>
-        </Card>
+          </div>
 
         {/* Two-Factor Authentication */}
-        <Card bg={bgColor} border="1px" borderColor={borderColor}>
-          <CardBody>
-            <HStack justify="space-between" mb={4}>
-              <Box>
-                <Text fontSize="lg" fontWeight="bold">Two-Factor Authentication</Text>
-                <Text fontSize="sm" color="gray.600">
-                  Add an extra layer of security to your account
-                </Text>
-              </Box>
-              <Switch
-                isChecked={securitySettings.twoFactorEnabled}
-                onChange={handle2FAToggle}
-                colorScheme="blue"
-                size="lg"
-              />
-            </HStack>
-            
-            {securitySettings.twoFactorEnabled ? (
-              <Alert status="success" borderRadius="md">
-                <AlertIcon />
-                <Box>
-                  <AlertTitle>2FA Enabled</AlertTitle>
-                  <AlertDescription>
-                    Your account is protected with two-factor authentication.
-                  </AlertDescription>
-                </Box>
-              </Alert>
-            ) : (
-              <Alert status="warning" borderRadius="md">
-                <AlertIcon />
-                <Box>
-                  <AlertTitle>2FA Disabled</AlertTitle>
-                  <AlertDescription>
-                    Enable two-factor authentication for enhanced security.
-                  </AlertDescription>
-                </Box>
-              </Alert>
-            )}
-
-            {securitySettings.twoFactorEnabled && (
-              <VStack spacing={4} mt={4}>
-                <Button
-                  size="sm"
-                  leftIcon={<DownloadIcon />}
-                  onClick={handleGenerateBackupCodes}
-                  isLoading={loading}
+        <div className="rounded-lg border bg-white dark:bg-gray-900 p-6 shadow">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <span className="text-lg font-bold block">Two-Factor Authentication</span>
+              <span className="text-sm text-gray-600 block">Add an extra layer of security to your account</span>
+            </div>
+            <input
+              type="checkbox"
+              checked={securitySettings.twoFactorEnabled}
+              onChange={handle2FAToggle}
+              className="w-6 h-6 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+          </div>
+          {securitySettings.twoFactorEnabled ? (
+            <div className="flex items-start p-4 bg-green-50 border border-green-200 rounded-md mb-4">
+              <span className="text-green-500 mr-2">✔️</span>
+              <div>
+                <span className="font-semibold block">2FA Enabled</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300 block">Your account is protected with two-factor authentication.</span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-start p-4 bg-yellow-50 border border-yellow-200 rounded-md mb-4">
+              <span className="text-yellow-500 mr-2">⚠️</span>
+              <div>
+                <span className="font-semibold block">2FA Disabled</span>
+                <span className="text-sm text-gray-700 dark:text-gray-300 block">Enable two-factor authentication for enhanced security.</span>
+              </div>
+            </div>
+          )}
+          {securitySettings.twoFactorEnabled && (
+            <div className="flex flex-col space-y-2 mt-4">
+              <button
+                className="inline-flex items-center px-3 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 text-sm"
+                onClick={handleGenerateBackupCodes}
+                disabled={loading}
+              >
+                <span className="mr-2">⬇️</span>Generate Backup Codes
+              </button>
+              <span className="text-xs text-gray-500">Backup codes allow you to access your account if you lose your 2FA device.</span>
+            </div>
+          )}
+        </div>
+        {/* 2FA Setup Modal */}
+        {show2FAModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-md mx-4 animate-fade-in">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <span className="text-lg font-bold">Enable Two-Factor Authentication</span>
+                <button onClick={() => setShow2FAModal(false)} className="text-gray-400 hover:text-gray-600">&times;</button>
+              </div>
+              <div className="px-6 py-4 space-y-4">
+                <span className="block text-sm text-gray-700">Scan the QR code below with your authenticator app:</span>
+                <div className="flex items-center justify-center">
+                  {/* QR code image or SVG here */}
+                  <span className="bg-gray-200 w-32 h-32 flex items-center justify-center rounded">QR</span>
+                </div>
+                <input
+                  type="text"
+                  className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+                  placeholder="Enter verification code"
+                  value={verificationCode}
+                  onChange={e => setVerificationCode(e.target.value)}
+                />
+                <button
+                  className="w-full inline-flex items-center justify-center px-4 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 text-sm"
+                  onClick={handleVerify2FA}
+                  disabled={loading}
                 >
-                  Generate Backup Codes
-                </Button>
-                <Text fontSize="xs" color="gray.500">
-                  Backup codes allow you to access your account if you lose your 2FA device.
-                </Text>
-              </VStack>
-            )}
-          </CardBody>
-        </Card>
+                  Verify & Enable
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Backup Codes Modal */}
+        {showBackupCodesModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-md mx-4 animate-fade-in">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <span className="text-lg font-bold">Your Backup Codes</span>
+                <button onClick={() => setShowBackupCodesModal(false)} className="text-gray-400 hover:text-gray-600">&times;</button>
+              </div>
+              <div className="px-6 py-4 space-y-2">
+                <ul className="grid grid-cols-2 gap-2">
+                  {backupCodes.map(code => (
+                    <li key={code} className="bg-gray-100 rounded px-3 py-2 text-center font-mono text-sm">{code}</li>
+                  ))}
+                </ul>
+                <span className="block text-xs text-gray-500 mt-2">Store these codes in a safe place. Each code can be used once.</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Role-Based Access Control */}
-        <Card bg={bgColor} border="1px" borderColor={borderColor}>
-          <CardBody>
-            <HStack justify="space-between" mb={4}>
-              <Text fontSize="lg" fontWeight="bold">Role Management</Text>
-              <Button size="sm" onClick={() => setShowRoleModal(true)}>
-                Add Role
-              </Button>
-            </HStack>
-            
-            <Table variant="simple" size="sm">
-              <Thead>
-                <Tr>
-                  <Th>Role</Th>
-                  <Th>Description</Th>
-                  <Th>Users</Th>
-                  <Th>Permissions</Th>
-                  <Th>Actions</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
+        <div className="rounded-lg border bg-white dark:bg-gray-900 p-6 shadow">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-lg font-bold">Role Management</span>
+            <button
+              className="inline-flex items-center px-3 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 text-sm"
+              onClick={() => setShowRoleModal(true)}
+            >
+              Add Role
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm border-separate border-spacing-y-2">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-2 py-1 font-medium text-gray-700 text-left">Role</th>
+                  <th className="px-2 py-1 font-medium text-gray-700 text-left">Description</th>
+                  <th className="px-2 py-1 font-medium text-gray-700 text-left">Users</th>
+                  <th className="px-2 py-1 font-medium text-gray-700 text-left">Permissions</th>
+                  <th className="px-2 py-1 font-medium text-gray-700 text-left">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
                 {userRoles.map((role) => (
-                  <Tr key={role.id}>
-                    <Td>
-                      <HStack>
-                        <Avatar size="sm" name={role.name} />
-                        <Text fontWeight="medium">{role.name}</Text>
-                      </HStack>
-                    </Td>
-                    <Td>{role.description}</Td>
-                    <Td>{role.userCount}</Td>
-                    <Td>
-                      <HStack spacing={1}>
+                  <tr key={role.id} className="even:bg-gray-50">
+                    <td className="px-2 py-1">
+                      <div className="flex items-center space-x-2">
+                        <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 text-gray-700 font-bold">{role.name[0]}</span>
+                        <span className="font-medium">{role.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-2 py-1">{role.description}</td>
+                    <td className="px-2 py-1">{role.userCount}</td>
+                    <td className="px-2 py-1">
+                      <div className="flex flex-wrap gap-1">
                         {role.permissions.slice(0, 3).map((perm) => (
-                          <Badge key={perm} size="sm" colorScheme="blue">
-                            {perm}
-                          </Badge>
+                          <span key={perm} className="inline-flex items-center px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-xs font-semibold">{perm}</span>
                         ))}
                         {role.permissions.length > 3 && (
-                          <Badge size="sm" colorScheme="gray">
-                            +{role.permissions.length - 3}
-                          </Badge>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs font-semibold">+{role.permissions.length - 3}</span>
                         )}
-                      </HStack>
-                    </Td>
-                    <Td>
-                      <HStack spacing={1}>
-                        <Tooltip label="Edit Role">
-                          <IconButton size="xs" aria-label="Edit" icon={<FiEye />} />
-                        </Tooltip>
-                        <Tooltip label="Delete Role">
-                          <IconButton size="xs" aria-label="Delete" icon={<CloseIcon />} />
-                        </Tooltip>
-                      </HStack>
-                    </Td>
-                  </Tr>
+                      </div>
+                    </td>
+                    <td className="px-2 py-1">
+                      <div className="flex items-center space-x-1">
+                        <button aria-label="Edit" className="p-1 rounded hover:bg-gray-200" title="Edit Role">
+                          <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z" /></svg>
+                        </button>
+                        <button aria-label="Delete" className="p-1 rounded hover:bg-gray-200" title="Delete Role">
+                          <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M3 6h18M9 6v12a2 2 0 002 2h2a2 2 0 002-2V6" /></svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
                 ))}
-              </Tbody>
-            </Table>
-          </CardBody>
-        </Card>
-
+              </tbody>
+            </table>
+          </div>
+        </div>
         {/* Audit Logs */}
-        <Card bg={bgColor} border="1px" borderColor={borderColor}>
-          <CardBody>
-            <HStack justify="space-between" mb={4}>
-              <Text fontSize="lg" fontWeight="bold">Audit Logs</Text>
-              <Button size="sm" leftIcon={<DownloadIcon />}>
-                Export Logs
-              </Button>
-            </HStack>
-            
-            <Table variant="simple" size="sm">
-              <Thead>
-                <Tr>
-                  <Th>Timestamp</Th>
-                  <Th>User</Th>
-                  <Th>Action</Th>
-                  <Th>Resource</Th>
-                  <Th>IP Address</Th>
-                  <Th>Status</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
+        <div className="rounded-lg border bg-white dark:bg-gray-900 p-6 shadow">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-lg font-bold">Audit Logs</span>
+            <button
+              className="inline-flex items-center px-3 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 text-sm"
+            >
+              <span className="mr-2">⬇️</span>Export Logs
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm border-separate border-spacing-y-2">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-2 py-1 font-medium text-gray-700 text-left">Timestamp</th>
+                  <th className="px-2 py-1 font-medium text-gray-700 text-left">User</th>
+                  <th className="px-2 py-1 font-medium text-gray-700 text-left">Action</th>
+                  <th className="px-2 py-1 font-medium text-gray-700 text-left">Resource</th>
+                  <th className="px-2 py-1 font-medium text-gray-700 text-left">IP Address</th>
+                  <th className="px-2 py-1 font-medium text-gray-700 text-left">Status</th>
+                </tr>
+              </thead>
+              <tbody>
                 {auditLogs.map((log) => (
-                  <Tr key={log.id}>
-                    <Td fontSize="xs">{new Date(log.timestamp).toLocaleString()}</Td>
-                    <Td fontSize="xs">{log.user}</Td>
-                    <Td fontSize="xs">{log.action}</Td>
-                    <Td fontSize="xs">{log.resource}</Td>
-                    <Td fontSize="xs">{log.ipAddress}</Td>
-                    <Td>
-                      <Badge colorScheme={getStatusColor(log.status)} size="sm">
-                        {log.status}
-                      </Badge>
-                    </Td>
-                  </Tr>
+                  <tr key={log.id} className="even:bg-gray-50">
+                    <td className="px-2 py-1 text-xs">{new Date(log.timestamp).toLocaleString()}</td>
+                    <td className="px-2 py-1 text-xs">{log.user}</td>
+                    <td className="px-2 py-1 text-xs">{log.action}</td>
+                    <td className="px-2 py-1 text-xs">{log.resource}</td>
+                    <td className="px-2 py-1 text-xs">{log.ipAddress}</td>
+                    <td className="px-2 py-1">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${getStatusColor(log.status) === 'green' ? 'bg-green-100 text-green-700' : getStatusColor(log.status) === 'red' ? 'bg-red-100 text-red-700' : getStatusColor(log.status) === 'yellow' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}>{log.status}</span>
+                    </td>
+                  </tr>
                 ))}
-              </Tbody>
-            </Table>
-          </CardBody>
-        </Card>
-
+              </tbody>
+            </table>
+          </div>
+        </div>
         {/* Security Settings */}
-        <Card bg={bgColor} border="1px" borderColor={borderColor}>
-          <CardBody>
-            <Text fontSize="lg" fontWeight="bold" mb={4}>Security Settings</Text>
-            
-            <VStack spacing={4} align="stretch">
-              <HStack justify="space-between">
-                <Box>
-                  <Text fontWeight="medium">Audit Logging</Text>
-                  <Text fontSize="sm" color="gray.600">
-                    Track all user activities for security monitoring
-                  </Text>
-                </Box>
-                <Switch
-                  isChecked={securitySettings.auditLogEnabled}
-                  onChange={(e) => setSecuritySettings(prev => ({ ...prev, auditLogEnabled: e.target.checked }))}
-                  colorScheme="blue"
-                />
-              </HStack>
-
-              <Divider />
-
-              <HStack justify="space-between">
-                <Box>
-                  <Text fontWeight="medium">Session Timeout</Text>
-                  <Text fontSize="sm" color="gray.600">
-                    Automatically log out inactive users
-                  </Text>
-                </Box>
-                <Select
-                  value={securitySettings.sessionTimeout}
-                  onChange={(e) => setSecuritySettings(prev => ({ ...prev, sessionTimeout: Number(e.target.value) }))}
-                  size="sm"
-                  width="120px"
-                >
-                  <option value={15}>15 minutes</option>
-                  <option value={30}>30 minutes</option>
-                  <option value={60}>1 hour</option>
-                  <option value={120}>2 hours</option>
-                </Select>
-              </HStack>
-
-              <Divider />
-
-              <HStack justify="space-between">
-                <Box>
-                  <Text fontWeight="medium">Account Lockout</Text>
-                  <Text fontSize="sm" color="gray.600">
-                    Lock account after failed login attempts
-                  </Text>
-                </Box>
-                <Badge colorScheme={securitySettings.accountLocked ? 'red' : 'green'}>
-                  {securitySettings.accountLocked ? 'Locked' : 'Active'}
-                </Badge>
-              </HStack>
-            </VStack>
-          </CardBody>
-        </Card>
-      </VStack>
-
-      {/* 2FA Setup Modal */}
-      <Modal isOpen={show2FAModal} onClose={() => setShow2FAModal(false)} size="lg">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Setup Two-Factor Authentication</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <VStack spacing={6}>
-              <Alert status="info">
-                <AlertIcon />
-                <Box>
-                  <AlertTitle>Setup Instructions</AlertTitle>
-                  <AlertDescription>
-                    1. Scan the QR code with your authenticator app<br/>
-                    2. Enter the 6-digit code to verify setup
-                  </AlertDescription>
-                </Box>
-              </Alert>
-
-              <Box textAlign="center" p={4} border="1px" borderColor={borderColor} borderRadius="md">
-                <MdQrCode boxSize={8}; mb={2} />
-                <Text fontSize="sm" color="gray.600">
-                  QR Code will appear here
-                </Text>
-                <Text fontSize="xs" color="gray.500">
-                  Use Google Authenticator, Authy, or similar app
-                </Text>
-              </Box>
-
-              <FormControl>
-                <FormLabel>Verification Code</FormLabel>
-                <Input
-                  placeholder="Enter 6-digit code"
-                  value={verificationCode}
-                  onChange={(e) => setVerificationCode(e.target.value)}
-                  maxLength={6}
-                />
-              </FormControl>
-            </VStack>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={() => setShow2FAModal(false)}>
-              Cancel
-            </Button>
-            <Button
-              colorScheme="blue"
-              onClick={handleVerify2FA}
-              isLoading={loading}
-              isDisabled={!verificationCode.trim()}
-            >
-              Verify & Enable
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
-      {/* Backup Codes Modal */}
-      <Modal isOpen={showBackupCodesModal} onClose={() => setShowBackupCodesModal(false)} size="md">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Backup Codes</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <Alert status="warning" mb={4}>
-              <AlertIcon />
-              <AlertTitle>Important</AlertTitle>
-              <AlertDescription>
-                Save these codes in a secure location. Each code can only be used once.
-              </AlertDescription>
-            </Alert>
-
-            <Box
-              p={4}
-              bg="gray.50"
-              borderRadius="md"
-              fontFamily="mono"
-              fontSize="sm"
-              textAlign="center"
-            >
-              {backupCodes.map((code, index) => (
-                <Text key={index} mb={2}>
-                  {code}
-                </Text>
-              ))}
-            </Box>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={() => setShowBackupCodesModal(false)}>
-              Close
-            </Button>
-            <Button
-              colorScheme="blue"
-              onClick={() => {
-                navigator.clipboard.writeText(backupCodes.join('\n'));
-                toast({
-                  title: 'Copied',
-                  description: 'Backup codes copied to clipboard',
-                  status: 'success',
-                  duration: 3000,
-                });
-              }}
-            >
-              Copy Codes
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-    </Box>
+        <div className="rounded-lg border bg-white dark:bg-gray-900 p-6 shadow">
+          <span className="text-lg font-bold mb-4 block">Security Settings</span>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="font-medium block">Audit Logging</span>
+                <span className="text-sm text-gray-600 block">Track all user activities for security monitoring</span>
+              </div>
+              <input
+                type="checkbox"
+                checked={securitySettings.auditLogEnabled}
+                onChange={e => setSecuritySettings(prev => ({ ...prev, auditLogEnabled: e.target.checked }))}
+                className="w-5 h-5 rounded border-gray-300 text-primary focus:ring-primary"
+              />
+            </div>
+            <hr />
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="font-medium block">Session Timeout</span>
+                <span className="text-sm text-gray-600 block">Automatically log out inactive users</span>
+              </div>
+              <select
+                value={securitySettings.sessionTimeout}
+                onChange={e => setSecuritySettings(prev => ({ ...prev, sessionTimeout: Number(e.target.value) }))}
+                className="rounded-md border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary w-32"
+              >
+                <option value={15}>15 minutes</option>
+                <option value={30}>30 minutes</option>
+                <option value={60}>1 hour</option>
+                <option value={120}>2 hours</option>
+              </select>
+            </div>
+            <hr />
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="font-medium block">Account Lockout</span>
+                <span className="text-sm text-gray-600 block">Lock account after failed login attempts</span>
+              </div>
+              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${securitySettings.accountLocked ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>{securitySettings.accountLocked ? 'Locked' : 'Active'}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

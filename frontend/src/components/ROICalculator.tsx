@@ -98,58 +98,45 @@ const ROICalculator: React.FC<ROICalculatorProps> = ({ planType = 'pro' }) => {
   };
 
   return (
-    <Card bg={bgColor} border="1px" borderColor={borderColor} shadow="md">
-      <CardBody>
-        <VStack spacing={6} align="stretch">
-          <Box>
-            <Text fontSize="lg" fontWeight="bold" mb={2}>
-              ROI Calculator
-            </Text>
-            <Text fontSize="sm" color="gray.600">
-              See how much revenue you can generate with LeadTap
-            </Text>
-          </Box>
-
-          {/* Input Controls */}
-          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-            <Box>
-              <Text fontSize="sm" fontWeight="medium" mb={2}>
-                Queries per Day
-              </Text>
-              <InputGroup>
-                <InputLeftAddon>🔍</InputLeftAddon>
-                <Input
-                  type="number"
-                  value={queriesPerDay}
-                  onChange={(e) => setQueriesPerDay(Number(e.target.value))}
-                  min={1}
-                  max={currentPlan.maxQueries / 30}
-                />
-              </InputGroup>
-              <Text fontSize="xs" color="gray.500" mt={1}>
-                Max: {currentPlan.maxQueries / 30} per day
-              </Text>
-            </Box>
-
-            <Box>
-              <Text fontSize="sm" fontWeight="medium" mb={2}>
-                Leads per Query
-              </Text>
-              <InputGroup>
-                <InputLeftAddon>📊</InputLeftAddon>
-                <Input
-                  type="number"
-                  value={leadsPerQuery}
-                  onChange={(e) => setLeadsPerQuery(Number(e.target.value))}
-                  min={1}
-                  max={100}
-                />
-              </InputGroup>
-              <Text fontSize="xs" color="gray.500" mt={1}>
-                Average: 15-25 leads per query
-              </Text>
-            </Box>
-          </SimpleGrid>
+    <div className="rounded-lg border bg-white dark:bg-gray-900 p-6 shadow">
+      <div className="flex flex-col space-y-6">
+        <div>
+          <span className="text-lg font-bold mb-2 block">ROI Calculator</span>
+          <span className="text-sm text-gray-600 block">See how much revenue you can generate with LeadTap</span>
+        </div>
+        {/* Input Controls */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <span className="text-sm font-medium mb-2 block">Queries per Day</span>
+            <div className="flex items-center">
+              <span className="inline-flex items-center px-2 py-1 bg-gray-100 rounded-l">🔍</span>
+              <input
+                type="number"
+                value={queriesPerDay}
+                onChange={(e) => setQueriesPerDay(Number(e.target.value))}
+                min={1}
+                max={currentPlan.maxQueries / 30}
+                className="w-full rounded-r border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+              />
+            </div>
+            <span className="text-xs text-gray-500 mt-1 block">Max: {currentPlan.maxQueries / 30} per day</span>
+          </div>
+          <div>
+            <span className="text-sm font-medium mb-2 block">Leads per Query</span>
+            <div className="flex items-center">
+              <span className="inline-flex items-center px-2 py-1 bg-gray-100 rounded-l">📊</span>
+              <input
+                type="number"
+                value={leadsPerQuery}
+                onChange={(e) => setLeadsPerQuery(Number(e.target.value))}
+                min={1}
+                max={100}
+                className="w-full rounded-r border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+              />
+            </div>
+            <span className="text-xs text-gray-500 mt-1 block">Average: 15-25 leads per query</span>
+          </div>
+        </div>
 
           <Box>
             <Text fontSize="sm" fontWeight="medium" mb={2}>
@@ -286,9 +273,9 @@ const ROICalculator: React.FC<ROICalculatorProps> = ({ planType = 'pro' }) => {
               ))}
             </VStack>
           </Box>
-        </VStack>
-      </CardBody>
-    </Card>
+        </div>
+      </div>
+    </div>
   );
 };
 

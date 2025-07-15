@@ -1,288 +1,101 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Container,
-  Heading,
-  Text,
-  VStack,
-  HStack,
-  useToast,
-  Spinner,
-  Grid,
-  GridItem,
-  Stat,
-  StatLabel,
-  StatNumber,
-  StatHelpText,
-  StatArrow,
-  Badge,
-  Select,
-  Button,
-  useColorModeValue,
-  Card,
-  CardBody,
-  CardHeader,
-  Progress,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
-  Flex,
-  IconButton,
-  Tooltip,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalFooter,
-  ModalBody,
-  ModalCloseButton,
-  useDisclosure,
-  Input,
-  Alert,
-  AlertIcon,
-} from '@chakra-ui/react';
-import { DownloadIcon, RepeatIcon } from '@chakra-ui/icons';
-import * as api from '../api';
+import React, { useState } from 'react';
+import { Card } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Tabs, TabList, Tab, TabPanels, TabPanel } from '../components/ui/tabs';
+import { Download, Star, Mail } from 'lucide-react';
+// Assume Chart components are available or stubbed
+import { BarChart, LineChart, PieChart } from '../components/ui/charts';
 
-interface AnalyticsData {
-  totalJobs: number;
-  completedJobs: number;
-  failedJobs: number;
-  successRate: number;
-  totalLeads: number;
-  conversionRate: number;
-  averageResponseTime: number;
-  dailyQueries: number;
-  monthlyGrowth: number;
-  topQueries: Array<{ query: string; count: number }>;
-  leadSources: Array<{ source: string; count: number }>;
-  jobTrends: Array<{ date: string; count: number }>;
-}
+const DUMMY_REPORTS = [
+  { id: 'r1', name: 'Leads by Source', type: 'bar' },
+  { id: 'r2', name: 'Conversion Rate Over Time', type: 'line' },
+  { id: 'r3', name: 'Lead Status Distribution', type: 'pie' },
+];
 
-const Analytics: React.FC = () => {
-  const [data, setData] = useState<AnalyticsData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [timeRange, setTimeRange] = useState('30');
-  const toast = useToast();
-  const bgColor = useColorModeValue('white', 'gray.800');
-  const borderColor = useColorModeValue('gray.200', 'gray.700');
-
-  useEffect(() => {
-    loadAnalytics();
-  }, [timeRange]);
-
-  const loadAnalytics = async () => {
-    setLoading(true);
-    try {
-      // TODO: Replace with real API call when backend is ready
-      const response = await api.getAnalytics();
-      setData(response);
-    } catch (error: any) {
-      console.error(error);
-      toast({
-        title: 'Error',
-        description: error.message,
-        status: 'error',
-        duration: 3000,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const exportAnalytics = async () => {
-    try {
-      // Mock export functionality
-      toast({
-        title: 'Export Started',
-        description: 'Analytics data is being exported...',
-        status: 'info',
-        duration: 3000,
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        status: 'error',
-        duration: 3000,
-      });
-    }
-  };
-
-  if (loading) {
-    return (
-      <Container maxW="container.xl" py={8}>
-        <Flex justify="center" py={8}>
-          <Spinner size="lg" />
-        </Flex>
-      </Container>
-    );
-  }
+const AnalyticsDashboard: React.FC = () => {
+  const [pinned, setPinned] = useState<string[]>([]);
+  const [compare, setCompare] = useState(false);
+  const [email, setEmail] = useState('');
+  const [scheduled, setScheduled] = useState(false);
 
   return (
-    <Box minH="100vh" bg={useColorModeValue('gray.100', 'gray.800')} data-tour="analytics-main">
-      <Container maxW="container.xl" py={8} data-tour="analytics-content">
-        <Heading size="lg" mb={6} className="gradient-text" data-tour="analytics-title">Analytics</Heading>
-        <HStack justify="space-between" mb={4} data-tour="analytics-actions">
-          <Button colorScheme="blue" onClick={loadAnalytics} data-tour="analytics-refresh">Refresh</Button>
-          <Button colorScheme="green" onClick={exportAnalytics} data-tour="analytics-export">Export Analytics</Button>
-        </HStack>
-
-        {/* Key Metrics */}
-        {data && (
-          <Grid templateColumns="repeat(auto-fit, minmax(250px, 1fr))" gap={6}>
-            <GridItem data-tour="total-jobs-card">
-              <Card bg={bgColor} border="1px" borderColor={borderColor}>
-                <CardBody>
-                  <Stat>
-                    <StatLabel>Total Jobs</StatLabel>
-                    <StatNumber>{data.totalJobs}</StatNumber>
-                    <StatHelpText>
-                      <StatArrow type="increase" />
-                      {data.monthlyGrowth}%
-                    </StatHelpText>
-                  </Stat>
-                </CardBody>
-              </Card>
-            </GridItem>
-            
-            <GridItem data-tour="success-rate-card">
-              <Card bg={bgColor} border="1px" borderColor={borderColor}>
-                <CardBody>
-                  <Stat>
-                    <StatLabel>Success Rate</StatLabel>
-                    <StatNumber>{data.successRate}%</StatNumber>
-                    <StatHelpText>
-                      {data.completedJobs} completed, {data.failedJobs} failed
-                    </StatHelpText>
-                  </Stat>
-                </CardBody>
-              </Card>
-            </GridItem>
-            
-            <GridItem data-tour="total-leads-card">
-              <Card bg={bgColor} border="1px" borderColor={borderColor}>
-                <CardBody>
-                  <Stat>
-                    <StatLabel>Total Leads</StatLabel>
-                    <StatNumber>{data.totalLeads}</StatNumber>
-                    <StatHelpText>
-                      Conversion rate: {data.conversionRate}%
-                    </StatHelpText>
-                  </Stat>
-                </CardBody>
-              </Card>
-            </GridItem>
-            
-            <GridItem data-tour="avg-response-time-card">
-              <Card bg={bgColor} border="1px" borderColor={borderColor}>
-                <CardBody>
-                  <Stat>
-                    <StatLabel>Avg Response Time</StatLabel>
-                    <StatNumber>{data.averageResponseTime}s</StatNumber>
-                    <StatHelpText>
-                      Daily queries: {data.dailyQueries}
-                    </StatHelpText>
-                  </Stat>
-                </CardBody>
-              </Card>
-            </GridItem>
-          </Grid>
-        )}
-
-        {/* Detailed Analytics */}
-        <Grid templateColumns="repeat(auto-fit, minmax(400px, 1fr))" gap={6}>
-          {/* Top Queries */}
-          <GridItem data-tour="top-queries-card">
-            <Card bg={bgColor} border="1px" borderColor={borderColor}>
-              <CardHeader>
-                <Heading size="md">Top Search Queries</Heading>
-              </CardHeader>
-              <CardBody>
-                <VStack spacing={3} align="stretch">
-                  {data?.topQueries.map((query, index) => (
-                    <Box key={index}>
-                      <HStack justify="space-between" mb={2}>
-                        <Text fontSize="sm" fontWeight="medium">
-                          {query.query}
-                        </Text>
-                        <Badge colorScheme="blue">{query.count}</Badge>
-                      </HStack>
-                      <Progress
-                        value={(query.count / (data?.topQueries[0]?.count || 1)) * 100}
-                        size="sm"
-                        colorScheme="blue"
-                      />
-                    </Box>
-                  ))}
-                </VStack>
-              </CardBody>
+    <div className="space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between">
+        <h1 className="text-2xl font-bold">Analytics Dashboard</h1>
+        <div className="flex gap-2">
+          <Button variant={compare ? 'default' : 'outline'} onClick={() => setCompare(v => !v)}>
+            {compare ? 'Comparing: This vs Last Period' : 'Compare Time Series'}
+          </Button>
+          <Button variant="outline" onClick={() => setScheduled(true)}><Mail className="w-4 h-4 mr-1" /> Schedule Email</Button>
+        </div>
+      </div>
+      {/* Chart Tabs */}
+      <Tabs>
+        <TabList>
+          {DUMMY_REPORTS.map(r => (
+            <Tab key={r.id}>
+              {r.name}
+              <Button size="icon" variant={pinned.includes(r.id) ? 'default' : 'ghost'} className="ml-2" onClick={e => { e.stopPropagation(); setPinned(p => p.includes(r.id) ? p.filter(id => id !== r.id) : [...p, r.id]); }}>
+                <Star className={pinned.includes(r.id) ? 'text-yellow-500' : ''} />
+              </Button>
+            </Tab>
+          ))}
+        </TabList>
+        <TabPanels>
+          <TabPanel>
+            <Card className="p-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-semibold">Leads by Source</span>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline"><Download className="w-4 h-4 mr-1" /> PDF</Button>
+                  <Button size="sm" variant="outline"><Download className="w-4 h-4 mr-1" /> CSV</Button>
+                </div>
+              </div>
+              <BarChart compare={compare} />
             </Card>
-          </GridItem>
-
-          {/* Lead Sources */}
-          <GridItem data-tour="lead-sources-card">
-            <Card bg={bgColor} border="1px" borderColor={borderColor}>
-              <CardHeader>
-                <Heading size="md">Lead Sources</Heading>
-              </CardHeader>
-              <CardBody>
-                <VStack spacing={3} align="stretch">
-                  {data?.leadSources.map((source, index) => (
-                    <Box key={index}>
-                      <HStack justify="space-between" mb={2}>
-                        <Text fontSize="sm" fontWeight="medium">
-                          {source.source}
-                        </Text>
-                        <Badge colorScheme="green">{source.count}</Badge>
-                      </HStack>
-                      <Progress
-                        value={(source.count / (data?.leadSources[0]?.count || 1)) * 100}
-                        size="sm"
-                        colorScheme="green"
-                      />
-                    </Box>
-                  ))}
-                </VStack>
-              </CardBody>
+          </TabPanel>
+          <TabPanel>
+            <Card className="p-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-semibold">Conversion Rate Over Time</span>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline"><Download className="w-4 h-4 mr-1" /> PDF</Button>
+                  <Button size="sm" variant="outline"><Download className="w-4 h-4 mr-1" /> CSV</Button>
+                </div>
+              </div>
+              <LineChart compare={compare} />
             </Card>
-          </GridItem>
-        </Grid>
-
-        {/* Job Trends Table */}
-        <Card bg={bgColor} border="1px" borderColor={borderColor}>
-          <CardHeader>
-            <Heading size="md">Job Trends</Heading>
-          </CardHeader>
-          <CardBody>
-            <Table size="sm">
-              <Thead>
-                <Tr>
-                  <Th>Date</Th>
-                  <Th>Jobs Created</Th>
-                  <Th>Status</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {data?.jobTrends.map((trend, index) => (
-                  <Tr key={index}>
-                    <Td>{new Date(trend.date).toLocaleDateString()}</Td>
-                    <Td>{trend.count}</Td>
-                    <Td>
-                      <Badge colorScheme="blue">Active</Badge>
-                    </Td>
-                  </Tr>
-                ))}
-              </Tbody>
-            </Table>
-          </CardBody>
-        </Card>
-      </Container>
-    </Box>
+          </TabPanel>
+          <TabPanel>
+            <Card className="p-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-semibold">Lead Status Distribution</span>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline"><Download className="w-4 h-4 mr-1" /> PDF</Button>
+                  <Button size="sm" variant="outline"><Download className="w-4 h-4 mr-1" /> CSV</Button>
+                </div>
+              </div>
+              <PieChart />
+            </Card>
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
+      {/* Email Scheduler Modal */}
+      {scheduled && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <Card className="p-6 w-full max-w-md">
+            <h2 className="font-bold text-lg mb-2">Schedule Analytics Report Email</h2>
+            <form onSubmit={e => { e.preventDefault(); setScheduled(false); }} className="space-y-4">
+              <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Recipient email" required />
+              <Button type="submit" className="w-full">Schedule</Button>
+              <Button type="button" variant="ghost" className="w-full" onClick={() => setScheduled(false)}>Cancel</Button>
+            </form>
+          </Card>
+        </div>
+      )}
+    </div>
   );
 };
 
-export default Analytics; 
+export default AnalyticsDashboard; 

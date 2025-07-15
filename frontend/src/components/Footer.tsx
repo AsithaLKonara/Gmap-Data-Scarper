@@ -1,144 +1,83 @@
 import React from 'react';
-import {
-  Box,
-  Container,
-  VStack,
-  HStack,
-  Text,
-  Link,
-  Divider,
-  Icon,
-  SimpleGrid
-} from '@chakra-ui/react';
 import { Link as RouterLink } from 'react-router-dom';
-import { 
-  FaTwitter, 
-  FaLinkedin, 
-  FaGithub, 
-  FaEnvelope,
-  FaMapMarkerAlt,
-  FaPhone
-} from 'react-icons/fa';
+import { FaTwitter, FaLinkedin, FaGithub, FaEnvelope, FaMapMarkerAlt, FaPhone } from 'react-icons/fa';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <Box 
-      bg="rgba(30, 41, 59, 0.8)" 
-      backdropFilter="blur(10px)"
-      borderTop="1px solid rgba(255, 255, 255, 0.1)"
-      mt="auto"
-    >
-      <Container maxW="1200px" py={12}>
-        <SimpleGrid columns={{ base: 1, md: 4 }} spacing={8}>
+    <footer className="bg-slate-900/80 backdrop-blur border-t border-white/10 mt-auto w-full">
+      <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Company Info */}
-          <VStack align="start" spacing={4}>
-            <Text fontSize="xl" fontWeight="bold" className="gradient-text">
-              LeadTap
-            </Text>
-            <Text color="gray.400" fontSize="sm" lineHeight="1.6">
+          <div className="flex flex-col gap-4">
+            <span className="text-xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">LeadTap</span>
+            <span className="text-gray-400 text-sm leading-relaxed">
               Advanced Google Maps data extraction platform for businesses, researchers, and marketers.
-            </Text>
-            <HStack spacing={4}>
-              <Link href="#" color="gray.400" _hover={{ color: "brand.400" }}>
-                <Icon as={FaTwitter} boxSize={5} />
-              </Link>
-              <Link href="#" color="gray.400" _hover={{ color: "brand.400" }}>
-                <Icon as={FaLinkedin} boxSize={5} />
-              </Link>
-              <Link href="#" color="gray.400" _hover={{ color: "brand.400" }}>
-                <Icon as={FaGithub} boxSize={5} />
-              </Link>
-              <Link href="mailto:contact@leadtap.com" color="gray.400" _hover={{ color: "brand.400" }}>
-                <Icon as={FaEnvelope} boxSize={5} />
-              </Link>
-            </HStack>
-          </VStack>
+            </span>
+            <div className="flex gap-4">
+              <a href="#" className="text-gray-400 hover:text-indigo-400" aria-label="Twitter"><FaTwitter size={20} /></a>
+              <a href="#" className="text-gray-400 hover:text-indigo-400" aria-label="LinkedIn"><FaLinkedin size={20} /></a>
+              <a href="#" className="text-gray-400 hover:text-indigo-400" aria-label="GitHub"><FaGithub size={20} /></a>
+              <a href="mailto:contact@leadtap.com" className="text-gray-400 hover:text-indigo-400" aria-label="Email"><FaEnvelope size={20} /></a>
+            </div>
+          </div>
 
           {/* Quick Links */}
-          <VStack align="start" spacing={4}>
-            <Text fontWeight="bold" color="white" fontSize="lg">
-              Quick Links
-            </Text>
-            <VStack align="start" spacing={2}>
-              <Link as={RouterLink} to="/" color="gray.400" _hover={{ color: "brand.400" }}>
-                Home
-              </Link>
-              <Link as={RouterLink} to="/about" color="gray.400" _hover={{ color: "brand.400" }}>
-                About
-              </Link>
-              <Link as={RouterLink} to="/pricing" color="gray.400" _hover={{ color: "brand.400" }}>
-                Pricing
-              </Link>
-              <Link as={RouterLink} to="/dashboard" color="gray.400" _hover={{ color: "brand.400" }}>
-                Dashboard
-              </Link>
-            </VStack>
-          </VStack>
+          <div className="flex flex-col gap-4">
+            <span className="font-bold text-white text-lg">Quick Links</span>
+            <div className="flex flex-col gap-2">
+              <RouterLink to="/" className="text-gray-400 hover:text-indigo-400">Home</RouterLink>
+              <RouterLink to="/about" className="text-gray-400 hover:text-indigo-400">About</RouterLink>
+              <RouterLink to="/pricing" className="text-gray-400 hover:text-indigo-400">Pricing</RouterLink>
+              <RouterLink to="/dashboard" className="text-gray-400 hover:text-indigo-400">Dashboard</RouterLink>
+            </div>
+          </div>
 
           {/* Features */}
-          <VStack align="start" spacing={4}>
-            <Text fontWeight="bold" color="white" fontSize="lg">
-              Features
-            </Text>
-            <VStack align="start" spacing={2}>
-              <Text color="gray.400" fontSize="sm">Data Extraction</Text>
-              <Text color="gray.400" fontSize="sm">Export Formats</Text>
-              <Text color="gray.400" fontSize="sm">Real-time Updates</Text>
-              <Text color="gray.400" fontSize="sm">Advanced Search</Text>
-            </VStack>
-          </VStack>
+          <div className="flex flex-col gap-4">
+            <span className="font-bold text-white text-lg">Features</span>
+            <div className="flex flex-col gap-2">
+              <span className="text-gray-400 text-sm">Data Extraction</span>
+              <span className="text-gray-400 text-sm">Export Formats</span>
+              <span className="text-gray-400 text-sm">Real-time Updates</span>
+              <span className="text-gray-400 text-sm">Advanced Search</span>
+            </div>
+          </div>
 
           {/* Contact Info */}
-          <VStack align="start" spacing={4}>
-            <Text fontWeight="bold" color="white" fontSize="lg">
-              Contact
-            </Text>
-            <VStack align="start" spacing={3}>
-              <HStack spacing={3}>
-                <Icon as={FaMapMarkerAlt} color="brand.400" />
-                <Text color="gray.400" fontSize="sm">
-                  Colombo, Sri Lanka
-                </Text>
-              </HStack>
-              <HStack spacing={3}>
-                <Icon as={FaPhone} color="brand.400" />
-                <Text color="gray.400" fontSize="sm">
-                  +94 11 123 4567
-                </Text>
-              </HStack>
-              <HStack spacing={3}>
-                <Icon as={FaEnvelope} color="brand.400" />
-                <Text color="gray.400" fontSize="sm">
-                  contact@leadtap.com
-                </Text>
-              </HStack>
-            </VStack>
-          </VStack>
-        </SimpleGrid>
+          <div className="flex flex-col gap-4">
+            <span className="font-bold text-white text-lg">Contact</span>
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <FaMapMarkerAlt className="text-indigo-400" />
+                <span className="text-gray-400 text-sm">Colombo, Sri Lanka</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <FaPhone className="text-indigo-400" />
+                <span className="text-gray-400 text-sm">+94 11 123 4567</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <FaEnvelope className="text-indigo-400" />
+                <span className="text-gray-400 text-sm">contact@leadtap.com</span>
+              </div>
+            </div>
+          </div>
+        </div>
 
-        <Divider my={8} borderColor="rgba(255, 255, 255, 0.1)" />
+        <div className="my-8 border-t border-white/10" />
 
         {/* Bottom Section */}
-        <HStack justify="space-between" align="center" flexWrap="wrap">
-          <Text color="gray.400" fontSize="sm">
-            © {currentYear} LeadTap. All rights reserved.
-          </Text>
-          <HStack spacing={6}>
-            <Link color="gray.400" fontSize="sm" _hover={{ color: "brand.400" }}>
-              Privacy Policy
-            </Link>
-            <Link color="gray.400" fontSize="sm" _hover={{ color: "brand.400" }}>
-              Terms of Service
-            </Link>
-            <Link color="gray.400" fontSize="sm" _hover={{ color: "brand.400" }}>
-              Cookie Policy
-            </Link>
-          </HStack>
-        </HStack>
-      </Container>
-    </Box>
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+          <span className="text-gray-400 text-sm">© {currentYear} LeadTap. All rights reserved.</span>
+          <div className="flex gap-6">
+            <a href="#" className="text-gray-400 text-sm hover:text-indigo-400">Privacy Policy</a>
+            <a href="#" className="text-gray-400 text-sm hover:text-indigo-400">Terms of Service</a>
+            <a href="#" className="text-gray-400 text-sm hover:text-indigo-400">Cookie Policy</a>
+          </div>
+        </div>
+      </div>
+    </footer>
   );
 };
 

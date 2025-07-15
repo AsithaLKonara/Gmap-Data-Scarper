@@ -2,8 +2,16 @@ import React, { useState } from 'react';
 import { Card, CardHeader, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+import { Avatar } from './ui/avatar';
+import { Select } from './ui/select';
 
 export type LeadStage = 'to_contact' | 'in_progress' | 'converted';
+
+export interface User {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+}
 
 export interface KanbanLead {
   id: string;
@@ -11,6 +19,7 @@ export interface KanbanLead {
   email?: string;
   company?: string;
   stage: LeadStage;
+  owners: string[]; // user IDs
 }
 
 const stageLabels: Record<LeadStage, string> = {
@@ -27,10 +36,12 @@ const stageColors: Record<LeadStage, string> = {
 
 interface LeadKanbanProps {
   leads: KanbanLead[];
+  users: User[];
   onStageChange: (leadId: string, newStage: LeadStage) => void;
+  onOwnerChange: (leadId: string, owners: string[]) => void;
 }
 
-export const LeadKanban: React.FC<LeadKanbanProps> = ({ leads, onStageChange }) => {
+export const LeadKanban: React.FC<LeadKanbanProps> = ({ leads, users, onStageChange, onOwnerChange }) => {
   const [draggedId, setDraggedId] = useState<string | null>(null);
 
   const handleDragStart = (id: string) => setDraggedId(id);
@@ -66,9 +77,36 @@ export const LeadKanban: React.FC<LeadKanbanProps> = ({ leads, onStageChange }) 
                     onDragStart={() => handleDragStart(lead.id)}
                     onDragEnd={handleDragEnd}
                   >
-                    <div className="font-medium">{lead.name}</div>
+                    <div className="font-medium flex items-center gap-2">
+                      {lead.name}
+                      <div className="flex -space-x-2">
+                        {lead.owners.map(ownerId => {
+                          const user = users.find(u => u.id === ownerId);
+                          return user ? (
+                            <Avatar key={user.id} src={user.avatarUrl} alt={user.name} className="w-6 h-6 border-2 border-white" />
+                          ) : null;
+                        })}
+                      </div>
+                    </div>
                     {lead.company && <div className="text-xs text-muted-foreground">{lead.company}</div>}
                     {lead.email && <div className="text-xs text-muted-foreground">{lead.email}</div>}
+                    {/* Owner assignment dropdown */}
+                    <div className="mt-2">
+                      <Select
+                        multiple
+                        value={lead.owners}
+                        onChange={e => {
+                          const selected = Array.from(e.target.selectedOptions).map(opt => opt.value);
+                          onOwnerChange(lead.id, selected);
+                        }}
+                        className="w-full text-xs"
+                        aria-label="Assign owners"
+                      >
+                        {users.map(user => (
+                          <option key={user.id} value={user.id}>{user.name}</option>
+                        ))}
+                      </Select>
+                    </div>
                   </div>
                 ))}
               </div>

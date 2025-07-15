@@ -1,52 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Box,
-  Container,
-  Heading,
-  Text,
   Button,
-  VStack,
-  HStack,
-  useToast,
-  Spinner,
   Badge,
   Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableFooter,
+  TablePagination,
   Input,
   Select,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalFooter,
-  ModalBody,
-  ModalCloseButton,
   useDisclosure,
   FormControl,
   FormLabel,
   Textarea,
-  Stat,
-  StatLabel,
-  StatNumber,
-  StatHelpText,
-  StatArrow,
-  Grid,
-  GridItem,
-  IconButton,
-  Tooltip,
-  Alert,
-  AlertIcon,
+  Spinner,
+  useToast,
+  HStack,
+  VStack,
   Flex,
-  useColorModeValue,
-} from '@chakra-ui/react';
+  Tooltip,
+  IconButton,
+} from '../components/ui';
 import { AddIcon, EditIcon, DeleteIcon, ViewIcon } from '@chakra-ui/icons';
 import * as api from '../api';
 import { LeadKanban, KanbanLead, LeadStage } from '../components/LeadKanban';
 import { AIAssistantSidebar } from '../components/AIAssistantSidebar';
+import { useQuery, useMutation, gql } from '@apollo/client';
+import { useTranslation } from 'react-i18next';
 
 interface Lead {
   id: number;
@@ -71,7 +54,58 @@ interface LeadStats {
   conversion_rate: number;
 }
 
+const LEADS_QUERY = gql`
+  query Leads {
+    leads {
+      id
+      name
+      email
+      phone
+      company
+      tag
+      notes
+      status
+      source
+      created_at
+      updated_at
+    }
+  }
+`;
+
+const ANALYTICS_QUERY = gql`
+  query Analytics {
+    analytics {
+      totalLeads
+      leadsByStatus
+      conversionRate
+    }
+  }
+`;
+
+const CREATE_LEAD = gql`
+  mutation CreateLead($name: String!, $email: String!, $phone: String, $company: String, $tag: String, $notes: String, $status: String, $source: String) {
+    createLead(name: $name, email: $email, phone: $phone, company: $company, tag: $tag, notes: $notes, status: $status, source: $source) {
+      lead { id name email status }
+    }
+  }
+`;
+
+const UPDATE_LEAD = gql`
+  mutation UpdateLead($leadId: Int!, $name: String, $email: String, $phone: String, $company: String, $tag: String, $notes: String, $status: String, $source: String) {
+    updateLead(leadId: $leadId, name: $name, email: $email, phone: $phone, company: $company, tag: $tag, notes: $notes, status: $status, source: $source) {
+      lead { id name email status }
+    }
+  }
+`;
+
+const DELETE_LEAD = gql`
+  mutation DeleteLead($leadId: Int!) {
+    deleteLead(leadId: $leadId) { ok }
+  }
+`;
+
 const CRM: React.FC = () => {
+  const { t } = useTranslation();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [stats, setStats] = useState<LeadStats | null>(null);
   const [loading, setLoading] = useState(false);
@@ -82,125 +116,62 @@ const CRM: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const toast = useToast();
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const bgColor = useColorModeValue('white', 'gray.800');
-  const borderColor = useColorModeValue('gray.200', 'gray.700');
+
+  const { data: leadsData, loading: leadsLoading, refetch: refetchLeads } = useQuery(LEADS_QUERY);
+  const { data: analyticsData, loading: statsLoading, refetch: refetchStats } = useQuery(ANALYTICS_QUERY);
+  const [createLead] = useMutation(CREATE_LEAD);
+  const [updateLeadMutation] = useMutation(UPDATE_LEAD);
+  const [deleteLeadMutation] = useMutation(DELETE_LEAD);
 
   useEffect(() => {
-    loadLeads();
-    loadStats();
-  }, []);
-
-  const loadLeads = async () => {
-    setLoading(true);
-    try {
-      const response = await api.getCRMLeads();
-      setLeads(response || []);
-    } catch (error: any) {
-      console.error(error);
-      toast({
-        title: 'Error',
-        description: error.message,
-        status: 'error',
-        duration: 3000,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadStats = async () => {
-    setStatsLoading(true);
-    try {
-      const response = await api.getCRMLeads();
-      // Calculate stats from leads data
-      const total = response?.length || 0;
-      const new_leads = response?.filter((l: Lead) => l.status === 'new').length || 0;
-      const contacted = response?.filter((l: Lead) => l.status === 'contacted').length || 0;
-      const qualified = response?.filter((l: Lead) => l.status === 'qualified').length || 0;
-      const converted = response?.filter((l: Lead) => l.status === 'converted').length || 0;
-      
+    if (leadsData && leadsData.leads) setLeads(leadsData.leads);
+  }, [leadsData]);
+  useEffect(() => {
+    if (analyticsData && analyticsData.analytics) {
       setStats({
-        total_leads: total,
-        new_leads,
-        contacted_leads: contacted,
-        qualified_leads: qualified,
-        converted_leads: converted,
-        conversion_rate: total > 0 ? (converted / total) * 100 : 0
+        total_leads: analyticsData.analytics.totalLeads,
+        new_leads: analyticsData.analytics.leadsByStatus?.new || 0,
+        contacted_leads: analyticsData.analytics.leadsByStatus?.contacted || 0,
+        qualified_leads: analyticsData.analytics.leadsByStatus?.qualified || 0,
+        converted_leads: analyticsData.analytics.leadsByStatus?.converted || 0,
+        conversion_rate: analyticsData.analytics.conversionRate * 100,
       });
-    } catch (error: any) {
-      console.error(error);
-    } finally {
-      setStatsLoading(false);
     }
-  };
+  }, [analyticsData]);
 
   const addLead = async (leadData: Partial<Lead>) => {
     try {
-      await api.addLeadToCRM(leadData);
-      toast({
-        title: 'Success',
-        description: 'Lead added successfully',
-        status: 'success',
-        duration: 3000,
-      });
-      loadLeads();
-      loadStats();
+      await createLead({ variables: leadData });
+      toast({ title: t('Success'), description: t('Lead added successfully'), status: 'success', duration: 3000 });
+      refetchLeads();
+      refetchStats();
       onClose();
     } catch (error: any) {
-      console.error(error);
-      toast({
-        title: 'Error',
-        description: error.message,
-        status: 'error',
-        duration: 3000,
-      });
+      toast({ title: t('Error'), description: error.message, status: 'error', duration: 3000 });
     }
   };
 
   const updateLead = async (leadId: number, leadData: Partial<Lead>) => {
     try {
-      await api.updateCRMLead(leadId, leadData);
-      toast({
-        title: 'Success',
-        description: 'Lead updated successfully',
-        status: 'success',
-        duration: 3000,
-      });
-      loadLeads();
-      loadStats();
+      await updateLeadMutation({ variables: { leadId, ...leadData } });
+      toast({ title: t('Success'), description: t('Lead updated successfully'), status: 'success', duration: 3000 });
+      refetchLeads();
+      refetchStats();
       onClose();
     } catch (error: any) {
-      console.error(error);
-      toast({
-        title: 'Error',
-        description: error.message,
-        status: 'error',
-        duration: 3000,
-      });
+      toast({ title: t('Error'), description: error.message, status: 'error', duration: 3000 });
     }
   };
 
   const deleteLead = async (leadId: number) => {
-    if (!confirm('Are you sure you want to delete this lead?')) return;
-    
+    if (!confirm(t('Are you sure you want to delete this lead?'))) return;
     try {
-      await api.deleteCRMLead(leadId);
-      toast({
-        title: 'Success',
-        description: 'Lead deleted successfully',
-        status: 'success',
-        duration: 3000,
-      });
-      loadLeads();
-      loadStats();
+      await deleteLeadMutation({ variables: { leadId } });
+      toast({ title: t('Success'), description: t('Lead deleted successfully'), status: 'success', duration: 3000 });
+      refetchLeads();
+      refetchStats();
     } catch (error: any) {
-      console.error(error);
-      toast({
-        title: 'Error',
-        description: error.message,
-        status: 'error',
-        duration: 3000,
-      });
+      toast({ title: t('Error'), description: error.message, status: 'error', duration: 3000 });
     }
   };
 
@@ -253,76 +224,72 @@ const CRM: React.FC = () => {
   };
 
   return (
-    <Box minH="100vh" bg={useColorModeValue('gray.100', 'gray.800')} data-tour="crm-main">
-      <Container maxW="container.xl" py={8} data-tour="crm-content">
-        <Heading size="lg" mb={6} className="gradient-text" data-tour="crm-title">CRM Leads</Heading>
-        <HStack justify="space-between" mb={4} data-tour="crm-actions">
-          <Button colorScheme="blue" onClick={onOpen} data-tour="crm-add-lead">Add Lead</Button>
-          <Button colorScheme="green" onClick={handleExportLeads} data-tour="crm-export">Export Leads</Button>
-        </HStack>
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-800" data-tour="crm-main">
+      <div className="max-w-7xl mx-auto py-8 px-4" data-tour="crm-content">
+        <h1 className="text-3xl font-bold mb-6 gradient-text" data-tour="crm-title">{t('CRM Leads')}</h1>
+        <div className="flex justify-between items-center mb-4" data-tour="crm-actions">
+          <Button colorScheme="blue" onClick={onOpen} data-tour="crm-add-lead">{t('Add Lead')}</Button>
+          <Button colorScheme="green" onClick={handleExportLeads} data-tour="crm-export">{t('Export Leads')}</Button>
+        </div>
 
         {/* Statistics */}
         {stats && (
-          <Grid templateColumns="repeat(auto-fit, minmax(200px, 1fr))" gap={6}>
-            <GridItem>
-              <Stat>
-                <StatLabel>Total Leads</StatLabel>
-                <StatNumber>{stats.total_leads}</StatNumber>
-                <StatHelpText>
-                  <StatArrow type="increase" />
-                  23.36%
-                </StatHelpText>
-              </Stat>
-            </GridItem>
-            <GridItem>
-              <Stat>
-                <StatLabel>New Leads</StatLabel>
-                <StatNumber>{stats.new_leads}</StatNumber>
-                <StatHelpText>This month</StatHelpText>
-              </Stat>
-            </GridItem>
-            <GridItem>
-              <Stat>
-                <StatLabel>Conversion Rate</StatLabel>
-                <StatNumber>{stats.conversion_rate.toFixed(1)}%</StatNumber>
-                <StatHelpText>
-                  <StatArrow type="increase" />
-                  12.5%
-                </StatHelpText>
-              </Stat>
-            </GridItem>
-            <GridItem>
-              <Stat>
-                <StatLabel>Converted</StatLabel>
-                <StatNumber>{stats.converted_leads}</StatNumber>
-                <StatHelpText>This month</StatHelpText>
-              </Stat>
-            </GridItem>
-          </Grid>
+          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
+            <div>
+              <div className="bg-white dark:bg-gray-900 rounded-lg p-4 shadow">
+                <span className="text-sm text-gray-500">{t('Total Leads')}</span>
+                <span className="text-2xl font-bold">{stats.total_leads}</span>
+                <span className="inline-block text-green-500 mr-1">↑</span>
+                <span className="text-xs text-gray-400">23.36%</span>
+              </div>
+            </div>
+            <div>
+              <div className="bg-white dark:bg-gray-900 rounded-lg p-4 shadow">
+                <span className="text-sm text-gray-500">{t('New Leads')}</span>
+                <span className="text-2xl font-bold">{stats.new_leads}</span>
+                <span className="text-xs text-gray-400">{t('This month')}</span>
+              </div>
+            </div>
+            <div>
+              <div className="bg-white dark:bg-gray-900 rounded-lg p-4 shadow">
+                <span className="text-sm text-gray-500">{t('Conversion Rate')}</span>
+                <span className="text-2xl font-bold">{stats.conversion_rate.toFixed(1)}%</span>
+                <span className="inline-block text-green-500 mr-1">↑</span>
+                <span className="text-xs text-gray-400">12.5%</span>
+              </div>
+            </div>
+            <div>
+              <div className="bg-white dark:bg-gray-900 rounded-lg p-4 shadow">
+                <span className="text-sm text-gray-500">{t('Converted')}</span>
+                <span className="text-2xl font-bold">{stats.converted_leads}</span>
+                <span className="text-xs text-gray-400">{t('This month')}</span>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Filters and Actions */}
-        <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor}>
-          <HStack spacing={4} mb={4}>
+        <div className="bg-white dark:bg-gray-900 rounded-lg p-4 shadow" data-tour="crm-filters">
+          <div className="flex flex-col sm:flex-row items-center gap-4 mb-4">
             <Input
-              placeholder="Search leads..."
+              placeholder={t('Search leads...')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               maxW="300px"
             />
             <Select
-              placeholder="Filter by status"
+              placeholder={t('Filter by status')}
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
               maxW="200px"
             >
-              <option value="new">New</option>
-              <option value="contacted">Contacted</option>
-              <option value="qualified">Qualified</option>
-              <option value="converted">Converted</option>
+              <option value="new">{t('New')}</option>
+              <option value="contacted">{t('Contacted')}</option>
+              <option value="qualified">{t('Qualified')}</option>
+              <option value="converted">{t('Converted')}</option>
             </Select>
             <Select
-              placeholder="Filter by tag"
+              placeholder={t('Filter by tag')}
               value={filterTag}
               onChange={(e) => setFilterTag(e.target.value)}
               maxW="200px"
@@ -339,54 +306,54 @@ const CRM: React.FC = () => {
                 onOpen();
               }}
             >
-              Add Lead
+              {t('Add Lead')}
             </Button>
-          </HStack>
-        </Box>
+          </div>
+        </div>
 
         {/* Leads Table */}
-        <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor}>
-          <Heading size="md" mb={4}>Leads</Heading>
+        <div className="bg-white dark:bg-gray-900 rounded-lg p-4 shadow" data-tour="crm-leads-table">
+          <h2 className="text-xl font-bold mb-4">{t('Leads')}</h2>
           {loading ? (
             <Flex justify="center" py={8}>
-              <Spinner size="lg" />
+              <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
             </Flex>
           ) : filteredLeads.length === 0 ? (
-            <Alert status="info">
-              <AlertIcon />
-              No leads found. Add your first lead to get started!
-            </Alert>
+            <div className="flex items-center p-4 mb-4 text-blue-800 rounded-lg bg-blue-50 dark:bg-gray-800 dark:text-blue-400">
+              <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20"><path d="M18 10A8 8 0 11..." /></svg>
+              {t('No leads found. Add your first lead to get started!')}
+            </div>
           ) : (
             <Table variant="simple">
-              <Thead>
-                <Tr>
-                  <Th>Name</Th>
-                  <Th>Email</Th>
-                  <Th>Company</Th>
-                  <Th>Status</Th>
-                  <Th>Tag</Th>
-                  <Th>Created</Th>
-                  <Th>Actions</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('Name')}</TableHead>
+                  <TableHead>{t('Email')}</TableHead>
+                  <TableHead>{t('Company')}</TableHead>
+                  <TableHead>{t('Status')}</TableHead>
+                  <TableHead>{t('Tag')}</TableHead>
+                  <TableHead>{t('Created')}</TableHead>
+                  <TableHead>{t('Actions')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {filteredLeads.map((lead) => (
-                  <Tr key={lead.id}>
-                    <Td fontWeight="bold">{lead.name}</Td>
-                    <Td>{lead.email}</Td>
-                    <Td>{lead.company || '-'}</Td>
-                    <Td>
+                  <TableRow key={lead.id}>
+                    <TableCell fontWeight="bold">{lead.name}</TableCell>
+                    <TableCell>{lead.email}</TableCell>
+                    <TableCell>{lead.company || '-'}</TableCell>
+                    <TableCell>
                       <Badge colorScheme={getStatusColor(lead.status)}>
-                        {lead.status}
+                        {t(lead.status)}
                       </Badge>
-                    </Td>
-                    <Td>{lead.tag || '-'}</Td>
-                    <Td>{new Date(lead.created_at).toLocaleDateString()}</Td>
-                    <Td>
+                    </TableCell>
+                    <TableCell>{lead.tag || '-'}</TableCell>
+                    <TableCell>{new Date(lead.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell>
                       <HStack spacing={2}>
-                        <Tooltip label="View Details">
+                        <Tooltip label={t('View Details')}>
                           <IconButton
-                            aria-label="View lead"
+                            aria-label={t('View lead')}
                             icon={<ViewIcon />}
                             size="sm"
                             variant="ghost"
@@ -396,56 +363,58 @@ const CRM: React.FC = () => {
                             }}
                           />
                         </Tooltip>
-                        <Tooltip label="Edit Lead">
-                          <IconButton
-                            aria-label="Edit lead"
-                            icon={<EditIcon />}
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => {
+                        <Tooltip label={t('Edit Lead')}>
+                          <div className="relative group">
+                            <button className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700" aria-label={t('Edit Lead')} onClick={() => {
                               setSelectedLead(lead);
                               onOpen();
-                            }}
-                          />
+                            }}>
+                              <EditIcon />
+                            </button>
+                            <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 z-10">
+                              {t('Edit Lead')}
+                            </span>
+                          </div>
                         </Tooltip>
-                        <Tooltip label="Delete Lead">
-                          <IconButton
-                            aria-label="Delete lead"
-                            icon={<DeleteIcon />}
-                            size="sm"
-                            variant="ghost"
-                            colorScheme="red"
-                            onClick={() => deleteLead(lead.id)}
-                          />
+                        <Tooltip label={t('Delete Lead')}>
+                          <div className="relative group">
+                            <button className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700" aria-label={t('Delete Lead')} onClick={() => deleteLead(lead.id)}>
+                              <DeleteIcon />
+                            </button>
+                            <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 z-10">
+                              {t('Delete Lead')}
+                            </span>
+                          </div>
                         </Tooltip>
                       </HStack>
-                    </Td>
-                  </Tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </Tbody>
+              </TableBody>
             </Table>
           )}
-        </Box>
-      </Container>
+        </div>
+      </div>
 
       {/* Add/Edit Lead Modal */}
-      <Modal isOpen={isOpen} onClose={onClose} size="lg">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>
-            {selectedLead ? 'Edit Lead' : 'Add New Lead'}
-          </ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <LeadForm
-              lead={selectedLead}
-              onSubmit={selectedLead ? updateLead : addLead}
-              onCancel={onClose}
-            />
-          </ModalBody>
-        </ModalContent>
-      </Modal>
-    </Box>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-lg p-6 relative">
+            <button
+              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
+              onClick={onClose}
+              aria-label="Close"
+            >
+              ×
+            </button>
+            <h2 className="text-xl font-semibold mb-4">
+              {selectedLead ? t('Edit Lead') : t('Add New Lead')}
+            </h2>
+            <LeadForm lead={selectedLead} onSubmit={selectedLead ? updateLead : addLead} onCancel={onClose} />
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -457,6 +426,7 @@ interface LeadFormProps {
 }
 
 const LeadForm: React.FC<LeadFormProps> = ({ lead, onSubmit, onCancel }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: lead?.name || '',
     email: lead?.email || '',
@@ -478,85 +448,106 @@ const LeadForm: React.FC<LeadFormProps> = ({ lead, onSubmit, onCancel }) => {
 
   return (
     <form onSubmit={handleSubmit}>
-      <VStack spacing={4}>
-        <FormControl isRequired>
-          <FormLabel>Name</FormLabel>
-          <Input
+      <div className="space-y-4">
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">
+            {t('Name')}
+          </label>
+          <input
+            type="text"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            placeholder="Enter lead name"
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
           />
-        </FormControl>
+        </div>
         
-        <FormControl isRequired>
-          <FormLabel>Email</FormLabel>
-          <Input
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">
+            {t('Email')}
+          </label>
+          <input
             type="email"
             value={formData.email}
             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            placeholder="Enter email address"
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
           />
-        </FormControl>
+        </div>
         
-        <FormControl>
-          <FormLabel>Phone</FormLabel>
-          <Input
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">
+            {t('Phone')}
+          </label>
+          <input
+            type="tel"
             value={formData.phone}
             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            placeholder="Enter phone number"
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-        </FormControl>
+        </div>
         
-        <FormControl>
-          <FormLabel>Company</FormLabel>
-          <Input
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">
+            {t('Company')}
+          </label>
+          <input
+            type="text"
             value={formData.company}
             onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-            placeholder="Enter company name"
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-        </FormControl>
+        </div>
         
-        <FormControl>
-          <FormLabel>Tag</FormLabel>
-          <Input
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">
+            {t('Tag')}
+          </label>
+          <input
+            type="text"
             value={formData.tag}
             onChange={(e) => setFormData({ ...formData, tag: e.target.value })}
-            placeholder="Enter tag"
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-        </FormControl>
+        </div>
         
-        <FormControl>
-          <FormLabel>Status</FormLabel>
-          <Select
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">
+            {t('Status')}
+          </label>
+          <select
             value={formData.status}
             onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="new">New</option>
-            <option value="contacted">Contacted</option>
-            <option value="qualified">Qualified</option>
-            <option value="converted">Converted</option>
-          </Select>
-        </FormControl>
+            <option value="new">{t('New')}</option>
+            <option value="contacted">{t('Contacted')}</option>
+            <option value="qualified">{t('Qualified')}</option>
+            <option value="converted">{t('Converted')}</option>
+          </select>
+        </div>
         
-        <FormControl>
-          <FormLabel>Notes</FormLabel>
-          <Textarea
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">
+            {t('Notes')}
+          </label>
+          <textarea
             value={formData.notes}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-            placeholder="Enter notes about this lead"
+            className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             rows={3}
           />
-        </FormControl>
+        </div>
         
         <HStack spacing={4} w="full">
           <Button type="submit" colorScheme="blue" flex={1}>
-            {lead ? 'Update Lead' : 'Add Lead'}
+            {lead ? t('Update Lead') : t('Add Lead')}
           </Button>
           <Button onClick={onCancel} variant="outline" flex={1}>
-            Cancel
+            {t('Cancel')}
           </Button>
         </HStack>
-      </VStack>
+      </div>
     </form>
   );
 };

@@ -1,75 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Container,
-  Heading,
-  Text,
-  Button,
-  VStack,
-  HStack,
-  useToast,
-  Spinner,
-  Badge,
-  Link,
-  useColorModeValue,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
-  Avatar,
-  Menu,
-  MenuButton,
-  MenuList,
-  MenuItem,
-  IconButton,
-  Flex,
-  Input,
-  Tag,
-  TagLabel,
-  Tooltip,
-  Alert,
-  AlertIcon,
-  AlertTitle,
-  AlertDescription,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  ModalCloseButton,
-  SimpleGrid,
-  Stat,
-  StatLabel,
-  StatNumber,
-  StatHelpText,
-  StatArrow,
-  Select,
-  Tabs,
-  TabList,
-  TabPanels,
-  Tab,
-  TabPanel,
-  useDisclosure,
-  Drawer,
-  DrawerOverlay,
-  DrawerContent,
-  DrawerCloseButton,
-  DrawerBody,
-  useBreakpointValue,
-  Skeleton,
-  useColorMode,
-} from '@chakra-ui/react';
-import { HamburgerIcon, ChevronDownIcon, CopyIcon } from '@chakra-ui/icons';
 import * as api from '../api';
 import { getSupportOptions, submitSupportRequest, getSavedQueries, createSavedQuery, updateSavedQuery, deleteSavedQuery, bulkDeleteJobs, bulkDeleteLeads, bulkAddLeads, getNotifications, markNotificationRead, enrichLead, shareJob, unshareJob, shareLead, unshareLead, getCRMStatus } from '../api';
 import { Suspense, lazy } from 'react';
-import { Home, Briefcase, Users, Settings, BarChart, Bell, LogOut } from 'lucide-react';
+import { Home, Briefcase, Users, Settings, BarChart, Bell, LogOut, Menu, ChevronDown, Copy, Moon, Sun } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { MoonIcon, SunIcon } from '@chakra-ui/icons';
+import { useTranslation } from 'react-i18next';
+import { OnboardingChecklist, MODULE_TOURS } from '../components/OnboardingTour';
+import { OnboardingTour } from '../components/OnboardingTour';
+import { Reorder, useDragControls } from 'framer-motion';
+import { Dialog } from '../components/ui/dialog';
+import { Checkbox } from '../components/ui/checkbox';
 
 const CRM = lazy(() => import('./CRM'));
 const Analytics = lazy(() => import('./Analytics'));
@@ -104,7 +45,14 @@ interface PlanLimits {
   subscription_end?: string;
 }
 
+const WIDGET_OPTIONS = [
+  { id: 'widget-1', label: 'Widget 1', content: 'Widget 1' },
+  { id: 'widget-2', label: 'Widget 2', content: 'Widget 2' },
+  { id: 'widget-3', label: 'Widget 3', content: 'Widget 3' },
+];
+
 const Dashboard: React.FC = () => {
+  const { t } = useTranslation();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(false);
@@ -143,7 +91,21 @@ const Dashboard: React.FC = () => {
   const [notifModalOpen, setNotifModalOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [crmConnected, setCrmConnected] = useState(false);
-  
+  const [onboarding, setOnboarding] = useState({
+    dashboard: false,
+    leads: false,
+  });
+  const [tourKey, setTourKey] = useState<string | null>(null);
+  const [tourRun, setTourRun] = useState(false);
+  const [widgets, setWidgets] = useState(
+    WIDGET_OPTIONS.filter(w => selectedWidgetIds.includes(w.id))
+  );
+  const [showWidgetModal, setShowWidgetModal] = useState(false);
+  const [selectedWidgetIds, setSelectedWidgetIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem('dashboardWidgets');
+    return saved ? JSON.parse(saved) : WIDGET_OPTIONS.map(w => w.id);
+  });
+
   const toast = useToast();
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
@@ -197,6 +159,11 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     getCRMStatus().then(status => setCrmConnected(!!status?.crm_connected));
   }, []);
+
+  useEffect(() => {
+    setWidgets(WIDGET_OPTIONS.filter(w => selectedWidgetIds.includes(w.id)));
+    localStorage.setItem('dashboardWidgets', JSON.stringify(selectedWidgetIds));
+  }, [selectedWidgetIds]);
 
   const loadDashboardData = async () => {
     try {
@@ -525,14 +492,14 @@ const Dashboard: React.FC = () => {
       <HStack spacing={4}>
         {isMobile ? (
           <IconButton
-            icon={<HamburgerIcon />}
+            icon={<Menu />}
             aria-label="Open sidebar"
             variant="ghost"
             onClick={() => setDrawerOpen(true)}
           />
         ) : (
         <IconButton
-          icon={<HamburgerIcon />}
+          icon={<Menu />}
           aria-label="Toggle sidebar"
           variant="ghost"
           onClick={() => setSidebarOpen((v) => !v)}
@@ -543,7 +510,7 @@ const Dashboard: React.FC = () => {
       <HStack spacing={4}>
         <IconButton
           aria-label="Toggle color mode"
-          icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
+          icon={colorMode === 'light' ? <Moon /> : <Sun />}
           onClick={toggleColorMode}
           variant="ghost"
           size="sm"
@@ -556,7 +523,7 @@ const Dashboard: React.FC = () => {
           </Tag>
         )}
         <Menu>
-          <MenuButton as={Button} rightIcon={<ChevronDownIcon />} variant="ghost">
+          <MenuButton as={Button} rightIcon={<ChevronDown />} variant="ghost">
             <HStack>
               <Avatar size="sm" name={user?.email} src="" />
               <Text fontSize="sm">{user?.email}</Text>
@@ -836,20 +803,88 @@ const Dashboard: React.FC = () => {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} transition={{ duration: 0.4 }}>
           <Tabs isFitted variant="enclosed" colorScheme="blue">
             <TabList mb="1em">
-              <Tab>Dashboard</Tab>
-              <Tab>CRM</Tab>
-              <Tab>Analytics</Tab>
+              <Tab>{t('dashboard.tabs.dashboard')}</Tab>
+              <Tab>{t('dashboard.tabs.crm')}</Tab>
+              <Tab>{t('dashboard.tabs.analytics')}</Tab>
             </TabList>
             <TabPanels>
               <TabPanel>
                 <Box className="fade-in-up">
+                  {/* Widget Customization Modal */}
+                  <Dialog open={showWidgetModal} onOpenChange={setShowWidgetModal}>
+                    <Dialog.Trigger asChild>
+                      <Button className="ml-auto block bg-primary text-primary-foreground px-4 py-2 rounded font-semibold shadow hover:bg-primary/90" onClick={() => setShowWidgetModal(true)}>{t('dashboard.customizeWidgets.button')}</Button>
+                    </Dialog.Trigger>
+                    <Dialog.Content>
+                      <Dialog.Title>{t('dashboard.customizeWidgets.title')}</Dialog.Title>
+                      <div className="space-y-2 mt-4">
+                        {WIDGET_OPTIONS.map(widget => (
+                          <label key={widget.id} className="flex items-center gap-2">
+                            <Checkbox
+                              checked={selectedWidgetIds.includes(widget.id)}
+                              onCheckedChange={checked => {
+                                setSelectedWidgetIds(ids =>
+                                  checked ? [...ids, widget.id] : ids.filter(id => id !== widget.id)
+                                );
+                              }}
+                            />
+                            {widget.label}
+                          </label>
+                        ))}
+                      </div>
+                      <Dialog.Close asChild>
+                        <Button className="mt-6 bg-primary text-primary-foreground px-4 py-2 rounded font-semibold shadow hover:bg-primary/90">{t('dashboard.customizeWidgets.doneButton')}</Button>
+                      </Dialog.Close>
+                    </Dialog.Content>
+                  </Dialog>
+                  {/* Onboarding Checklist */}
+                  <OnboardingChecklist
+                    items={[
+                      { key: 'dashboard', label: 'Explore your dashboard', completed: onboarding.dashboard },
+                      { key: 'leads', label: 'View and filter leads', completed: onboarding.leads },
+                    ]}
+                    onStartTour={key => {
+                      setTourKey(key);
+                      setTourRun(true);
+                    }}
+                  />
+                  {/* Onboarding Tour (per module) */}
+                  {tourKey && (
+                    <OnboardingTour
+                      steps={MODULE_TOURS[tourKey]}
+                      run={tourRun}
+                      onClose={() => {
+                        setOnboarding(o => ({ ...o, [tourKey]: true }));
+                        setTourRun(false);
+                        setTourKey(null);
+                      }}
+                    />
+                  )}
+                  {/* Dashboard Widgets Area (drag-and-drop, only selected widgets) */}
+                  <Reorder.Group
+                    axis="x"
+                    values={widgets}
+                    onReorder={setWidgets}
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8"
+                  >
+                    {widgets.map(widget => (
+                      <Reorder.Item
+                        key={widget.id}
+                        value={widget}
+                        className="dashboard-widget bg-card border border-border rounded-lg p-6 shadow-md cursor-move select-none"
+                        whileDrag={{ scale: 1.03, boxShadow: '0 8px 32px rgba(99,102,241,0.15)' }}
+                      >
+                        {widget.content}
+                      </Reorder.Item>
+                    ))}
+                  </Reorder.Group>
                   {/* Plan Status Alert */}
                   {planLimits && planLimits.queries_remaining_today <= 0 && (
                     <Alert status="warning" mb={6} className="card-modern">
                       <AlertIcon />
-                      <AlertTitle>Daily Limit Reached!</AlertTitle>
+                      <AlertTitle>{t('dashboard.planStatus.limitReached.title')}</AlertTitle>
                       <AlertDescription>
-                        You've reached your daily query limit. <Button size="sm" className="btn-modern" ml={2} onClick={() => setShowUpgradeModal(true)}>Upgrade Plan</Button>
+                        {t('dashboard.planStatus.limitReached.description')} <Button size="sm" className="btn-modern" ml={2} onClick={() => setShowUpgradeModal(true)}>{t('dashboard.planStatus.limitReached.upgradeButton')}</Button>
                       </AlertDescription>
                     </Alert>
                   )}
@@ -859,28 +894,28 @@ const Dashboard: React.FC = () => {
                     <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={8} mb={10}>
                       <Box className="card-modern glass">
                         <Stat>
-                          <StatLabel className="gradient-text">Queries Today</StatLabel>
+                          <StatLabel className="gradient-text">{t('dashboard.stats.queriesToday.label')}</StatLabel>
                           <StatNumber>{planLimits.queries_used_today}</StatNumber>
-                          <StatHelpText>of {planLimits.max_queries_per_day}</StatHelpText>
+                          <StatHelpText>{t('dashboard.stats.queriesToday.helpText')}</StatHelpText>
                         </Stat>
                       </Box>
                       <Box className="card-modern glass">
                         <Stat>
-                          <StatLabel className="gradient-text">Total Jobs</StatLabel>
+                          <StatLabel className="gradient-text">{t('dashboard.stats.totalJobs.label')}</StatLabel>
                           <StatNumber>{jobs.length}</StatNumber>
-                          <StatHelpText>created</StatHelpText>
+                          <StatHelpText>{t('dashboard.stats.totalJobs.helpText')}</StatHelpText>
                         </Stat>
                       </Box>
                       <Box className="card-modern glass">
                         <Stat>
-                          <StatLabel className="gradient-text">CRM Leads</StatLabel>
+                          <StatLabel className="gradient-text">{t('dashboard.stats.crmLeads.label')}</StatLabel>
                           <StatNumber>{leads.length}</StatNumber>
-                          <StatHelpText>total leads</StatHelpText>
+                          <StatHelpText>{t('dashboard.stats.crmLeads.helpText')}</StatHelpText>
                         </Stat>
                       </Box>
                       <Box className="card-modern glass">
                         <Stat>
-                          <StatLabel className="gradient-text">Plan</StatLabel>
+                          <StatLabel className="gradient-text">{t('dashboard.stats.plan.label')}</StatLabel>
                           <StatNumber>{planLimits.plan_name.toUpperCase()}</StatNumber>
                           <StatHelpText>{planLimits.subscription_status}</StatHelpText>
                         </Stat>
@@ -891,9 +926,9 @@ const Dashboard: React.FC = () => {
                   {/* API Key Management (Pro/Business) */}
                   {user && (user.plan === 'pro' || user.plan === 'business') && (
                     <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" mb={8} className="card-modern glass">
-                      <Heading size="md" mb={2} className="gradient-text">API Key Management</Heading>
+                      <Heading size="md" mb={2} className="gradient-text">{t('dashboard.apiKeyManagement.title')}</Heading>
                       <Text fontSize="sm" color="gray.600" mb={4}>
-                        Use your API key to access programmatic endpoints. Keep it secret! You can generate or revoke your key at any time.
+                        {t('dashboard.apiKeyManagement.description')}
                       </Text>
                       {apiKeyLoading ? (
                         <Spinner />
@@ -901,27 +936,27 @@ const Dashboard: React.FC = () => {
                         <VStack align="start" spacing={4}>
                           {newApiKey && (
                             <Box bg="yellow.100" p={3} borderRadius="md" w="100%" className="glass">
-                              <Text fontWeight="bold">Your new API key:</Text>
+                              <Text fontWeight="bold">{t('dashboard.apiKeyManagement.newApiKey.title')}</Text>
                               <HStack>
                                 <Text fontFamily="mono" fontSize="sm">{newApiKey}</Text>
-                                <Button size="xs" onClick={() => {navigator.clipboard.writeText(newApiKey); toast({ title: 'Copied to clipboard', status: 'success' });}} leftIcon={<CopyIcon />}>Copy</Button>
+                                <Button size="xs" onClick={() => {navigator.clipboard.writeText(newApiKey); toast({ title: 'Copied to clipboard', status: 'success' });}} leftIcon={<Copy />}>{t('dashboard.apiKeyManagement.newApiKey.copyButton')}</Button>
                               </HStack>
-                              <Text fontSize="xs" color="red.500">Copy and save this key now. It will not be shown again.</Text>
+                              <Text fontSize="xs" color="red.500">{t('dashboard.apiKeyManagement.newApiKey.warning')}</Text>
                             </Box>
                           )}
                           {apiKeyInfo && apiKeyInfo.has_api_key && !newApiKey && (
                             <Box className="glass">
-                              <Text fontWeight="bold">API key is active.</Text>
-                              <Text fontSize="xs" color="gray.500">Created: {apiKeyInfo.created_at ? new Date(apiKeyInfo.created_at).toLocaleString() : '-'}</Text>
-                              <Text fontSize="xs" color="gray.500">Last used: {apiKeyInfo.last_used ? new Date(apiKeyInfo.last_used).toLocaleString() : '-'}</Text>
+                              <Text fontWeight="bold">{t('dashboard.apiKeyManagement.activeApiKey.title')}</Text>
+                              <Text fontSize="xs" color="gray.500">{t('dashboard.apiKeyManagement.activeApiKey.createdAt')}: {apiKeyInfo.created_at ? new Date(apiKeyInfo.created_at).toLocaleString() : '-'}</Text>
+                              <Text fontSize="xs" color="gray.500">{t('dashboard.apiKeyManagement.activeApiKey.lastUsed')}: {apiKeyInfo.last_used ? new Date(apiKeyInfo.last_used).toLocaleString() : '-'}</Text>
                             </Box>
                           )}
                           {!apiKeyInfo?.has_api_key && !newApiKey && (
-                            <Text color="gray.500">No API key generated yet.</Text>
+                            <Text color="gray.500">{t('dashboard.apiKeyManagement.noApiKey')}</Text>
                           )}
                           <HStack>
-                            <Button colorScheme="blue" size="sm" onClick={handleCreateApiKey} isLoading={apiKeyLoading} isDisabled={!!apiKeyInfo?.has_api_key}>Generate API Key</Button>
-                            <Button colorScheme="red" size="sm" onClick={handleRevokeApiKey} isLoading={apiKeyLoading} isDisabled={!apiKeyInfo?.has_api_key}>Revoke API Key</Button>
+                            <Button colorScheme="blue" size="sm" onClick={handleCreateApiKey} isLoading={apiKeyLoading} isDisabled={!!apiKeyInfo?.has_api_key}>{t('dashboard.apiKeyManagement.generateApiKeyButton')}</Button>
+                            <Button colorScheme="red" size="sm" onClick={handleRevokeApiKey} isLoading={apiKeyLoading} isDisabled={!apiKeyInfo?.has_api_key}>{t('dashboard.apiKeyManagement.revokeApiKeyButton')}</Button>
                           </HStack>
                         </VStack>
                       )}
@@ -931,20 +966,18 @@ const Dashboard: React.FC = () => {
                   {/* Support/Contact Section */}
                   <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" mb={8} className="card-modern glass">
                     <HStack justify="space-between" mb={2}>
-                      <Heading size="md" className="gradient-text">Support & Contact</Heading>
-                      <Button size="sm" colorScheme="blue" onClick={() => setSupportModalOpen(true)}>
-                        Contact Support
-                      </Button>
+                      <Heading size="md" className="gradient-text">{t('dashboard.supportContact.title')}</Heading>
+                      <Button size="sm" colorScheme="blue" onClick={() => setSupportModalOpen(true)}>{t('dashboard.supportContact.contactSupportButton')}</Button>
                     </HStack>
                     {supportLoading ? <Spinner /> : (
                       <VStack align="start" spacing={2}>
-                        <Text fontSize="sm" color="gray.600">Available support options for your plan:</Text>
+                        <Text fontSize="sm" color="gray.600">{t('dashboard.supportContact.availableOptions')}</Text>
                         <HStack>
                           {supportOptions?.support?.map((opt: string) => (
                             <Badge key={opt} colorScheme={opt === 'phone' ? 'green' : opt === 'email' ? 'blue' : 'purple'}>{opt.replace('_', ' ').toUpperCase()}</Badge>
                           ))}
                         </HStack>
-                        {supportOptions?.priority && <Badge colorScheme="red">Priority</Badge>}
+                        {supportOptions?.priority && <Badge colorScheme="red">{t('dashboard.supportContact.priorityBadge')}</Badge>}
                       </VStack>
                     )}
                   </Box>
@@ -952,18 +985,18 @@ const Dashboard: React.FC = () => {
                   {/* Saved Searches Section */}
                   <Box bg={bgColor} p={4} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" mb={6} className="card-modern glass">
                     <HStack justify="space-between" mb={2}>
-                      <Heading size="sm" className="gradient-text">Saved Searches</Heading>
-                      <Button size="xs" colorScheme="blue" onClick={() => setSavedQueryModalOpen(true)}>Save Current as Template</Button>
+                      <Heading size="sm" className="gradient-text">{t('dashboard.savedSearches.title')}</Heading>
+                      <Button size="xs" colorScheme="blue" onClick={() => setSavedQueryModalOpen(true)}>{t('dashboard.savedSearches.saveTemplateButton')}</Button>
                     </HStack>
                     {savedQueries.length === 0 ? (
-                      <Text color="gray.500">No saved searches yet.</Text>
+                      <Text color="gray.500">{t('dashboard.savedSearches.noSavedSearches')}</Text>
                     ) : (
                       <VStack align="stretch" spacing={2}>
                         {savedQueries.map((q) => (
                           <HStack key={q.id} spacing={2}>
                             <Button size="xs" variant="ghost" onClick={() => handleUseTemplate(q)}>{q.name}</Button>
-                            <Button size="xs" colorScheme="yellow" variant="outline" onClick={() => { setEditingQuery(q); setTemplateName(q.name); setQueries(q.queries.join('\n')); setSavedQueryModalOpen(true); }}>Edit</Button>
-                            <Button size="xs" colorScheme="red" variant="outline" onClick={() => handleDeleteTemplate(q.id)}>Delete</Button>
+                            <Button size="xs" colorScheme="yellow" variant="outline" onClick={() => { setEditingQuery(q); setTemplateName(q.name); setQueries(q.queries.join('\n')); setSavedQueryModalOpen(true); }}>{t('dashboard.savedSearches.editButton')}</Button>
+                            <Button size="xs" colorScheme="red" variant="outline" onClick={() => handleDeleteTemplate(q.id)}>{t('dashboard.savedSearches.deleteButton')}</Button>
                           </HStack>
                         ))}
                       </VStack>
@@ -975,19 +1008,19 @@ const Dashboard: React.FC = () => {
                     <Box flex="1" minW="320px">
                       <VStack spacing={8} align="stretch">
                         <Box>
-                          <Heading size="lg" mb={4} className="gradient-text">Dashboard</Heading>
-                          <Text color="gray.600">Create and monitor your Google Maps scraping jobs</Text>
+                          <Heading size="lg" mb={4} className="gradient-text">{t('dashboard.dashboardSection.title')}</Heading>
+                          <Text color="gray.600">{t('dashboard.dashboardSection.description')}</Text>
                         </Box>
                         <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" className="card-modern glass">
                           <VStack spacing={4} align="stretch">
-                            <Heading size="md" className="gradient-text">Create New Job</Heading>
+                            <Heading size="md" className="gradient-text">{t('dashboard.createNewJob.title')}</Heading>
                             <Text fontSize="sm" color="gray.600">
-                              Enter your search queries (one per line)
+                              {t('dashboard.createNewJob.description')}
                             </Text>
                             <textarea
                               value={queries}
                               onChange={(e) => setQueries(e.target.value)}
-                              placeholder="e.g., restaurants in New York\ncoffee shops in San Francisco"
+                              placeholder={t('dashboard.createNewJob.placeholder')}
                               className="input-modern"
                               style={{ width: '100%', minHeight: '120px', resize: 'vertical', marginBottom: 16 }}
                               disabled={planLimits ? planLimits.queries_remaining_today <= 0 : false}
@@ -996,29 +1029,29 @@ const Dashboard: React.FC = () => {
                               colorScheme="blue"
                               onClick={createJob}
                               isLoading={loading}
-                              loadingText="Creating Job"
+                              loadingText={t('dashboard.createNewJob.loadingText')}
                               isDisabled={planLimits ? planLimits.queries_remaining_today <= 0 : false}
                               className="btn-modern"
                             >
                               {planLimits && planLimits.queries_remaining_today <= 0 
-                                ? `Daily limit reached (${planLimits.max_queries_per_day})` 
-                                : 'Create Job'}
+                                ? `${t('dashboard.createNewJob.dailyLimitReached', { limit: planLimits.max_queries_per_day })}` 
+                                : t('dashboard.createNewJob.createJobButton')}
                             </Button>
                           </VStack>
                         </Box>
                         <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" className="card-modern glass">
-                          <Heading size="md" mb={4} className="gradient-text">Your Jobs</Heading>
+                          <Heading size="md" mb={4} className="gradient-text">{t('dashboard.yourJobs.title')}</Heading>
                           {jobs.length === 0 ? (
-                            <Text color="gray.500">No jobs created yet. Create your first job above!</Text>
+                            <Text color="gray.500">{t('dashboard.yourJobs.noJobsCreated')}</Text>
                           ) : (
                             <VStack spacing={4} align="stretch">
                               {/* Bulk Actions for Jobs */}
                               {jobs.length > 0 && (
                                 <HStack mb={2}>
-                                  <Button size="xs" className="btn-modern" variant="outline" onClick={toggleAllJobs}>{selectedJobIds.length === jobs.length ? 'Unselect All' : 'Select All'}</Button>
-                                  <Button size="xs" className="btn-modern" onClick={() => handleBulkExportJobs('csv')}>Export CSV</Button>
-                                  <Button size="xs" className="btn-modern" onClick={() => handleBulkExportJobs('json')}>Export JSON</Button>
-                                  <Button size="xs" className="btn-modern" colorScheme="red" onClick={handleBulkDeleteJobs}>Delete</Button>
+                                  <Button size="xs" className="btn-modern" variant="outline" onClick={toggleAllJobs}>{selectedJobIds.length === jobs.length ? t('dashboard.yourJobs.unselectAll') : t('dashboard.yourJobs.selectAll')}</Button>
+                                  <Button size="xs" className="btn-modern" onClick={() => handleBulkExportJobs('csv')}>{t('dashboard.yourJobs.exportCsvButton')}</Button>
+                                  <Button size="xs" className="btn-modern" onClick={() => handleBulkExportJobs('json')}>{t('dashboard.yourJobs.exportJsonButton')}</Button>
+                                  <Button size="xs" className="btn-modern" colorScheme="red" onClick={handleBulkDeleteJobs}>{t('dashboard.yourJobs.deleteButton')}</Button>
                                 </HStack>
                               )}
                               {jobs.map((job) => (
@@ -1039,7 +1072,7 @@ const Dashboard: React.FC = () => {
                                   className="glass"
                                 >
                                   <HStack justify="space-between" mb={2}>
-                                    <Text fontWeight="bold">Job #{job.id}</Text>
+                                    <Text fontWeight="bold">{t('dashboard.jobItem.jobId', { id: job.id })}</Text>
                                     <Badge colorScheme={getStatusColor(job.status)}>{job.status}</Badge>
                                   </HStack>
                                   <Text color="gray.400" fontSize="sm">{job.queries.join(', ')}</Text>
@@ -1057,7 +1090,7 @@ const Dashboard: React.FC = () => {
                         <Box borderRadius="lg" overflow="hidden" border="1px" borderColor={borderColor} minH="320px" boxShadow="md" mb={6} className="glass">
                           {selectedJob && selectedJob.queries && selectedJob.queries.length > 0 ? (
                             <iframe
-                              title="Google Map"
+                              title={t('dashboard.gmapIframe.title')}
                               src={getGMapUrl(selectedJob)}
                               width="100%"
                               height="320"
@@ -1067,34 +1100,34 @@ const Dashboard: React.FC = () => {
                               referrerPolicy="no-referrer-when-downgrade"
                             />
                           ) : (
-                            <Text color="gray.500" p={8} textAlign="center">No query to show on map.</Text>
+                            <Text color="gray.500" p={8} textAlign="center">{t('dashboard.gmapIframe.noQueryMessage')}</Text>
                           )}
                         </Box>
                         {/* Results Table */}
                         <Box overflowX="auto" className="glass">
-                          <Heading size="md" mb={4} className="gradient-text">Search Results</Heading>
+                          <Heading size="md" mb={4} className="gradient-text">{t('dashboard.searchResults.title')}</Heading>
                           {/* Advanced Filters (Pro/Business only) */}
                           {user && (user.plan === 'pro' || user.plan === 'business') && (
                             <Box mb={4}>
                               <HStack spacing={4} mb={2}>
-                                <Text fontSize="sm" color="gray.600">Advanced Filters:</Text>
-                                <Select placeholder="Status" size="sm" w="120px" value={filters.status} onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}>
-                                  <option value="completed">Completed</option>
-                                  <option value="pending">Pending</option>
-                                  <option value="failed">Failed</option>
+                                <Text fontSize="sm" color="gray.600">{t('dashboard.searchResults.advancedFilters')}</Text>
+                                <Select placeholder={t('dashboard.searchResults.statusPlaceholder')} size="sm" w="120px" value={filters.status} onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}>
+                                  <option value="completed">{t('dashboard.searchResults.statusOptions.completed')}</option>
+                                  <option value="pending">{t('dashboard.searchResults.statusOptions.pending')}</option>
+                                  <option value="failed">{t('dashboard.searchResults.statusOptions.failed')}</option>
                                 </Select>
-                                <Input placeholder="Company" size="sm" w="160px" value={filters.company} onChange={e => setFilters(f => ({ ...f, company: e.target.value }))} />
+                                <Input placeholder={t('dashboard.searchResults.companyPlaceholder')} size="sm" w="160px" value={filters.company} onChange={e => setFilters(f => ({ ...f, company: e.target.value }))} />
                                 <Input type="date" size="sm" w="140px" value={filters.dateFrom} onChange={e => setFilters(f => ({ ...f, dateFrom: e.target.value }))} />
                                 <Input type="date" size="sm" w="140px" value={filters.dateTo} onChange={e => setFilters(f => ({ ...f, dateTo: e.target.value }))} />
-                                <Button size="sm" colorScheme="blue" onClick={() => selectedJob && fetchJobResults(Number(selectedJob.id), filters)}>Apply</Button>
-                                <Button size="sm" variant="ghost" onClick={() => { setFilters({ status: '', company: '', dateFrom: '', dateTo: '' }); selectedJob && fetchJobResults(Number(selectedJob.id), {}); }}>Reset</Button>
+                                <Button size="sm" colorScheme="blue" onClick={() => selectedJob && fetchJobResults(Number(selectedJob.id), filters)}>{t('dashboard.searchResults.applyFiltersButton')}</Button>
+                                <Button size="sm" variant="ghost" onClick={() => { setFilters({ status: '', company: '', dateFrom: '', dateTo: '' }); selectedJob && fetchJobResults(Number(selectedJob.id), {}); }}>{t('dashboard.searchResults.resetFiltersButton')}</Button>
                               </HStack>
                             </Box>
                           )}
                           {resultsLoading ? (
                             <Spinner />
                           ) : jobResults.length === 0 ? (
-                            <Text color="gray.500">No results to display.</Text>
+                            <Text color="gray.500">{t('dashboard.searchResults.noResults')}</Text>
                           ) : (
                             <Table size="sm">
                               <Thead>
@@ -1103,7 +1136,7 @@ const Dashboard: React.FC = () => {
                                   {Object.keys(jobResults[0]).map((key) => (
                                     <Th key={key}>{key}</Th>
                                   ))}
-                                  <Th>Actions</Th>
+                                  <Th>{t('dashboard.searchResults.actions')}</Th>
                                 </Tr>
                               </Thead>
                               <Tbody>
@@ -1114,10 +1147,8 @@ const Dashboard: React.FC = () => {
                                       <Td key={i}>{String(val)}</Td>
                                     ))}
                                     <Td>
-                                      <Tooltip label="Add to CRM" aria-label="Add to CRM">
-                                        <Button size="xs" onClick={() => addLeadToCRM(row)}>
-                                          ➕
-                                        </Button>
+                                      <Tooltip label={t('dashboard.searchResults.addCrmTooltip')} aria-label={t('dashboard.searchResults.addCrmTooltip')}>
+                                        <Button size="xs" onClick={() => addLeadToCRM(row)}>{t('dashboard.searchResults.addCrmButton')}</Button>
                                       </Tooltip>
                                     </Td>
                                   </Tr>
@@ -1134,7 +1165,7 @@ const Dashboard: React.FC = () => {
                                   colorScheme={format === 'csv' ? 'green' : format === 'json' ? 'blue' : format === 'xlsx' ? 'purple' : 'orange'}
                                   onClick={() => handleExport(format)}
                                 >
-                                  Export {format.toUpperCase()}
+                                  {t(`dashboard.searchResults.exportFormats.${format.toUpperCase()}`)}
                                 </Button>
                               ))}
                             </HStack>
@@ -1165,35 +1196,31 @@ const Dashboard: React.FC = () => {
       <Modal isOpen={showUpgradeModal} onClose={() => setShowUpgradeModal(false)}>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Upgrade Your Plan</ModalHeader>
+          <ModalHeader>{t('dashboard.upgradeModal.title')}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            <Text mb={4}>Choose the plan that fits your needs. Unlock more features and higher limits:</Text>
+            <Text mb={4}>{t('dashboard.upgradeModal.choosePlan')}</Text>
             <VStack spacing={4} align="stretch">
               <Box p={4} border="1px" borderColor="gray.200" borderRadius="md" bg="gray.50" className="card-modern glass">
-                <Heading size="sm" mb={2} className="gradient-text">Free Plan - $0/month</Heading>
-                <Text fontSize="sm">10 queries/day, CSV export, Email support, Basic search filters</Text>
-                <Text fontSize="xs" color="gray.500">Included with every account</Text>
+                <Heading size="sm" mb={2} className="gradient-text">{t('dashboard.upgradeModal.freePlan.title')}</Heading>
+                <Text fontSize="sm">{t('dashboard.upgradeModal.freePlan.description')}</Text>
+                <Text fontSize="xs" color="gray.500">{t('dashboard.upgradeModal.freePlan.included')}</Text>
               </Box>
               <Box p={4} border="2px" borderColor="blue.400" borderRadius="md" bg="blue.50" className="card-modern glass">
-                <Heading size="sm" mb={2} className="gradient-text">Pro Plan - $29/month</Heading>
-                <Text fontSize="sm">100 queries/day, CSV/JSON/Excel export, Priority email support, Advanced filters, API access, Data validation</Text>
-                <Text fontSize="xs" color="gray.500">Best for professionals and small teams</Text>
+                <Heading size="sm" mb={2} className="gradient-text">{t('dashboard.upgradeModal.proPlan.title')}</Heading>
+                <Text fontSize="sm">{t('dashboard.upgradeModal.proPlan.description')}</Text>
+                <Text fontSize="xs" color="gray.500">{t('dashboard.upgradeModal.proPlan.bestFor')}</Text>
               </Box>
               <Box p={4} border="2px" borderColor="green.400" borderRadius="md" bg="green.50" className="card-modern glass">
-                <Heading size="sm" mb={2} className="gradient-text">Business Plan - $99/month</Heading>
-                <Text fontSize="sm">1000+ queries/day, All export formats, 24/7 phone support, Custom integrations, White-label, Dedicated manager</Text>
-                <Text fontSize="xs" color="gray.500">For enterprises and advanced users</Text>
+                <Heading size="sm" mb={2} className="gradient-text">{t('dashboard.upgradeModal.businessPlan.title')}</Heading>
+                <Text fontSize="sm">{t('dashboard.upgradeModal.businessPlan.description')}</Text>
+                <Text fontSize="xs" color="gray.500">{t('dashboard.upgradeModal.businessPlan.for')}</Text>
               </Box>
             </VStack>
           </ModalBody>
           <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={() => setShowUpgradeModal(false)}>
-              Cancel
-            </Button>
-            <Button colorScheme="blue">
-              Upgrade Now
-            </Button>
+            <Button variant="ghost" mr={3} onClick={() => setShowUpgradeModal(false)}>{t('dashboard.upgradeModal.cancelButton')}</Button>
+            <Button colorScheme="blue">{t('dashboard.upgradeModal.upgradeNowButton')}</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
@@ -1202,43 +1229,43 @@ const Dashboard: React.FC = () => {
       <Modal isOpen={leadModalOpen} onClose={() => setLeadModalOpen(false)}>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Add New Lead</ModalHeader>
+          <ModalHeader>{t('dashboard.addLeadModal.title')}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <VStack spacing={4}>
               <Input
-                placeholder="Name"
+                placeholder={t('dashboard.addLeadModal.namePlaceholder')}
                 value={newLead.name}
                 onChange={(e) => setNewLead({...newLead, name: e.target.value})}
                 className="input-modern"
               />
               <Input
-                placeholder="Email"
+                placeholder={t('dashboard.addLeadModal.emailPlaceholder')}
                 type="email"
                 value={newLead.email}
                 onChange={(e) => setNewLead({...newLead, email: e.target.value})}
                 className="input-modern"
               />
               <Input
-                placeholder="Phone"
+                placeholder={t('dashboard.addLeadModal.phonePlaceholder')}
                 value={newLead.phone}
                 onChange={(e) => setNewLead({...newLead, phone: e.target.value})}
                 className="input-modern"
               />
               <Input
-                placeholder="Company"
+                placeholder={t('dashboard.addLeadModal.companyPlaceholder')}
                 value={newLead.company}
                 onChange={(e) => setNewLead({...newLead, company: e.target.value})}
                 className="input-modern"
               />
               <Input
-                placeholder="Website"
+                placeholder={t('dashboard.addLeadModal.websitePlaceholder')}
                 value={newLead.website}
                 onChange={(e) => setNewLead({...newLead, website: e.target.value})}
                 className="input-modern"
               />
               <textarea
-                placeholder="Notes"
+                placeholder={t('dashboard.addLeadModal.notesPlaceholder')}
                 value={newLead.notes}
                 onChange={(e) => setNewLead({...newLead, notes: e.target.value})}
                 style={{
@@ -1253,12 +1280,8 @@ const Dashboard: React.FC = () => {
             </VStack>
           </ModalBody>
           <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={() => setLeadModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button colorScheme="blue" onClick={createNewLead}>
-              Add Lead
-            </Button>
+            <Button variant="ghost" mr={3} onClick={() => setLeadModalOpen(false)}>{t('dashboard.addLeadModal.cancelButton')}</Button>
+            <Button colorScheme="blue" onClick={createNewLead}>{t('dashboard.addLeadModal.addLeadButton')}</Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
@@ -1267,18 +1290,18 @@ const Dashboard: React.FC = () => {
       <Modal isOpen={supportModalOpen} onClose={() => setSupportModalOpen(false)}>
           <ModalOverlay />
           <ModalContent>
-          <ModalHeader>Contact Support</ModalHeader>
+          <ModalHeader>{t('dashboard.supportModal.title')}</ModalHeader>
           <ModalCloseButton />
             <ModalBody>
             <VStack spacing={4} align="stretch">
               <Input
-                placeholder="Subject"
+                placeholder={t('dashboard.supportModal.subjectPlaceholder')}
                 value={supportForm.subject}
                 onChange={e => setSupportForm({ ...supportForm, subject: e.target.value })}
                 className="input-modern"
               />
               <textarea
-                placeholder="Message"
+                placeholder={t('dashboard.supportModal.messagePlaceholder')}
                 value={supportForm.message}
                 onChange={e => setSupportForm({ ...supportForm, message: e.target.value })}
                 style={{ width: '100%', minHeight: '100px', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '4px' }}
@@ -1286,7 +1309,7 @@ const Dashboard: React.FC = () => {
               />
               {supportOptions?.support?.includes('phone') && (
                 <Input
-                  placeholder="Phone (optional)"
+                  placeholder={t('dashboard.supportModal.phonePlaceholder')}
                   value={supportForm.phone}
                   onChange={e => setSupportForm({ ...supportForm, phone: e.target.value })}
                   className="input-modern"
@@ -1295,12 +1318,8 @@ const Dashboard: React.FC = () => {
             </VStack>
             </ModalBody>
             <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={() => setSupportModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button colorScheme="blue" onClick={handleSupportSubmit} isLoading={supportLoading}>
-              Send
-            </Button>
+            <Button variant="ghost" mr={3} onClick={() => setSupportModalOpen(false)}>{t('dashboard.supportModal.cancelButton')}</Button>
+            <Button colorScheme="blue" onClick={handleSupportSubmit} isLoading={supportLoading}>{t('dashboard.supportModal.sendButton')}</Button>
             </ModalFooter>
           </ModalContent>
         </Modal>
@@ -1309,26 +1328,26 @@ const Dashboard: React.FC = () => {
       <Modal isOpen={savedQueryModalOpen} onClose={() => { setSavedQueryModalOpen(false); setEditingQuery(null); setTemplateName(''); }}>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>{editingQuery ? 'Edit Template' : 'Save Search as Template'}</ModalHeader>
+          <ModalHeader>{editingQuery ? t('dashboard.savedQueryModal.editTemplateTitle') : t('dashboard.savedQueryModal.saveSearchTitle')}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <VStack spacing={4}>
-              <Input placeholder="Template Name" value={templateName} onChange={e => setTemplateName(e.target.value)} className="input-modern" />
+              <Input placeholder={t('dashboard.savedQueryModal.templateNamePlaceholder')} value={templateName} onChange={e => setTemplateName(e.target.value)} className="input-modern" />
               <textarea
                 value={queries}
                 onChange={e => setQueries(e.target.value)}
-                placeholder="Enter queries, one per line"
+                placeholder={t('dashboard.savedQueryModal.enterQueriesPlaceholder')}
                 style={{ width: '100%', minHeight: '120px', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontFamily: 'inherit', fontSize: '14px', resize: 'vertical', background: useColorModeValue('white', 'gray.900') }}
                 className="input-modern"
               />
             </VStack>
           </ModalBody>
           <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={() => { setSavedQueryModalOpen(false); setEditingQuery(null); setTemplateName(''); }}>Cancel</Button>
+            <Button variant="ghost" mr={3} onClick={() => { setSavedQueryModalOpen(false); setEditingQuery(null); setTemplateName(''); }}>{t('dashboard.savedQueryModal.cancelButton')}</Button>
             {editingQuery ? (
-              <Button colorScheme="yellow" onClick={handleUpdateTemplate}>Update</Button>
+              <Button colorScheme="yellow" onClick={handleUpdateTemplate}>{t('dashboard.savedQueryModal.updateButton')}</Button>
             ) : (
-              <Button colorScheme="blue" onClick={handleSaveTemplate}>Save</Button>
+              <Button colorScheme="blue" onClick={handleSaveTemplate}>{t('dashboard.savedQueryModal.saveButton')}</Button>
             )}
             </ModalFooter>
           </ModalContent>
@@ -1338,12 +1357,12 @@ const Dashboard: React.FC = () => {
       <Modal isOpen={notifModalOpen} onClose={() => setNotifModalOpen(false)}>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Notifications</ModalHeader>
+          <ModalHeader>{t('dashboard.notificationsModal.title')}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <VStack align="stretch" spacing={2}>
               {notifications.length === 0 ? (
-                <Text color="gray.500">No notifications</Text>
+                <Text color="gray.500">{t('dashboard.notificationsModal.noNotifications')}</Text>
               ) : notifications.map((n) => (
                 <Box key={n.id} p={3} bg={n.read ? 'gray.100' : 'yellow.100'} borderRadius="md" cursor="pointer" onClick={() => handleMarkRead(n.id)}>
                   <Text fontWeight="bold">{n.type}</Text>
@@ -1360,13 +1379,13 @@ const Dashboard: React.FC = () => {
       <Modal isOpen={shareJobModal.open} onClose={() => setShareJobModal({ open: false, job: null, link: null })}>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Share Job Results</ModalHeader>
+          <ModalHeader>{t('dashboard.shareJobModal.shareableLinkTitle')}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            <Text mb={2}>Shareable link:</Text>
+            <Text mb={2}>{t('dashboard.shareJobModal.shareableLinkText')}</Text>
             <Input value={shareJobModal.link || ''} isReadOnly />
-            <Button mt={2} onClick={() => {navigator.clipboard.writeText(shareJobModal.link || ''); toast({ title: 'Copied', status: 'success' });}}>Copy Link</Button>
-            <Button mt={2} colorScheme="red" onClick={() => handleUnshareJob(shareJobModal.job!)}>Disable Link</Button>
+            <Button mt={2} onClick={() => {navigator.clipboard.writeText(shareJobModal.link || ''); toast({ title: 'Copied', status: 'success' });}}>{t('dashboard.shareJobModal.copyLinkButton')}</Button>
+            <Button mt={2} colorScheme="red" onClick={() => handleUnshareJob(shareJobModal.job!)}>{t('dashboard.shareJobModal.disableLinkButton')}</Button>
           </ModalBody>
         </ModalContent>
       </Modal>
@@ -1375,13 +1394,13 @@ const Dashboard: React.FC = () => {
       <Modal isOpen={shareLeadModal.open} onClose={() => setShareLeadModal({ open: false, lead: null, link: null })}>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>Share Lead</ModalHeader>
+          <ModalHeader>{t('dashboard.shareLeadModal.shareableLinkTitle')}</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            <Text mb={2}>Shareable link:</Text>
+            <Text mb={2}>{t('dashboard.shareLeadModal.shareableLinkText')}</Text>
             <Input value={shareLeadModal.link || ''} isReadOnly />
-            <Button mt={2} onClick={() => {navigator.clipboard.writeText(shareLeadModal.link || ''); toast({ title: 'Copied', status: 'success' });}}>Copy Link</Button>
-            <Button mt={2} colorScheme="red" onClick={() => handleUnshareLead(shareLeadModal.lead!)}>Disable Link</Button>
+            <Button mt={2} onClick={() => {navigator.clipboard.writeText(shareLeadModal.link || ''); toast({ title: 'Copied', status: 'success' });}}>{t('dashboard.shareLeadModal.copyLinkButton')}</Button>
+            <Button mt={2} colorScheme="red" onClick={() => handleUnshareLead(shareLeadModal.lead!)}>{t('dashboard.shareLeadModal.disableLinkButton')}</Button>
           </ModalBody>
           </ModalContent>
         </Modal>

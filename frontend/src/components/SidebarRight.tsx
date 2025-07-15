@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Heading, Button, Text, Spinner, Table, Thead, Tbody, Tr, Th, Td } from '@chakra-ui/react';
 import * as api from '../api';
 
 const SidebarRight = ({ jobId }: { jobId: number | null }) => {
@@ -39,31 +38,42 @@ const SidebarRight = ({ jobId }: { jobId: number | null }) => {
   }, [jobId]);
 
   return (
-    <Box w={['100%', '350px']} p={4} bg="gray.100" minH="100vh" borderLeftWidth={1}>
-      <Heading as="h3" size="md" mb={4}>Collected Data</Heading>
-      {loading && <Spinner />}
-      {status === 'completed' && results.length > 0 && (
-        <Table size="sm" bg="white" borderRadius="md" boxShadow="sm" mb={2}>
-          <Thead>
-            <Tr>
-              {Object.keys(results[0]).map(key => <Th key={key}>{key}</Th>)}
-            </Tr>
-          </Thead>
-          <Tbody>
-            {results.map((row, i) => (
-              <Tr key={i}>
-                {Object.values(row).map((val, j) => <Td key={j}>{val}</Td>)}
-              </Tr>
-            ))}
-          </Tbody>
-        </Table>
+    <div className="w-full md:w-[350px] p-4 bg-gray-100 min-h-screen border-l border-gray-200">
+      <h3 className="text-lg font-semibold mb-4">Collected Data</h3>
+      {loading && (
+        <span className="inline-block w-6 h-6 border-2 border-gray-300 border-t-primary rounded-full animate-spin mb-2" aria-label="Loading" />
       )}
-      {status === 'pending' && <Text>Scraping in progress...</Text>}
-      {status === 'failed' && <Text color="red.500">Scraping failed.</Text>}
-      <Button colorScheme="teal" mt={4} width="100%" as="a" href={jobId && csvReady ? api.getJobCSV(jobId) : undefined} isDisabled={!csvReady} download>
+      {status === 'completed' && results.length > 0 && (
+        <div className="overflow-x-auto mb-2 rounded-md shadow-sm bg-white">
+          <table className="min-w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                {Object.keys(results[0]).map(key => <th key={key} className="px-2 py-1 font-medium text-gray-700 text-left">{key}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {results.map((row, i) => (
+                <tr key={i} className="even:bg-gray-50">
+                  {Object.values(row).map((val, j) => <td key={j} className="px-2 py-1">{val}</td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {status === 'pending' && <span className="text-gray-700">Scraping in progress...</span>}
+      {status === 'failed' && <span className="text-red-600">Scraping failed.</span>}
+      <a
+        className="mt-4 w-full inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 disabled:bg-gray-300 disabled:text-gray-500 text-center"
+        href={jobId && csvReady ? api.getJobCSV(jobId) : undefined}
+        download
+        tabIndex={csvReady ? 0 : -1}
+        aria-disabled={!csvReady}
+        style={{ pointerEvents: csvReady ? 'auto' : 'none', opacity: csvReady ? 1 : 0.5 }}
+      >
         Download CSV
-      </Button>
-    </Box>
+      </a>
+    </div>
   );
 };
 

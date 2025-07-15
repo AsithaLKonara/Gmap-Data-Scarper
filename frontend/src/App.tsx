@@ -1,161 +1,36 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { ThemeProvider } from './components/ui/theme-provider';
-import { Toaster } from './components/ui/toaster';
-import Navbar from './components/Navbar';
-import Footer from './components/Footer';
-import Landing from './pages/Landing';
-import Dashboard from './pages/Dashboard';
-import Pricing from './pages/Pricing';
-import About from './pages/About';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import NotFound from './pages/NotFound';
-import PaymentSuccess from './pages/PaymentSuccess';
-import PaymentCancel from './pages/PaymentCancel';
-import AdminDashboard from './pages/AdminDashboard';
-import Profile from './pages/Profile';
-import SharedJob from './pages/SharedJob';
-import SharedLead from './pages/SharedLead';
-import AuditLog from './pages/AuditLog';
-import OnboardingTour from './components/OnboardingTour';
-import ProtectedRoute from './components/ProtectedRoute';
-import { useState, useEffect, Suspense, lazy } from 'react';
-import { AuthProvider } from './hooks/useAuth';
-import './styles/global.css';
-import LiveChatWidget from './components/LiveChatWidget';
-import LeadCollection from './pages/LeadCollection';
-import { CustomDashboard } from './pages/CustomDashboard';
+import React, { Suspense, lazy } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import MainLayout from './components/MainLayout';
 
-const CRM = lazy(() => import('./pages/CRM'));
-const Analytics = lazy(() => import('./pages/Analytics'));
-const TeamManagement = lazy(() => import('./pages/TeamManagement'));
-const KnowledgeBase = lazy(() => import('./pages/KnowledgeBase'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Projects = lazy(() => import('./pages/ProjectDashboard'));
+const Teams = lazy(() => import('./pages/TeamManagement'));
+const Copilot = lazy(() => import('./pages/Copilot'));
+const Settings = lazy(() => import('./pages/Settings'));
+const WorkspaceSetup = lazy(() => import('./pages/WorkspaceSetup'));
+const ProjectWizard = lazy(() => import('./pages/ProjectWizard'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
-function App() {
-  console.log('🚀 [APP] GMap Data Scraper application starting...');
-  console.log('📱 [APP] User agent:', navigator.userAgent);
-  console.log('🌐 [APP] Current URL:', window.location.href);
-
-  const [showTour, setShowTour] = useState(false);
-  const [tourRun, setTourRun] = useState(false);
-
-  // Example: Show onboarding tour for new users (localStorage flag)
-  useEffect(() => {
-    const hasCompletedTour = localStorage.getItem('onboarding_complete');
-    if (!hasCompletedTour) {
-      setShowTour(true);
-      setTourRun(true);
-    }
-  }, []);
-
-  const handleTourClose = () => {
-    setShowTour(false);
-    localStorage.setItem('onboarding_complete', 'true');
-  };
-
-  const tourSteps = [
-    {
-      target: '[data-tour="dashboard-header"]',
-      content: 'Welcome to LeadTap! This is your dashboard where you can manage all your lead generation activities.',
-      placement: 'bottom'
-    },
-    {
-      target: '[data-tour="dashboard-sidebar"]',
-      content: 'Use the sidebar to navigate between different sections of the platform.',
-      placement: 'right'
-    },
-    {
-      target: '[data-tour="dashboard-content"]',
-      content: 'Create new scraping jobs, view results, and manage your CRM leads from here.',
-      placement: 'top'
-    }
-  ];
-
-  useEffect(() => {
-    // White-label: detect domain and fetch tenant config
-    const domain = window.location.hostname;
-    fetch(`/api/branding/config?domain=${domain}`)
-      .then(res => res.json())
-      .then(cfg => {
-        if (cfg && cfg.tenant_slug) {
-          (window as any).tenantSlug = cfg.tenant_slug;
-          localStorage.setItem('tenantSlug', cfg.tenant_slug);
-        }
-        // Optionally apply branding/colors here
-      });
-  }, []);
-
+const App: React.FC = () => {
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="system"
-      enableSystem
-      disableTransitionOnChange
-    >
-      <AuthProvider>
-        <div className="min-h-screen bg-background text-foreground">
-          {showTour && (
-            <OnboardingTour steps={tourSteps} run={tourRun} onClose={handleTourClose} />
-          )}
-          <LiveChatWidget />
-          <Router>
-            <Navbar />
-            <main className="pt-16 flex-1">
-              <Suspense fallback={<div className="text-center mt-10">Loading...</div>}>
-                <Routes>
-                  <Route path="/" element={<Landing />} />
-                  <Route path="/dashboard" element={
-                    <ProtectedRoute>
-                      <Dashboard />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/pricing" element={<Pricing />} />
-                  <Route path="/about" element={<About />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
-                  <Route path="/payment/success" element={<PaymentSuccess />} />
-                  <Route path="/payment/cancel" element={<PaymentCancel />} />
-                  <Route path="/admin" element={
-                    <ProtectedRoute adminOnly>
-                      <AdminDashboard />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/profile" element={
-                    <ProtectedRoute>
-                      <Profile />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/teams" element={
-                    <ProtectedRoute requiredPlan="pro">
-                      <TeamManagement />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/knowledge-base" element={<KnowledgeBase />} />
-                  <Route path="/shared/job/:token" element={<SharedJob />} />
-                  <Route path="/shared/lead/:token" element={<SharedLead />} />
-                  <Route path="/audit-log" element={
-                    <ProtectedRoute requiredPlan="pro">
-                      <AuditLog />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/lead-collection" element={
-                    <ProtectedRoute requiredPlan="pro">
-                      <LeadCollection />
-                    </ProtectedRoute>
-                  } />
-                  <Route path="/custom-dashboard" element={<CustomDashboard />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Suspense>
-            </main>
-            <Footer />
-          </Router>
-          <Toaster />
-        </div>
-      </AuthProvider>
-    </ThemeProvider>
+    <BrowserRouter>
+      <Suspense fallback={<div>Loading...</div>}>
+        <Routes>
+          <Route path="/" element={<MainLayout />}>
+            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="projects" element={<Projects />} />
+            <Route path="teams" element={<Teams />} />
+            <Route path="copilot" element={<Copilot />} />
+            <Route path="settings" element={<Settings />} />
+            <Route path="workspace-setup" element={<WorkspaceSetup />} />
+            <Route path="project-wizard" element={<ProjectWizard />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
+        </Routes>
+      </Suspense>
+    </BrowserRouter>
   );
-}
+};
 
 export default App; 

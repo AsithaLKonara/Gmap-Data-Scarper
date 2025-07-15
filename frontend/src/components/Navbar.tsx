@@ -5,8 +5,27 @@ import { ThemeToggle } from './ui/theme-toggle';
 import { Button } from './ui/button';
 import { Menu, X, User, LogOut, Settings } from 'lucide-react';
 import { NotificationCenter } from './ui/notification-center';
+import { useTranslation } from 'react-i18next';
+
+const LanguageSwitcher = () => {
+  const { i18n } = useTranslation();
+  const changeLanguage = (lng: string) => i18n.changeLanguage(lng);
+  return (
+    <select
+      value={i18n.language}
+      onChange={e => changeLanguage(e.target.value)}
+      className="rounded border px-2 py-1 text-sm bg-background text-foreground"
+      style={{ minWidth: 60 }}
+      aria-label="Select language"
+    >
+      <option value="en">EN</option>
+      <option value="es">ES</option>
+    </select>
+  );
+};
 
 const Navbar = () => {
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -15,17 +34,17 @@ const Navbar = () => {
   const isActive = (path: string) => location.pathname === path;
 
   const navItems = [
-    { path: '/dashboard', label: 'Dashboard' },
-    { path: '/custom-dashboard', label: 'Custom Dashboard' },
-    { path: '/lead-collection', label: 'Leads' },
-    { path: '/crm', label: 'CRM' },
-    { path: '/analytics', label: 'Analytics' },
-    { path: '/teams', label: 'Teams' },
+    { path: '/dashboard', label: t('dashboard') },
+    { path: '/custom-dashboard', label: t('custom_dashboard', 'Custom Dashboard') },
+    { path: '/lead-collection', label: t('leads', 'Leads') },
+    { path: '/crm', label: t('crm') },
+    { path: '/analytics', label: t('analytics') },
+    { path: '/teams', label: t('teams', 'Teams') },
   ];
 
   const adminItems = [
-    { path: '/admin', label: 'Admin' },
-    { path: '/audit-log', label: 'Audit Log' },
+    { path: '/admin', label: t('admin', 'Admin') },
+    { path: '/audit-log', label: t('audit_log', 'Audit Log') },
   ];
 
   useEffect(() => {
@@ -43,7 +62,7 @@ const Navbar = () => {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex-shrink-0">
-            <Link to="/" className="flex items-center space-x-2">
+            <Link to="/" className="flex items-center space-x-2" aria-label="Home">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <span className="text-primary-foreground font-bold text-sm">L</span>
               </div>
@@ -58,6 +77,7 @@ const Navbar = () => {
                 <Link
                   key={item.path}
                   to={item.path}
+                  aria-label={item.label}
                   className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                     isActive(item.path)
                       ? 'bg-primary text-primary-foreground'
@@ -71,6 +91,7 @@ const Navbar = () => {
                 <Link
                   key={item.path}
                   to={item.path}
+                  aria-label={item.label}
                   className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                     isActive(item.path)
                       ? 'bg-primary text-primary-foreground'
@@ -87,35 +108,37 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-4">
             <NotificationCenter />
             <ThemeToggle />
-            
+            <LanguageSwitcher />
             {user ? (
               <div className="relative">
                 <Button
                   variant="ghost"
                   size="sm"
+                  aria-label="User menu"
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   className="flex items-center space-x-2"
                 >
                   <User className="h-4 w-4" />
                   <span>{user.email}</span>
                 </Button>
-                
                 {isDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-md shadow-lg py-1 z-50">
                     <Link
                       to="/profile"
                       className="flex items-center px-4 py-2 text-sm text-foreground hover:bg-accent"
                       onClick={() => setIsDropdownOpen(false)}
+                      aria-label="Profile settings"
                     >
                       <Settings className="h-4 w-4 mr-2" />
-                      Settings
+                      {t('settings', 'Settings')}
                     </Link>
                     <button
                       onClick={handleLogout}
                       className="flex items-center w-full px-4 py-2 text-sm text-foreground hover:bg-accent"
+                      aria-label="Logout"
                     >
                       <LogOut className="h-4 w-4 mr-2" />
-                      Logout
+                      {t('logout')}
                     </button>
                   </div>
                 )}
@@ -123,13 +146,13 @@ const Navbar = () => {
             ) : (
               <div className="flex items-center space-x-2">
                 <Link to="/login">
-                  <Button variant="ghost" size="sm">
-                    Login
+                  <Button variant="ghost" size="sm" aria-label="Login">
+                    {t('login')}
                   </Button>
                 </Link>
                 <Link to="/register">
-                  <Button size="sm">
-                    Sign Up
+                  <Button size="sm" aria-label="Sign Up">
+                    {t('sign_up', 'Sign Up')}
                   </Button>
                 </Link>
               </div>
@@ -141,6 +164,7 @@ const Navbar = () => {
             <Button
               variant="ghost"
               size="sm"
+              aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
               {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -157,6 +181,7 @@ const Navbar = () => {
               <Link
                 key={item.path}
                 to={item.path}
+                aria-label={item.label}
                 className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
                   isActive(item.path)
                     ? 'bg-primary text-primary-foreground'
@@ -170,6 +195,7 @@ const Navbar = () => {
               <Link
                 key={item.path}
                 to={item.path}
+                aria-label={item.label}
                 className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
                   isActive(item.path)
                     ? 'bg-primary text-primary-foreground'
@@ -179,32 +205,33 @@ const Navbar = () => {
                 {item.label}
               </Link>
             ))}
-            
             {user ? (
               <div className="pt-4 border-t border-border">
                 <Link
                   to="/profile"
                   className="block px-3 py-2 text-base font-medium text-muted-foreground hover:text-foreground hover:bg-accent"
+                  aria-label="Profile settings"
                 >
-                  Settings
+                  {t('settings', 'Settings')}
                 </Link>
                 <button
                   onClick={handleLogout}
                   className="block w-full text-left px-3 py-2 text-base font-medium text-muted-foreground hover:text-foreground hover:bg-accent"
+                  aria-label="Logout"
                 >
-                  Logout
+                  {t('logout')}
                 </button>
               </div>
             ) : (
               <div className="pt-4 border-t border-border space-y-2">
                 <Link to="/login">
-                  <Button variant="ghost" className="w-full justify-start">
-                    Login
+                  <Button variant="ghost" className="w-full justify-start" aria-label="Login">
+                    {t('login')}
                   </Button>
                 </Link>
                 <Link to="/register">
-                  <Button className="w-full justify-start">
-                    Sign Up
+                  <Button className="w-full justify-start" aria-label="Sign Up">
+                    {t('sign_up', 'Sign Up')}
                   </Button>
                 </Link>
               </div>

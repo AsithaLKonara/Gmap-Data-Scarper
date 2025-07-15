@@ -31,6 +31,16 @@ import { useAuth } from '../hooks/useAuth';
 import { Navigate } from 'react-router-dom';
 import * as api from '../api';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Button as ShadCNButton } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import {
+  Table as ShadCNTable,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from '../components/ui/table';
 
 const AdminDashboard: React.FC = () => {
   const { user, loading } = useAuth();
@@ -139,9 +149,9 @@ const AdminDashboard: React.FC = () => {
         <Heading size="md" fontWeight="bold" color="blue.500">LeadTap Admin</Heading>
       </HStack>
       <HStack spacing={4}>
-        <Tag colorScheme="green">{user.plan.toUpperCase()}</Tag>
+        <Badge variant="outline">{user.plan.toUpperCase()}</Badge>
         <Menu>
-          <MenuButton as={Button} rightIcon={<ChevronDownIcon />} variant="ghost">
+          <MenuButton as={ShadCNButton} rightIcon={<ChevronDownIcon />} variant="ghost">
             <HStack>
               <Avatar size="sm" name={user.email} />
               <Text fontSize="sm">{user.email}</Text>
@@ -161,12 +171,12 @@ const AdminDashboard: React.FC = () => {
   const sidebar = (
     <Box {...sidebarStyles}>
       <VStack align="stretch" spacing={2} pt={6} px={sidebarOpen ? 4 : 1}>
-        <Button variant="ghost" justifyContent={sidebarOpen ? 'flex-start' : 'center'} leftIcon={<span>📊</span>} size="lg">{sidebarOpen && 'Dashboard'}</Button>
-        <Button variant="ghost" justifyContent={sidebarOpen ? 'flex-start' : 'center'} leftIcon={<span>👥</span>} size="lg">{sidebarOpen && 'Users'}</Button>
-        <Button variant="ghost" justifyContent={sidebarOpen ? 'flex-start' : 'center'} leftIcon={<span>🗂️</span>} size="lg">{sidebarOpen && 'Jobs'}</Button>
-        <Button variant="ghost" justifyContent={sidebarOpen ? 'flex-start' : 'center'} leftIcon={<span>📈</span>} size="lg">{sidebarOpen && 'Analytics'}</Button>
-        <Button variant="ghost" justifyContent={sidebarOpen ? 'flex-start' : 'center'} leftIcon={<span>📝</span>} size="lg">{sidebarOpen && 'CRM'}</Button>
-        <Button variant="ghost" justifyContent={sidebarOpen ? 'flex-start' : 'center'} leftIcon={<span>⚙️</span>} size="lg">{sidebarOpen && 'Settings'}</Button>
+        <ShadCNButton variant="ghost" justifyContent={sidebarOpen ? 'flex-start' : 'center'} leftIcon={<span>📊</span>} size="lg">{sidebarOpen && 'Dashboard'}</ShadCNButton>
+        <ShadCNButton variant="ghost" justifyContent={sidebarOpen ? 'flex-start' : 'center'} leftIcon={<span>👥</span>} size="lg">{sidebarOpen && 'Users'}</ShadCNButton>
+        <ShadCNButton variant="ghost" justifyContent={sidebarOpen ? 'flex-start' : 'center'} leftIcon={<span>🗂️</span>} size="lg">{sidebarOpen && 'Jobs'}</ShadCNButton>
+        <ShadCNButton variant="ghost" justifyContent={sidebarOpen ? 'flex-start' : 'center'} leftIcon={<span>📈</span>} size="lg">{sidebarOpen && 'Analytics'}</ShadCNButton>
+        <ShadCNButton variant="ghost" justifyContent={sidebarOpen ? 'flex-start' : 'center'} leftIcon={<span>📝</span>} size="lg">{sidebarOpen && 'CRM'}</ShadCNButton>
+        <ShadCNButton variant="ghost" justifyContent={sidebarOpen ? 'flex-start' : 'center'} leftIcon={<span>⚙️</span>} size="lg">{sidebarOpen && 'Settings'}</ShadCNButton>
       </VStack>
     </Box>
   );
@@ -188,49 +198,49 @@ const AdminDashboard: React.FC = () => {
                 {/* Add user/job management, filters, etc. here */}
                 <Box bg={useColorModeValue('white', 'gray.900')} p={6} borderRadius="lg" border="1px" borderColor={useColorModeValue('gray.200', 'gray.700')} boxShadow="md">
                   <Heading size="md" mb={4}>User Management</Heading>
-                  <Table size="sm">
-                    <Thead>
-                      <Tr>
-                        <Th>ID</Th>
-                        <Th>Email</Th>
-                        <Th>Plan</Th>
-                        <Th>Created</Th>
-                      </Tr>
-                    </Thead>
-                    <Tbody>
+                  <ShadCNTable size="sm">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Plan</TableHead>
+                        <TableHead>Created</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {users.map((u) => (
-                        <Tr key={u.id}>
-                          <Td>{u.id}</Td>
-                          <Td>{u.email}</Td>
-                          <Td>{u.plan}</Td>
-                          <Td>{new Date(u.created_at).toLocaleDateString()}</Td>
-                        </Tr>
+                        <TableRow key={u.id}>
+                          <TableCell>{u.id}</TableCell>
+                          <TableCell>{u.email}</TableCell>
+                          <TableCell>{u.plan}</TableCell>
+                          <TableCell>{new Date(u.created_at).toLocaleDateString()}</TableCell>
+                        </TableRow>
                       ))}
-                    </Tbody>
-                  </Table>
+                    </TableBody>
+                  </ShadCNTable>
                 </Box>
                 <Box bg={useColorModeValue('white', 'gray.900')} p={6} borderRadius="lg" border="1px" borderColor={useColorModeValue('gray.200', 'gray.700')} boxShadow="md">
                   <Heading size="md" mb={4}>Job Management</Heading>
-                  <Table size="sm">
-                    <Thead>
-                      <Tr>
-                        <Th>ID</Th>
-                        <Th>User</Th>
-                        <Th>Status</Th>
-                        <Th>Created</Th>
-                      </Tr>
-                    </Thead>
-                    <Tbody>
+                  <ShadCNTable size="sm">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>User</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Created</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {jobs.map((j) => (
-                        <Tr key={j.id}>
-                          <Td>{j.id}</Td>
-                          <Td>{j.user_email || '-'}</Td>
-                          <Td>{j.status}</Td>
-                          <Td>{new Date(j.created_at).toLocaleDateString()}</Td>
-                        </Tr>
+                        <TableRow key={j.id}>
+                          <TableCell>{j.id}</TableCell>
+                          <TableCell>{j.user_email || '-'}</TableCell>
+                          <TableCell>{j.status}</TableCell>
+                          <TableCell>{new Date(j.created_at).toLocaleDateString()}</TableCell>
+                        </TableRow>
                       ))}
-                    </Tbody>
-                  </Table>
+                    </TableBody>
+                  </ShadCNTable>
                 </Box>
               </VStack>
             </Box>
@@ -299,28 +309,28 @@ const AdminDashboard: React.FC = () => {
                 </Box>
                 <Box bg={useColorModeValue('white', 'gray.900')} p={6} borderRadius="lg" border="1px" borderColor={useColorModeValue('gray.200', 'gray.700')} boxShadow="md">
                   <Heading size="md" mb={4}>CRM Leads</Heading>
-                  <Table size="sm">
-                    <Thead>
-                      <Tr>
-                        <Th>Name</Th>
-                        <Th>Email</Th>
-                        <Th>Company</Th>
-                        <Th>Status</Th>
-                        <Th>Source</Th>
-                      </Tr>
-                    </Thead>
-                    <Tbody>
+                  <ShadCNTable size="sm">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Company</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Source</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                       {crmLeads.map((lead) => (
-                        <Tr key={lead.id}>
-                          <Td>{lead.name}</Td>
-                          <Td>{lead.email}</Td>
-                          <Td>{lead.company || '-'}</Td>
-                          <Td>{lead.status}</Td>
-                          <Td>{lead.source}</Td>
-                        </Tr>
+                        <TableRow key={lead.id}>
+                          <TableCell>{lead.name}</TableCell>
+                          <TableCell>{lead.email}</TableCell>
+                          <TableCell>{lead.company || '-'}</TableCell>
+                          <TableCell>{lead.status}</TableCell>
+                          <TableCell>{lead.source}</TableCell>
+                        </TableRow>
                       ))}
-                    </Tbody>
-                  </Table>
+                    </TableBody>
+                  </ShadCNTable>
                 </Box>
               </VStack>
             </Box>

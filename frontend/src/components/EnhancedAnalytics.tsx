@@ -167,130 +167,121 @@ const EnhancedAnalytics: React.FC = () => {
   };
 
   return (
-    <Box>
+    <div>
       {/* Header with Period Selector */}
-      <HStack justify="space-between" mb={6}>
-        <Box>
-          <Text fontSize="2xl" fontWeight="bold">Analytics Dashboard</Text>
-          <Text color="gray.600">Track your lead generation performance</Text>
-        </Box>
-        <HStack spacing={4}>
-          <Select
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
+        <div>
+          <span className="text-2xl font-bold block">Analytics Dashboard</span>
+          <span className="text-gray-600 block">Track your lead generation performance</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <select
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
-            size="sm"
-            width="120px"
+            className="rounded-md border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary w-32"
           >
             <option value="7">Last 7 days</option>
             <option value="30">Last 30 days</option>
             <option value="90">Last 90 days</option>
             <option value="365">Last year</option>
-          </Select>
-          <Button size="sm" leftIcon={<DownloadIcon />}>
-            Export Report
-          </Button>
-        </HStack>
-      </HStack>
-
+          </select>
+          <button
+            className="inline-flex items-center px-3 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 text-sm"
+          >
+            <span className="mr-2">⬇️</span>Export Report
+          </button>
+        </div>
+      </div>
       {/* Key Metrics */}
-      <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={6} mb={8}>
-        <Card bg={bgColor} border="1px" borderColor={borderColor}>
-          <CardBody>
-            <Stat>
-              <StatLabel>Jobs Created</StatLabel>
-              <StatNumber>{currentMonth?.jobsCreated || 0}</StatNumber>
-              <StatHelpText>
-                <StatArrow type={currentMonth?.jobsCreated > previousMonth?.jobsCreated ? 'increase' : 'decrease'} />
-                {Math.abs(calculateGrowth(currentMonth?.jobsCreated || 0, previousMonth?.jobsCreated || 0)).toFixed(1)}%
-              </StatHelpText>
-            </Stat>
-          </CardBody>
-        </Card>
-
-        <Card bg={bgColor} border="1px" borderColor={borderColor}>
-          <CardBody>
-            <Stat>
-              <StatLabel>Leads Generated</StatLabel>
-              <StatNumber>{currentMonth?.leadsGenerated?.toLocaleString() || 0}</StatNumber>
-              <StatHelpText>
-                <StatArrow type={currentMonth?.leadsGenerated > previousMonth?.leadsGenerated ? 'increase' : 'decrease'} />
-                {Math.abs(calculateGrowth(currentMonth?.leadsGenerated || 0, previousMonth?.leadsGenerated || 0)).toFixed(1)}%
-              </StatHelpText>
-            </Stat>
-          </CardBody>
-        </Card>
-
-        <Card bg={bgColor} border="1px" borderColor={borderColor}>
-          <CardBody>
-            <Stat>
-              <StatLabel>Conversion Rate</StatLabel>
-              <StatNumber>{(currentMonth?.conversionRate * 100).toFixed(1)}%</StatNumber>
-              <StatHelpText>
-                <StatArrow type={currentMonth?.conversionRate > previousMonth?.conversionRate ? 'increase' : 'decrease'} />
-                {Math.abs(calculateGrowth(currentMonth?.conversionRate || 0, previousMonth?.conversionRate || 0)).toFixed(1)}%
-              </StatHelpText>
-            </Stat>
-          </CardBody>
-        </Card>
-
-        <Card bg={bgColor} border="1px" borderColor={borderColor}>
-          <CardBody>
-            <Stat>
-              <StatLabel>Revenue</StatLabel>
-              <StatNumber>${currentMonth?.revenue?.toLocaleString() || 0}</StatNumber>
-              <StatHelpText>
-                <StatArrow type={currentMonth?.revenue > previousMonth?.revenue ? 'increase' : 'decrease'} />
-                {Math.abs(calculateGrowth(currentMonth?.revenue || 0, previousMonth?.revenue || 0)).toFixed(1)}%
-              </StatHelpText>
-            </Stat>
-          </CardBody>
-        </Card>
-      </SimpleGrid>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Jobs Created */}
+        <div className="rounded-lg border bg-white dark:bg-gray-900 p-6 shadow">
+          <div className="text-gray-500 text-sm">Jobs Created</div>
+          <div className="text-2xl font-bold">{currentMonth?.jobsCreated || 0}</div>
+          <div className="flex items-center text-xs mt-1">
+            <span className={currentMonth?.jobsCreated > previousMonth?.jobsCreated ? 'text-green-600' : 'text-red-600'}>
+              {currentMonth?.jobsCreated > previousMonth?.jobsCreated ? '▲' : '▼'}
+            </span>
+            <span className="ml-1">
+              {Math.abs(calculateGrowth(currentMonth?.jobsCreated || 0, previousMonth?.jobsCreated || 0)).toFixed(1)}%
+            </span>
+          </div>
+        </div>
+        {/* Leads Generated */}
+        <div className="rounded-lg border bg-white dark:bg-gray-900 p-6 shadow">
+          <div className="text-gray-500 text-sm">Leads Generated</div>
+          <div className="text-2xl font-bold">{currentMonth?.leadsGenerated?.toLocaleString() || 0}</div>
+          <div className="flex items-center text-xs mt-1">
+            <span className={currentMonth?.leadsGenerated > previousMonth?.leadsGenerated ? 'text-green-600' : 'text-red-600'}>
+              {currentMonth?.leadsGenerated > previousMonth?.leadsGenerated ? '▲' : '▼'}
+            </span>
+            <span className="ml-1">
+              {Math.abs(calculateGrowth(currentMonth?.leadsGenerated || 0, previousMonth?.leadsGenerated || 0)).toFixed(1)}%
+            </span>
+          </div>
+        </div>
+        {/* Conversion Rate */}
+        <div className="rounded-lg border bg-white dark:bg-gray-900 p-6 shadow">
+          <div className="text-gray-500 text-sm">Conversion Rate</div>
+          <div className="text-2xl font-bold">{(currentMonth?.conversionRate * 100).toFixed(1)}%</div>
+          <div className="flex items-center text-xs mt-1">
+            <span className={currentMonth?.conversionRate > previousMonth?.conversionRate ? 'text-green-600' : 'text-red-600'}>
+              {currentMonth?.conversionRate > previousMonth?.conversionRate ? '▲' : '▼'}
+            </span>
+            <span className="ml-1">
+              {Math.abs(calculateGrowth(currentMonth?.conversionRate || 0, previousMonth?.conversionRate || 0)).toFixed(1)}%
+            </span>
+          </div>
+        </div>
+        {/* Revenue */}
+        <div className="rounded-lg border bg-white dark:bg-gray-900 p-6 shadow">
+          <div className="text-gray-500 text-sm">Revenue</div>
+          <div className="text-2xl font-bold">${currentMonth?.revenue?.toLocaleString() || 0}</div>
+          <div className="flex items-center text-xs mt-1">
+            <span className={currentMonth?.revenue > previousMonth?.revenue ? 'text-green-600' : 'text-red-600'}>
+              {currentMonth?.revenue > previousMonth?.revenue ? '▲' : '▼'}
+            </span>
+            <span className="ml-1">
+              {Math.abs(calculateGrowth(currentMonth?.revenue || 0, previousMonth?.revenue || 0)).toFixed(1)}%
+            </span>
+          </div>
+        </div>
+      </div>
 
       {/* Goals Section */}
-      <Card bg={bgColor} border="1px" borderColor={borderColor} mb={6}>
-        <CardBody>
-          <HStack justify="space-between" mb={4}>
-            <Text fontSize="lg" fontWeight="bold">Goals & Targets</Text>
-            <Button size="sm" onClick={() => setShowGoalModal(true)}>
-              Add Goal
-            </Button>
-          </HStack>
-          
-          <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4}>
-            {goals.map((goal) => (
-              <Box key={goal.id} p={4} border="1px" borderColor={borderColor} borderRadius="md">
-                <HStack justify="space-between" mb={2}>
-                  <Text fontWeight="medium" fontSize="sm">{goal.name}</Text>
-                  <Badge colorScheme={getGoalColor(goal)}>
-                    {getGoalProgress(goal).toFixed(0)}%
-                  </Badge>
-                </HStack>
-                <Progress 
-                  value={getGoalProgress(goal)} 
-                  colorScheme={getGoalColor(goal)}
-                  size="sm"
-                  mb={2}
-                />
-                <Text fontSize="sm" color="gray.600">
-                  {goal.current.toLocaleString()} / {goal.target.toLocaleString()} {goal.type}
-                </Text>
-                <Text fontSize="xs" color="gray.500">
-                  Due: {new Date(goal.deadline).toLocaleDateString()}
-                </Text>
-              </Box>
-            ))}
-          </SimpleGrid>
-        </CardBody>
-      </Card>
-
+      <div className="rounded-lg border bg-white dark:bg-gray-900 p-6 shadow mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <span className="text-lg font-bold">Goals & Targets</span>
+          <button
+            className="inline-flex items-center px-3 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 text-sm"
+            onClick={() => setShowGoalModal(true)}
+          >
+            Add Goal
+          </button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {goals.map((goal) => (
+            <div key={goal.id} className="p-4 border rounded-md">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-medium text-sm">{goal.name}</span>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${getGoalColor(goal) === 'green' ? 'bg-green-100 text-green-700' : getGoalColor(goal) === 'blue' ? 'bg-blue-100 text-blue-700' : getGoalColor(goal) === 'yellow' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{getGoalProgress(goal).toFixed(0)}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+                <div className={`${getGoalColor(goal) === 'green' ? 'bg-green-600' : getGoalColor(goal) === 'blue' ? 'bg-blue-600' : getGoalColor(goal) === 'yellow' ? 'bg-yellow-500' : 'bg-red-600'} h-2.5 rounded-full transition-all`} style={{ width: `${getGoalProgress(goal)}%` }} />
+              </div>
+              <span className="text-sm text-gray-600 block">{goal.current.toLocaleString()} / {goal.target.toLocaleString()} {goal.type}</span>
+              <span className="text-xs text-gray-500 block">Due: {new Date(goal.deadline).toLocaleDateString()}</span>
+            </div>
+          ))}
+        </div>
+      </div>
       {/* Charts Section */}
-      <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6} mb={6}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Trend Chart */}
-        <Card bg={bgColor} border="1px" borderColor={borderColor}>
-          <CardBody>
-            <Text fontSize="lg" fontWeight="bold" mb={4}>Performance Trends</Text>
-            <ResponsiveContainer width="100%" height={300}>
+        <div className="rounded-lg border bg-white dark:bg-gray-900 p-6 shadow">
+          <span className="text-lg font-bold mb-4 block">Performance Trends</span>
+          <div className="w-full h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
               <LineChart data={analyticsData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="period" />
@@ -301,14 +292,13 @@ const EnhancedAnalytics: React.FC = () => {
                 <Line type="monotone" dataKey="revenue" stroke="#38A169" name="Revenue" />
               </LineChart>
             </ResponsiveContainer>
-          </CardBody>
-        </Card>
-
+          </div>
+        </div>
         {/* Funnel Chart */}
-        <Card bg={bgColor} border="1px" borderColor={borderColor}>
-          <CardBody>
-            <Text fontSize="lg" fontWeight="bold" mb={4}>Conversion Funnel</Text>
-            <ResponsiveContainer width="100%" height={300}>
+        <div className="rounded-lg border bg-white dark:bg-gray-900 p-6 shadow">
+          <span className="text-lg font-bold mb-4 block">Conversion Funnel</span>
+          <div className="w-full h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
               <BarChart data={funnelData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="stage" />
@@ -317,168 +307,154 @@ const EnhancedAnalytics: React.FC = () => {
                 <Bar dataKey="count" fill="#3182CE" />
               </BarChart>
             </ResponsiveContainer>
-          </CardBody>
-        </Card>
-      </SimpleGrid>
-
+          </div>
+        </div>
+      </div>
       {/* Funnel Details Table */}
-      <Card bg={bgColor} border="1px" borderColor={borderColor} mb={6}>
-        <CardBody>
-          <Text fontSize="lg" fontWeight="bold" mb={4}>Funnel Analysis</Text>
-          <Table variant="simple" size="sm">
-            <Thead>
-              <Tr>
-                <Th>Stage</Th>
-                <Th>Count</Th>
-                <Th>Conversion Rate</Th>
-                <Th>Drop-off</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
+      <div className="rounded-lg border bg-white dark:bg-gray-900 p-6 shadow mb-6">
+        <span className="text-lg font-bold mb-4 block">Funnel Analysis</span>
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm border-separate border-spacing-y-2">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-2 py-1 font-medium text-gray-700 text-left">Stage</th>
+                <th className="px-2 py-1 font-medium text-gray-700 text-left">Count</th>
+                <th className="px-2 py-1 font-medium text-gray-700 text-left">Conversion Rate</th>
+                <th className="px-2 py-1 font-medium text-gray-700 text-left">Drop-off</th>
+              </tr>
+            </thead>
+            <tbody>
               {funnelData.map((stage, index) => (
-                <Tr key={stage.stage}>
-                  <Td>
-                    <HStack>
-                      <Box w={3} h={3} bg={stage.color} borderRadius="full" />
-                      <Text>{stage.stage}</Text>
-                    </HStack>
-                  </Td>
-                  <Td>{stage.count.toLocaleString()}</Td>
-                  <Td>{stage.conversionRate.toFixed(1)}%</Td>
-                  <Td>
+                <tr key={stage.stage} className="even:bg-gray-50">
+                  <td className="px-2 py-1">
+                    <div className="flex items-center space-x-2">
+                      <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: stage.color }} />
+                      <span>{stage.stage}</span>
+                    </div>
+                  </td>
+                  <td className="px-2 py-1">{stage.count.toLocaleString()}</td>
+                  <td className="px-2 py-1">{stage.conversionRate.toFixed(1)}%</td>
+                  <td className="px-2 py-1">
                     {index < funnelData.length - 1 
                       ? `${((1 - funnelData[index + 1].count / stage.count) * 100).toFixed(1)}%`
                       : '-'
                     }
-                  </Td>
-                </Tr>
+                  </td>
+                </tr>
               ))}
-            </Tbody>
-          </Table>
-        </CardBody>
-      </Card>
-
+            </tbody>
+          </table>
+        </div>
+      </div>
       {/* Insights & Recommendations */}
-      <Card bg={bgColor} border="1px" borderColor={borderColor}>
-        <CardBody>
-          <Text fontSize="lg" fontWeight="bold" mb={4}>Insights & Recommendations</Text>
-          
-          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-            <Alert status="success" borderRadius="md">
-              <AlertIcon />
-              <Box>
-                <AlertTitle>Strong Performance</AlertTitle>
-                <AlertDescription>
-                  Your conversion rate is 20% above industry average. Keep up the great work!
-                </AlertDescription>
-              </Box>
-            </Alert>
-
-            <Alert status="info" borderRadius="md">
-              <AlertIcon />
-              <Box>
-                <AlertTitle>Optimization Opportunity</AlertTitle>
-                <AlertDescription>
-                  Consider adding more specific queries to improve lead quality and conversion rates.
-                </AlertDescription>
-              </Box>
-            </Alert>
-
-            <Alert status="warning" borderRadius="md">
-              <AlertIcon />
-              <Box>
-                <AlertTitle>Goal Alert</AlertTitle>
-                <AlertDescription>
-                  You're 15% behind your monthly lead generation goal. Consider increasing your daily query volume.
-                </AlertDescription>
-              </Box>
-            </Alert>
-
-            <Alert status="info" borderRadius="md">
-              <AlertIcon />
-              <Box>
-                <AlertTitle>Feature Suggestion</AlertTitle>
-                <AlertDescription>
-                  Upgrade to Pro plan to access advanced analytics and team collaboration features.
-                </AlertDescription>
-              </Box>
-            </Alert>
-          </SimpleGrid>
-        </CardBody>
-      </Card>
-
+      <div className="rounded-lg border bg-white dark:bg-gray-900 p-6 shadow mb-6">
+        <span className="text-lg font-bold mb-4 block">Insights & Recommendations</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex items-start p-4 bg-green-50 border border-green-200 rounded-md">
+            <span className="text-green-500 mr-2">✔️</span>
+            <div>
+              <span className="font-semibold block">Strong Performance</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300 block">Your conversion rate is 20% above industry average. Keep up the great work!</span>
+            </div>
+          </div>
+          <div className="flex items-start p-4 bg-blue-50 border border-blue-200 rounded-md">
+            <span className="text-blue-500 mr-2">ℹ️</span>
+            <div>
+              <span className="font-semibold block">Optimization Opportunity</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300 block">Consider adding more specific queries to improve lead quality and conversion rates.</span>
+            </div>
+          </div>
+          <div className="flex items-start p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+            <span className="text-yellow-500 mr-2">⚠️</span>
+            <div>
+              <span className="font-semibold block">Goal Alert</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300 block">You're 15% behind your monthly lead generation goal. Consider increasing your daily query volume.</span>
+            </div>
+          </div>
+          <div className="flex items-start p-4 bg-blue-50 border border-blue-200 rounded-md">
+            <span className="text-blue-500 mr-2">ℹ️</span>
+            <div>
+              <span className="font-semibold block">Feature Suggestion</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300 block">Upgrade to Pro plan to access advanced analytics and team collaboration features.</span>
+            </div>
+          </div>
+        </div>
+      </div>
       {/* Add Goal Modal */}
-      <Modal isOpen={showGoalModal} onClose={() => setShowGoalModal(false)}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Add New Goal</ModalHeader>
-          <ModalBody>
-            <VStack spacing={4}>
-              <FormControl>
-                <FormLabel>Goal Name</FormLabel>
-                <Input
+      {showGoalModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-md mx-4 animate-fade-in">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <span className="text-lg font-bold">Add New Goal</span>
+              <button onClick={() => setShowGoalModal(false)} className="text-gray-400 hover:text-gray-600">&times;</button>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Goal Name</label>
+                <input
                   value={newGoal.name}
                   onChange={(e) => setNewGoal({ ...newGoal, name: e.target.value })}
                   placeholder="e.g., Generate 1000 leads this month"
+                  className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
                 />
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Target Value</FormLabel>
-                <Input
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Target Value</label>
+                <input
                   type="number"
                   value={newGoal.target}
                   onChange={(e) => setNewGoal({ ...newGoal, target: Number(e.target.value) })}
                   placeholder="1000"
+                  className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
                 />
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Goal Type</FormLabel>
-                <Select
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Goal Type</label>
+                <select
                   value={newGoal.type}
                   onChange={(e) => setNewGoal({ ...newGoal, type: e.target.value as any })}
+                  className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
                 >
                   <option value="leads">Leads Generated</option>
                   <option value="revenue">Revenue</option>
                   <option value="jobs">Jobs Created</option>
                   <option value="exports">Exports Completed</option>
-                </Select>
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Period</FormLabel>
-                <Select
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Period</label>
+                <select
                   value={newGoal.period}
                   onChange={(e) => setNewGoal({ ...newGoal, period: e.target.value as any })}
+                  className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
                 >
                   <option value="daily">Daily</option>
                   <option value="weekly">Weekly</option>
                   <option value="monthly">Monthly</option>
-                </Select>
-              </FormControl>
-
-              <FormControl>
-                <FormLabel>Deadline</FormLabel>
-                <Input
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Deadline</label>
+                <input
                   type="date"
                   value={newGoal.deadline}
                   onChange={(e) => setNewGoal({ ...newGoal, deadline: e.target.value })}
+                  className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
                 />
-              </FormControl>
-            </VStack>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={() => setShowGoalModal(false)}>
-              Cancel
-            </Button>
-            <Button colorScheme="blue" onClick={handleAddGoal}>
-              Add Goal
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-    </Box>
+              </div>
+            </div>
+            <div className="flex items-center justify-end px-6 py-4 border-t border-gray-200 dark:border-gray-700 space-x-2">
+              <button onClick={() => setShowGoalModal(false)} className="inline-flex items-center px-4 py-2 rounded-md bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200 font-medium">
+                Cancel
+              </button>
+              <button onClick={handleAddGoal} className="inline-flex items-center px-4 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                Add Goal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

@@ -1,9 +1,8 @@
 import React from 'react';
-import { Box, Heading, Text, Container, VStack, SimpleGrid, Icon } from '@chakra-ui/react';
-import { 
-  SearchIcon, 
-  DownloadIcon, 
-  LockIcon, 
+import {
+  SearchIcon,
+  DownloadIcon,
+  LockIcon,
   StarIcon,
   CheckCircleIcon,
   TimeIcon
@@ -46,60 +45,52 @@ const About = () => {
   ];
 
   return (
-    <Box py={20} minH="calc(100vh - 64px)">
-      <Container maxW="1200px">
-        <VStack spacing={16}>
-          <VStack spacing={6} textAlign="center">
-            <Heading size="3xl" className="gradient-text">
+    <div className="py-20 min-h-[calc(100vh-64px)]">
+      <div className="max-w-[1200px] mx-auto">
+        <div className="flex flex-col gap-16">
+          <div className="flex flex-col gap-6 text-center">
+            <h1 className="text-5xl font-bold gradient-text">
               {t('about.heading', 'About LeadTap')}
-            </Heading>
-            <Text color="gray.400" fontSize="xl" maxW="800px" lineHeight="1.6">
+            </h1>
+            <p className="text-gray-400 text-xl max-w-[800px] mx-auto leading-relaxed">
               {t('about.description', 'LeadTap is a powerful Google Maps data extraction platform designed to help businesses, researchers, and marketers gather comprehensive location data efficiently and accurately. Our advanced technology makes it easy to extract business information, contact details, and location data from Google Maps.')}
-            </Text>
-          </VStack>
+            </p>
+          </div>
 
-          <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={8}>
-            {features.map((feature, index) => (
-              <Box
-                key={index}
-                className="card-modern"
-                p={6}
-                textAlign="center"
-                transition="all 0.3s ease"
-                _hover={{
-                  transform: 'translateY(-4px)',
-                  boxShadow: '0 12px 24px rgba(0, 0, 0, 0.15)'
-                }}
-              >
-                <Icon 
-                  as={feature.icon} 
-                  w={10} 
-                  h={10} 
-                  color="brand.400" 
-                  mb={4}
-                />
-                <Heading size="md" mb={3}>
-                  {feature.title}
-                </Heading>
-                <Text color="gray.400" lineHeight="1.6">
-                  {feature.description}
-    </Text>
-              </Box>
-            ))}
-          </SimpleGrid>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {features.map((feature, index) => {
+              const IconComp = feature.icon;
+              return (
+                <div
+                  key={index}
+                  className="card-modern p-6 text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+                >
+                  <span className="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-full bg-blue-900/10">
+                    <IconComp boxSize={10} className="text-blue-400 w-10 h-10" />
+                  </span>
+                  <h3 className="text-xl font-semibold mb-3">
+                    {feature.title}
+                  </h3>
+                  <p className="text-gray-400 leading-relaxed">
+                    {feature.description}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
 
-          <VStack spacing={6} textAlign="center" pt={8}>
-            <Heading size="lg" color="white">
+          <div className="flex flex-col gap-6 text-center pt-8">
+            <h2 className="text-3xl font-bold text-white">
               {t('about.whyChoose.heading', 'Why Choose LeadTap?')}
-            </Heading>
-            <Text color="gray.400" fontSize="lg" maxW="800px" lineHeight="1.6">
+            </h2>
+            <p className="text-gray-400 text-lg max-w-[800px] mx-auto leading-relaxed">
               {t('about.whyChoose.description', 'Our platform combines cutting-edge technology with user-friendly design to provide the most efficient and reliable Google Maps data extraction solution. Whether you\'re a small business looking for leads or an enterprise requiring bulk data extraction, LeadTap has the tools and features you need to succeed.')}
-            </Text>
-          </VStack>
-        </VStack>
-      </Container>
-  </Box>
-);
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default About; 

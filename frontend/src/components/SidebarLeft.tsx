@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { Box, VStack, Input, Button, List, ListItem, IconButton, HStack, Heading, Spinner, Text } from '@chakra-ui/react';
-import { CloseIcon } from '@chakra-ui/icons';
-import * as api from '../api';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { X, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const SidebarLeft = ({ onJobCreated }: { onJobCreated: (jobId: number) => void }) => {
   const [query, setQuery] = useState('');
   const [queries, setQueries] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
 
   const addQuery = () => {
     if (query.trim() && !queries.includes(query.trim())) {
@@ -25,7 +26,8 @@ const SidebarLeft = ({ onJobCreated }: { onJobCreated: (jobId: number) => void }
     setLoading(true);
     setError(null);
     try {
-      const res = await api.createJob(queries);
+      // @ts-ignore
+      const res = await import('../api').then(api => api.createJob(queries));
       onJobCreated(res.job_id);
     } catch (e: any) {
       setError(e.message);
@@ -33,31 +35,50 @@ const SidebarLeft = ({ onJobCreated }: { onJobCreated: (jobId: number) => void }
     setLoading(false);
   };
 
+  if (collapsed) {
+    return (
+      <div className="h-full flex flex-col items-center justify-start bg-muted border-r w-12 min-h-screen pt-4">
+        <Button variant="ghost" size="icon" onClick={() => setCollapsed(false)} aria-label="Expand sidebar">
+          <ChevronRight />
+        </Button>
+      </div>
+    );
+  }
+
   return (
-    <Box w={['100%', '300px']} p={4} bg="gray.100" minH="100vh" borderRightWidth={1}>
-      <Heading as="h3" size="md" mb={4}>Search Queries</Heading>
-      <HStack mb={4}>
+    <aside className="w-full md:w-72 bg-muted border-r min-h-screen p-4 flex flex-col transition-all duration-300">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold">Search Queries</h3>
+        <Button variant="ghost" size="icon" onClick={() => setCollapsed(true)} aria-label="Collapse sidebar">
+          <ChevronLeft />
+        </Button>
+      </div>
+      <div className="flex gap-2 mb-4">
         <Input
           placeholder="Enter search query"
           value={query}
           onChange={e => setQuery(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && addQuery()}
         />
-        <Button onClick={addQuery} colorScheme="teal">Add</Button>
-      </HStack>
-      <List spacing={2} mb={4}>
+        <Button type="button" onClick={addQuery} variant="secondary" size="icon" aria-label="Add query">
+          <Plus />
+        </Button>
+      </div>
+      <ul className="space-y-2 mb-4">
         {queries.map(q => (
-          <ListItem key={q} display="flex" alignItems="center" justifyContent="space-between" bg="white" p={2} borderRadius="md" boxShadow="sm">
+          <li key={q} className="flex items-center justify-between bg-background p-2 rounded-md shadow-sm">
             <span>{q}</span>
-            <IconButton aria-label="Remove" icon={<CloseIcon />} size="xs" onClick={() => removeQuery(q)} />
-          </ListItem>
+            <Button variant="ghost" size="icon" onClick={() => removeQuery(q)} aria-label="Remove query">
+              <X className="w-4 h-4" />
+            </Button>
+          </li>
         ))}
-      </List>
-      <Button colorScheme="teal" width="100%" onClick={handleSubmit} isLoading={loading} isDisabled={!queries.length} mb={2}>
-        Start Scraping
+      </ul>
+      <Button className="w-full mb-2" onClick={handleSubmit} disabled={!queries.length || loading}>
+        {loading ? 'Starting...' : 'Start Scraping'}
       </Button>
-      {error && <Text color="red.500">{error}</Text>}
-    </Box>
+      {error && <div className="text-red-500 text-sm mt-2">{error}</div>}
+    </aside>
   );
 };
 

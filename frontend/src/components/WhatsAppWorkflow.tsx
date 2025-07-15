@@ -340,52 +340,36 @@ const WhatsAppWorkflow: React.FC = () => {
   };
 
   return (
-    <Box p={6}>
-      <Heading size="lg" mb={6}>{t('whatsappWorkflow.whatsAppWorkflowAutomation')}</Heading>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-6">{t('whatsappWorkflow.whatsAppWorkflowAutomation')}</h1>
       
       {/* Analytics Overview */}
       {analytics && (
-        <Card mb={6} bg={bgColor} border="1px" borderColor={borderColor}>
-          <CardHeader>
-            <Heading size="md">{t('whatsappWorkflow.workflowAnalytics')}</Heading>
-          </CardHeader>
-          <CardBody>
-            <StatGroup>
-              <Stat>
-                <StatLabel>{t('whatsappWorkflow.totalWorkflows')}</StatLabel>
-                <StatNumber>{analytics.total_workflows}</StatNumber>
-                <StatHelpText>
-                  <StatArrow type="increase" />
-                  12.5%
-                </StatHelpText>
-              </Stat>
-              <Stat>
-                <StatLabel>{t('whatsappWorkflow.activeWorkflows')}</StatLabel>
-                <StatNumber>{analytics.active_workflows}</StatNumber>
-                <StatHelpText>
-                  <StatArrow type="increase" />
-                  8.2%
-                </StatHelpText>
-              </Stat>
-              <Stat>
-                <StatLabel>{t('whatsappWorkflow.totalMessages')}</StatLabel>
-                <StatNumber>{analytics.total_messages}</StatNumber>
-                <StatHelpText>
-                  <StatArrow type="increase" />
-                  23.1%
-                </StatHelpText>
-              </Stat>
-              <Stat>
-                <StatLabel>{t('whatsappWorkflow.successRate')}</StatLabel>
-                <StatNumber>{analytics.success_rate.toFixed(1)}%</StatNumber>
-                <StatHelpText>
-                  <StatArrow type="increase" />
-                  5.3%
-                </StatHelpText>
-              </Stat>
-            </StatGroup>
-          </CardBody>
-        </Card>
+        <div className="mb-6 rounded-lg border bg-white dark:bg-gray-900 p-6 shadow">
+          <h2 className="text-lg font-semibold mb-4">{t('whatsappWorkflow.workflowAnalytics')}</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <div className="text-gray-500 text-sm">{t('whatsappWorkflow.totalWorkflows')}</div>
+              <div className="text-2xl font-bold">{analytics.total_workflows}</div>
+              <div className="text-green-600 text-xs mt-1">+12.5%</div>
+            </div>
+            <div>
+              <div className="text-gray-500 text-sm">{t('whatsappWorkflow.activeWorkflows')}</div>
+              <div className="text-2xl font-bold">{analytics.active_workflows}</div>
+              <div className="text-green-600 text-xs mt-1">+8.2%</div>
+            </div>
+            <div>
+              <div className="text-gray-500 text-sm">{t('whatsappWorkflow.totalMessages')}</div>
+              <div className="text-2xl font-bold">{analytics.total_messages}</div>
+              <div className="text-green-600 text-xs mt-1">+23.1%</div>
+            </div>
+            <div>
+              <div className="text-gray-500 text-sm">{t('whatsappWorkflow.successRate')}</div>
+              <div className="text-2xl font-bold">{analytics.success_rate.toFixed(1)}%</div>
+              <div className="text-green-600 text-xs mt-1">+5.3%</div>
+            </div>
+          </div>
+        </div>
       )}
 
       <Tabs>
@@ -398,116 +382,81 @@ const WhatsAppWorkflow: React.FC = () => {
         <TabPanels>
           {/* My Workflows */}
           <TabPanel>
-            <Card bg={bgColor} border="1px" borderColor={borderColor}>
-              <CardHeader>
-                <Flex align="center" justify="space-between">
-                  <Heading size="md">{t('whatsappWorkflow.myWorkflows')}</Heading>
-                  <Button
-                    leftIcon={<FaPlus />}
-                    colorScheme="blue"
-                    onClick={onOpen}
-                  >
-                    {t('whatsappWorkflow.createNewWorkflow')}
-                  </Button>
-                </Flex>
-              </CardHeader>
-              <CardBody>
-                {workflows.length === 0 ? (
-                  <Alert status="info">
-                    <AlertIcon />
-                    <AlertTitle>{t('whatsappWorkflow.noWorkflowsYet')}</AlertTitle>
-                    <AlertDescription>
-                      {t('whatsappWorkflow.createYourFirstWorkflow')}
-                    </AlertDescription>
-                  </Alert>
-                ) : (
-                  <VStack spacing={4} align="stretch">
-                    {workflows.map((workflow) => (
-                      <Card key={workflow.id} variant="outline">
-                        <CardBody>
-                          <Flex align="center" justify="space-between">
-                            <VStack align="start" spacing={2}>
-                              <HStack>
-                                <Heading size="md">{workflow.name}</Heading>
-                                <Badge colorScheme={workflow.is_active ? 'green' : 'red'}>
-                                  {workflow.is_active ? t('whatsappWorkflow.active') : t('whatsappWorkflow.inactive')}
-                                </Badge>
-                                <Badge colorScheme={getTriggerTypeColor(workflow.trigger_type)}>
-                                  {workflow.trigger_type}
-                                </Badge>
-                              </HStack>
-                              {workflow.description && (
-                                <Text color="gray.600">{workflow.description}</Text>
+            <div className="rounded-lg border bg-white dark:bg-gray-900 p-6 shadow">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">{t('whatsappWorkflow.myWorkflows')}</h2>
+                <button
+                  className="inline-flex items-center px-4 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  onClick={onOpen}
+                >
+                  <span className="mr-2">+</span>{t('whatsappWorkflow.createNewWorkflow')}
+                </button>
+              </div>
+              {workflows.length === 0 ? (
+                <div className="flex items-center p-4 bg-blue-50 border border-blue-200 rounded-md">
+                  <span className="text-blue-500 mr-2">i</span>
+                  <div>
+                    <div className="font-semibold">{t('whatsappWorkflow.noWorkflowsYet')}</div>
+                    <div className="text-sm text-gray-700 dark:text-gray-300">{t('whatsappWorkflow.createYourFirstWorkflow')}</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {workflows.map((workflow) => (
+                    <div key={workflow.id} className="border rounded-lg p-4 bg-white dark:bg-gray-800 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex flex-col space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-lg font-bold">{workflow.name}</span>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${workflow.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{workflow.is_active ? t('whatsappWorkflow.active') : t('whatsappWorkflow.inactive')}</span>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs font-semibold">{workflow.trigger_type}</span>
+                          </div>
+                          {workflow.description && (
+                            <span className="text-gray-600 dark:text-gray-300">{workflow.description}</span>
+                          )}
+                          <span className="text-xs text-gray-500">{workflow.steps.length} {t('whatsappWorkflow.steps')} • {t('whatsappWorkflow.createdAt', 'Created')} {new Date(workflow.created_at!).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {/* Replace with Lucide/Heroicons or inline SVGs for play, edit, copy, trash, etc. */}
+                          <button aria-label={t('whatsappWorkflow.executeWorkflow')} className="p-2 rounded-full bg-green-100 hover:bg-green-200" onClick={() => handleExecuteWorkflow(workflow.id!)}>
+                            {/* Play Icon */}
+                            <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20"><polygon points="6,4 16,10 6,16" /></svg>
+                          </button>
+                          <button aria-label={t('whatsappWorkflow.editWorkflow')} className="p-2 rounded-full hover:bg-gray-200" onClick={() => { setCurrentWorkflow(workflow); onOpen(); }}>
+                            {/* Edit Icon */}
+                            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z" /></svg>
+                          </button>
+                          <button aria-label={t('whatsappWorkflow.duplicateWorkflow')} className="p-2 rounded-full hover:bg-gray-200">
+                            {/* Copy Icon */}
+                            <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" /><rect x="3" y="3" width="13" height="13" rx="2" /></svg>
+                          </button>
+                          <button aria-label={t('whatsappWorkflow.deleteWorkflow')} className="p-2 rounded-full bg-red-100 hover:bg-red-200">
+                            {/* Trash Icon */}
+                            <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M3 6h18M9 6v12a2 2 0 002 2h2a2 2 0 002-2V6" /></svg>
+                          </button>
+                        </div>
+                      </div>
+                      {/* Workflow Steps Preview */}
+                      <div className="mt-4">
+                        <span className="text-xs font-bold mb-2 block">{t('whatsappWorkflow.steps')}:</span>
+                        <div className="space-y-2">
+                          {workflow.steps.map((step, index) => (
+                            <div key={index} className="flex items-center space-x-3">
+                              {/* Replace with step icon as needed */}
+                              <span className="w-4 h-4 bg-gray-200 rounded-full flex items-center justify-center text-xs font-bold">{step.step_type[0].toUpperCase()}</span>
+                              <span className="text-xs">{step.name}</span>
+                              {step.step_type === 'delay' && step.delay_minutes && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs font-semibold">{step.delay_minutes}{t('whatsappWorkflow.minutes')}</span>
                               )}
-                              <Text fontSize="sm" color="gray.500">
-                                {workflow.steps.length} {t('whatsappWorkflow.steps')} • {t('whatsappWorkflow.createdAt', 'Created')} {new Date(workflow.created_at!).toLocaleDateString()}
-                              </Text>
-                            </VStack>
-                            
-                            <HStack spacing={2}>
-                              <Tooltip label={t('whatsappWorkflow.executeWorkflow')}>
-                                <IconButton
-                                  aria-label={t('whatsappWorkflow.executeWorkflow')}
-                                  icon={<FaPlay />}
-                                  colorScheme="green"
-                                  size="sm"
-                                  onClick={() => handleExecuteWorkflow(workflow.id!)}
-                                />
-                              </Tooltip>
-                              <Tooltip label={t('whatsappWorkflow.editWorkflow')}>
-                                <IconButton
-                                  aria-label={t('whatsappWorkflow.editWorkflow')}
-                                  icon={<FaEdit />}
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => {
-                                    setCurrentWorkflow(workflow);
-                                    onOpen();
-                                  }}
-                                />
-                              </Tooltip>
-                              <Tooltip label={t('whatsappWorkflow.duplicate')}>
-                                <IconButton
-                                  aria-label={t('whatsappWorkflow.duplicateWorkflow')}
-                                  icon={<FaCopy />}
-                                  size="sm"
-                                  variant="ghost"
-                                />
-                              </Tooltip>
-                              <Tooltip label={t('whatsappWorkflow.delete')}>
-                                <IconButton
-                                  aria-label={t('whatsappWorkflow.deleteWorkflow')}
-                                  icon={<FaTrash />}
-                                  size="sm"
-                                  variant="ghost"
-                                  colorScheme="red"
-                                />
-                              </Tooltip>
-                            </HStack>
-                          </Flex>
-                          
-                          {/* Workflow Steps Preview */}
-                          <Box mt={4}>
-                            <Text fontSize="sm" fontWeight="bold" mb={2}>{t('whatsappWorkflow.steps')}:</Text>
-                            <VStack spacing={2} align="stretch">
-                              {workflow.steps.map((step, index) => (
-                                <HStack key={index} spacing={3}>
-                                  {getStepIcon(step.step_type)}
-                                  <Text fontSize="sm">{step.name}</Text>
-                                  {step.step_type === 'delay' && step.delay_minutes && (
-                                    <Badge size="sm">{step.delay_minutes}{t('whatsappWorkflow.minutes')}</Badge>
-                                  )}
-                                </HStack>
-                              ))}
-                            </VStack>
-                          </Box>
-                        </CardBody>
-                      </Card>
-                    ))}
-                  </VStack>
-                )}
-              </CardBody>
-            </Card>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </TabPanel>
 
           {/* Create Workflow */}
@@ -519,46 +468,51 @@ const WhatsAppWorkflow: React.FC = () => {
               <CardBody>
                 <VStack spacing={6} align="stretch">
                   {/* Basic Information */}
-                  <FormControl>
-                    <FormLabel>{t('whatsappWorkflow.workflowName')}</FormLabel>
-                    <Input
-                      placeholder={t('whatsappWorkflow.enterWorkflowName')}
-                      value={currentWorkflow.name}
-                      onChange={(e) => setCurrentWorkflow({...currentWorkflow, name: e.target.value})}
-                    />
-                  </FormControl>
-
-                  <FormControl>
-                    <FormLabel>{t('whatsappWorkflow.description')}</FormLabel>
-                    <Textarea
-                      placeholder={t('whatsappWorkflow.describeWorkflow')}
-                      value={currentWorkflow.description}
-                      onChange={(e) => setCurrentWorkflow({...currentWorkflow, description: e.target.value})}
-                    />
-                  </FormControl>
-
-                  <HStack spacing={4}>
-                    <FormControl>
-                      <FormLabel>{t('whatsappWorkflow.triggerType')}</FormLabel>
-                      <Select
-                        value={currentWorkflow.trigger_type}
-                        onChange={(e) => setCurrentWorkflow({...currentWorkflow, trigger_type: e.target.value})}
-                      >
-                        <option value="manual">{t('whatsappWorkflow.manual')}</option>
-                        <option value="lead_created">{t('whatsappWorkflow.leadCreated')}</option>
-                        <option value="lead_qualified">{t('whatsappWorkflow.leadQualified')}</option>
-                        <option value="scheduled">{t('whatsappWorkflow.scheduled')}</option>
-                      </Select>
-                    </FormControl>
-                    
-                    <FormControl>
-                      <FormLabel>{t('whatsappWorkflow.active')}</FormLabel>
-                      <Switch
-                        isChecked={currentWorkflow.is_active}
-                        onChange={(e) => setCurrentWorkflow({...currentWorkflow, is_active: e.target.checked})}
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('whatsappWorkflow.workflowName')}</label>
+                      <input
+                        type="text"
+                        className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+                        placeholder={t('whatsappWorkflow.enterWorkflowName')}
+                        value={currentWorkflow.name}
+                        onChange={(e) => setCurrentWorkflow({...currentWorkflow, name: e.target.value})}
                       />
-                    </FormControl>
-                  </HStack>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('whatsappWorkflow.description')}</label>
+                      <textarea
+                        className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+                        placeholder={t('whatsappWorkflow.describeWorkflow')}
+                        value={currentWorkflow.description}
+                        onChange={(e) => setCurrentWorkflow({...currentWorkflow, description: e.target.value})}
+                      />
+                    </div>
+                    <div className="flex space-x-4">
+                      <div className="flex-1">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">{t('whatsappWorkflow.triggerType')}</label>
+                        <select
+                          className="w-full rounded-md border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+                          value={currentWorkflow.trigger_type}
+                          onChange={(e) => setCurrentWorkflow({...currentWorkflow, trigger_type: e.target.value})}
+                        >
+                          <option value="manual">{t('whatsappWorkflow.manual')}</option>
+                          <option value="lead_created">{t('whatsappWorkflow.leadCreated')}</option>
+                          <option value="lead_qualified">{t('whatsappWorkflow.leadQualified')}</option>
+                          <option value="scheduled">{t('whatsappWorkflow.scheduled')}</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">{t('whatsappWorkflow.active')}</label>
+                        <input
+                          type="checkbox"
+                          checked={currentWorkflow.is_active}
+                          onChange={(e) => setCurrentWorkflow({...currentWorkflow, is_active: e.target.checked})}
+                          className="rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                      </div>
+                    </div>
+                  </div>
 
                   {/* Workflow Steps */}
                   <Box>
@@ -582,18 +536,21 @@ const WhatsAppWorkflow: React.FC = () => {
                         </AlertDescription>
                       </Alert>
                     ) : (
-                      <Accordion allowMultiple>
+                      <div className="border rounded-lg divide-y">
                         {currentWorkflow.steps.map((step, index) => (
-                          <AccordionItem key={index}>
-                            <AccordionButton>
-                              <HStack flex="1" textAlign="left">
-                                {getStepIcon(step.step_type)}
-                                <Text fontWeight="bold">{step.name}</Text>
-                                <Badge size="sm">{step.step_type}</Badge>
-                              </HStack>
-                              <AccordionIcon />
-                            </AccordionButton>
-                            <AccordionPanel>
+                          <div key={index} className="p-4">
+                            <div className="flex items-center justify-between cursor-pointer" onClick={() => {/* handle expand/collapse */}}>
+                              <div className="flex items-center space-x-2">
+                                {/* Replace with step icon as needed */}
+                                <span className="w-4 h-4 bg-gray-200 rounded-full flex items-center justify-center text-xs font-bold">{step.step_type[0].toUpperCase()}</span>
+                                <span className="font-bold">{step.name}</span>
+                                <span className="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs font-semibold">{step.step_type}</span>
+                              </div>
+                              {/* Expand/collapse icon */}
+                              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" /></svg>
+                            </div>
+                            {/* Expanded content for editing step details */}
+                            <div className="mt-4">
                               <VStack spacing={4} align="stretch">
                                 <FormControl>
                                   <FormLabel>{t('whatsappWorkflow.stepName')}</FormLabel>
@@ -792,20 +749,19 @@ const WhatsAppWorkflow: React.FC = () => {
                                   </FormControl>
                                 )}
                                 
-                                <Button
-                                  leftIcon={<FaTrash />}
-                                  colorScheme="red"
-                                  size="sm"
-                                  variant="outline"
+                                <button
+                                  className="mt-4 inline-flex items-center px-3 py-1.5 rounded-md border border-red-300 bg-red-50 text-red-700 text-xs font-medium hover:bg-red-100"
                                   onClick={() => handleRemoveStep(index)}
                                 >
+                                  {/* Trash Icon */}
+                                  <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M3 6h18M9 6v12a2 2 0 002 2h2a2 2 0 002-2V6" /></svg>
                                   {t('whatsappWorkflow.removeStep')}
-                                </Button>
+                                </button>
                               </VStack>
-                            </AccordionPanel>
-                          </AccordionItem>
+                            </div>
+                          </div>
                         ))}
-                      </Accordion>
+                      </div>
                     )}
                   </Box>
 
@@ -877,26 +833,28 @@ const WhatsAppWorkflow: React.FC = () => {
       </Tabs>
 
       {/* Create/Edit Workflow Modal */}
-      <Modal isOpen={isOpen} onClose={onClose} size="6xl">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>
-            {selectedWorkflow ? t('whatsappWorkflow.editWorkflow') : t('whatsappWorkflow.createNewWorkflow')}
-          </ModalHeader>
-          <ModalBody>
-            {/* Workflow creation form would go here - same as in the Create Workflow tab */}
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onClose}>
-              {t('whatsappWorkflow.cancel')}
-            </Button>
-            <Button colorScheme="blue" onClick={handleCreateWorkflow}>
-              {selectedWorkflow ? t('whatsappWorkflow.updateWorkflow') : t('whatsappWorkflow.createWorkflow')}
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-    </Box>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-4xl mx-4 animate-fade-in">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <span className="text-lg font-bold">{selectedWorkflow ? t('whatsappWorkflow.editWorkflow') : t('whatsappWorkflow.createNewWorkflow')}</span>
+              <button onClick={onClose} className="text-gray-400 hover:text-gray-600">&times;</button>
+            </div>
+            <div className="px-6 py-4">
+              {/* Workflow creation form would go here - same as in the Create Workflow tab */}
+            </div>
+            <div className="flex items-center justify-end px-6 py-4 border-t border-gray-200 dark:border-gray-700 space-x-2">
+              <button onClick={onClose} className="inline-flex items-center px-4 py-2 rounded-md bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200 font-medium">
+                {t('whatsappWorkflow.cancel')}
+              </button>
+              <button onClick={handleCreateWorkflow} className="inline-flex items-center px-4 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                {selectedWorkflow ? t('whatsappWorkflow.updateWorkflow') : t('whatsappWorkflow.createWorkflow')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

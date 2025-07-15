@@ -1,36 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  VStack,
-  HStack,
-  Text,
-  Button,
-  Progress,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  useDisclosure,
-  Badge,
-  Icon,
-  Tooltip,
-  Alert,
-  AlertIcon,
-  AlertTitle,
-  AlertDescription,
-  useToast,
-  Flex,
-  Spacer,
-  Divider,
-  List,
-  ListItem,
-  ListIcon,
-} from '@chakra-ui/react';
-import { CheckCircleIcon, InfoIcon, StarIcon, ArrowForwardIcon } from '@chakra-ui/icons';
 import { useAuth } from '../hooks/useAuth';
 import * as api from '../api';
+import { useTranslation } from 'react-i18next';
+
+// Lucide/Heroicons SVGs for icons
+const CheckCircleIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg {...props} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="text-green-500"><circle cx="10" cy="10" r="9" /><polyline points="7 10.5 9.5 13 13 8.5" /></svg>
+);
+const InfoIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg {...props} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="text-blue-500"><circle cx="10" cy="10" r="9" /><line x1="10" y1="14" x2="10" y2="10" /><circle cx="10" cy="7" r="1" /></svg>
+);
+const StarIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg {...props} viewBox="0 0 20 20" fill="currentColor" className="text-yellow-400"><polygon points="10 2 12.59 7.36 18.51 8.09 14 12.26 15.18 18.09 10 15.27 4.82 18.09 6 12.26 1.49 8.09 7.41 7.36 10 2" /></svg>
+);
+const ArrowForwardIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg {...props} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="10" x2="15" y2="10" /><polyline points="10 5 15 10 10 15" /></svg>
+);
 
 interface OnboardingStep {
   id: string;
@@ -49,45 +34,45 @@ interface OnboardingProps {
 }
 
 const EnhancedOnboarding: React.FC<OnboardingProps> = ({ isOpen, onClose, onComplete }) => {
+  const { t } = useTranslation();
   const { user } = useAuth();
-  const toast = useToast();
   const [currentStep, setCurrentStep] = useState(0);
   const [demoJobCreated, setDemoJobCreated] = useState(false);
   const [demoResults, setDemoResults] = useState<any[]>([]);
   const [feedback, setFeedback] = useState<string>('');
+  const [toastMsg, setToastMsg] = useState<{title: string, description: string, status: string, duration: number} | null>(null);
 
   const onboardingSteps: OnboardingStep[] = [
     {
       id: 'welcome',
-      title: 'Welcome to LeadTap! 🚀',
-      description: 'Let\'s get you set up with your first lead generation campaign in just a few minutes.',
+      title: t('onboarding.welcomeTitle', 'Welcome to LeadTap! 🚀'),
+      description: t('onboarding.welcomeDescription', "Let's get you set up with your first lead generation campaign in just a few minutes."),
       completed: false,
       required: true,
     },
     {
       id: 'demo-job',
-      title: 'Create Your First Job',
-      description: 'We\'ll create a sample job to show you how LeadTap works.',
+      title: t('onboarding.createFirstJobTitle', 'Create Your First Job'),
+      description: t('onboarding.createFirstJobDescription', "We'll create a sample job to show you how LeadTap works."),
       completed: false,
       required: true,
       demo: true,
       action: async () => {
         try {
           // Create a demo job with sample data
-          const demoQueries = ['restaurants in New York', 'coffee shops in San Francisco'];
+          const demoQueries = [t('onboarding.demoQuery1', 'restaurants in New York'), t('onboarding.demoQuery2', 'coffee shops in San Francisco')];
           const response = await api.createJob(demoQueries);
-          // Optionally fetch real job results here if needed
           setDemoJobCreated(true);
-          toast({
-            title: 'Demo Job Created!',
-            description: 'Your sample job has been created.',
+          setToastMsg({
+            title: t('onboarding.demoJobCreated', 'Demo Job Created!'),
+            description: t('onboarding.demoJobDescription', 'We\'ve created a sample job with queries like "restaurants in New York" and "coffee shops in San Francisco".'),
             status: 'success',
             duration: 3000,
           });
         } catch (error) {
-          toast({
-            title: 'Demo Creation Failed',
-            description: 'We\'ll continue with the tour anyway.',
+          setToastMsg({
+            title: t('onboarding.demoCreationFailed', 'Demo Creation Failed'),
+            description: t('onboarding.demoCreationFailedDescription', "We'll continue with the tour anyway."),
             status: 'warning',
             duration: 3000,
           });
@@ -96,24 +81,23 @@ const EnhancedOnboarding: React.FC<OnboardingProps> = ({ isOpen, onClose, onComp
     },
     {
       id: 'view-results',
-      title: 'View Your Results',
-      description: 'See how LeadTap extracts detailed business information automatically.',
+      title: t('onboarding.viewResultsTitle', 'View Your Results'),
+      description: t('onboarding.viewResultsDescription', 'See how LeadTap extracts detailed business information automatically.'),
       completed: false,
       required: true,
       demo: true,
     },
     {
       id: 'export-data',
-      title: 'Export Your Data',
-      description: 'Download your leads in multiple formats for your CRM or marketing tools.',
+      title: t('onboarding.exportDataTitle', 'Export Your Data'),
+      description: t('onboarding.exportDataDescription', 'Download your leads in multiple formats for your CRM or marketing tools.'),
       completed: false,
       required: true,
       demo: true,
       action: () => {
-        // Simulate export
-        toast({
-          title: 'Export Successful!',
-          description: 'Your data has been exported in CSV format.',
+        setToastMsg({
+          title: t('onboarding.exportSuccessful', 'Export Successful!'),
+          description: t('onboarding.exportSuccessfulDescription', 'Your data has been exported in CSV format.'),
           status: 'success',
           duration: 3000,
         });
@@ -121,16 +105,16 @@ const EnhancedOnboarding: React.FC<OnboardingProps> = ({ isOpen, onClose, onComp
     },
     {
       id: 'crm-setup',
-      title: 'Setup Your CRM',
-      description: 'Import your leads into your CRM or use our built-in lead management.',
+      title: t('onboarding.crmSetupTitle', 'Setup Your CRM'),
+      description: t('onboarding.crmSetupDescription', 'Import your leads into your CRM or use our built-in lead management.'),
       completed: false,
       required: false,
       demo: true,
     },
     {
       id: 'complete',
-      title: 'You\'re Ready to Go! 🎉',
-      description: 'Start creating real jobs and generating leads for your business.',
+      title: t('onboarding.readyToGoTitle', "You're Ready to Go! 🎉"),
+      description: t('onboarding.readyToGoDescription', 'Start creating real jobs and generating leads for your business.'),
       completed: false,
       required: true,
     }
@@ -171,9 +155,9 @@ const EnhancedOnboarding: React.FC<OnboardingProps> = ({ isOpen, onClose, onComp
     localStorage.setItem('onboarding_complete', 'true');
     localStorage.setItem('onboarding_feedback', feedback);
     
-    toast({
-      title: 'Onboarding Complete!',
-      description: 'Welcome to LeadTap. Start generating leads now!',
+    setToastMsg({
+      title: t('onboarding.onboardingComplete', 'Onboarding Complete!'),
+      description: t('onboarding.onboardingCompleteDescription', 'Welcome to LeadTap. Start generating leads now!'),
       status: 'success',
       duration: 5000,
     });
@@ -189,187 +173,116 @@ const EnhancedOnboarding: React.FC<OnboardingProps> = ({ isOpen, onClose, onComp
 
   const currentStepData = steps[currentStep];
 
+  // Replace Chakra UI Modal with ShadCN Dialog
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="xl" isCentered>
-      <ModalOverlay />
-      <ModalContent>
-        <ModalHeader>
-          <HStack justify="space-between" align="center">
-            <Text fontSize="lg" fontWeight="bold">
-              {currentStepData.title}
-            </Text>
-            <Badge colorScheme="blue" variant="subtle">
-              Step {currentStep + 1} of {steps.length}
-            </Badge>
-          </HStack>
-        </ModalHeader>
-        
-        <ModalBody>
-          <VStack spacing={6} align="stretch">
-            {/* Progress Bar */}
-            <Box>
-              <HStack justify="space-between" mb={2}>
-                <Text fontSize="sm" color="gray.600">
-                  Progress
-                </Text>
-                <Text fontSize="sm" color="gray.600">
-                  {Math.round(getProgressPercentage())}%
-                </Text>
-              </HStack>
-              <Progress value={getProgressPercentage()} colorScheme="blue" size="sm" />
-            </Box>
-
-            {/* Step Description */}
-            <Text color="gray.600" fontSize="md">
-              {currentStepData.description}
-            </Text>
-
-            {/* Demo Content */}
-            {currentStepData.demo && (
-              <Box>
-                {currentStepData.id === 'demo-job' && (
-                  <Alert status="info" borderRadius="md">
-                    <AlertIcon />
-                    <Box>
-                      <AlertTitle>Demo Job Created!</AlertTitle>
-                      <AlertDescription>
-                        We've created a sample job with queries like "restaurants in New York" and "coffee shops in San Francisco".
-                      </AlertDescription>
-                    </Box>
-                  </Alert>
-                )}
-
-                {currentStepData.id === 'view-results' && demoResults.length > 0 && (
-                  <Box border="1px" borderColor="gray.200" borderRadius="md" p={4}>
-                    <Text fontWeight="bold" mb={3}>Sample Results:</Text>
-                    <VStack spacing={2} align="stretch">
-                      {demoResults.slice(0, 3).map((result, index) => (
-                        <Box key={index} p={3} bg="gray.50" borderRadius="md">
-                          <Text fontWeight="bold">{result.business_name}</Text>
-                          <Text fontSize="sm" color="gray.600">{result.address}</Text>
-                          <HStack spacing={4} mt={1}>
-                            <Text fontSize="xs">📞 {result.phone}</Text>
-                            <Text fontSize="xs">⭐ {result.rating}</Text>
-                            <Text fontSize="xs">🏷️ {result.category}</Text>
-                          </HStack>
-                        </Box>
-                      ))}
-                    </VStack>
-                  </Box>
-                )}
-
-                {currentStepData.id === 'export-data' && (
-                  <Alert status="success" borderRadius="md">
-                    <AlertIcon />
-                    <Box>
-                      <AlertTitle>Export Options Available</AlertTitle>
-                      <AlertDescription>
-                        Download your data in CSV, JSON, Excel, or PDF formats. Perfect for importing into your CRM or marketing tools.
-                      </AlertDescription>
-                    </Box>
-                  </Alert>
-                )}
-
-                {currentStepData.id === 'crm-setup' && (
-                  <Box border="1px" borderColor="gray.200" borderRadius="md" p={4}>
-                    <Text fontWeight="bold" mb={3}>CRM Integration Options:</Text>
-                    <List spacing={2}>
-                      <ListItem>
-                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                        Built-in Lead Management
-                      </ListItem>
-                      <ListItem>
-                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                        Export to CSV/Excel
-                      </ListItem>
-                      <ListItem>
-                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                        API Integration
-                      </ListItem>
-                      <ListItem>
-                        <ListIcon as={CheckCircleIcon} color="green.500" />
-                        Webhook Support
-                      </ListItem>
-                    </List>
-                  </Box>
-                )}
-              </Box>
-            )}
-
-            {/* Feature Tips */}
-            {currentStepData.id === 'complete' && (
-              <Box>
-                <Text fontWeight="bold" mb={3}>Pro Tips:</Text>
-                <VStack spacing={2} align="stretch">
-                  <HStack>
-                    <Icon as={StarIcon} color="yellow.500" />
-                    <Text fontSize="sm">Use specific queries for better results</Text>
-                  </HStack>
-                  <HStack>
-                    <Icon as={StarIcon} color="yellow.500" />
-                    <Text fontSize="sm">Export data regularly to your CRM</Text>
-                  </HStack>
-                  <HStack>
-                    <Icon as={StarIcon} color="yellow.500" />
-                    <Text fontSize="sm">Upgrade to Pro for advanced features</Text>
-                  </HStack>
-                </VStack>
-              </Box>
-            )}
-
-            {/* Feedback Section */}
-            {currentStepData.id === 'complete' && (
-              <Box>
-                <Text fontWeight="bold" mb={2}>How was your onboarding experience?</Text>
-                <textarea
-                  value={feedback}
-                  onChange={(e) => setFeedback(e.target.value)}
-                  placeholder="Share your thoughts (optional)..."
-                  style={{
-                    width: '100%',
-                    minHeight: '80px',
-                    padding: '8px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '4px',
-                    resize: 'vertical'
-                  }}
-                />
-              </Box>
-            )}
-          </VStack>
-        </ModalBody>
-
-        <ModalFooter>
-          <HStack spacing={3}>
-            {currentStep > 0 && (
-              <Button variant="ghost" onClick={handlePrevious}>
-                Previous
-              </Button>
-            )}
-            
-            <Spacer />
-            
-            {currentStep < steps.length - 1 ? (
-              <Button
-                colorScheme="blue"
-                onClick={handleNext}
-                rightIcon={<ArrowForwardIcon />}
-              >
-                {currentStepData.action ? 'Try It' : 'Next'}
-              </Button>
-            ) : (
-              <Button
-                colorScheme="green"
-                onClick={handleComplete}
-                size="lg"
-              >
-                Get Started! 🚀
-              </Button>
-            )}
-          </HStack>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+    <>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-2xl mx-4 animate-fade-in">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <span className="text-lg font-bold">{currentStepData.title}</span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded bg-blue-100 text-blue-700 text-xs font-semibold">
+                {t('onboarding.step', 'Step')} {currentStep + 1} {t('onboarding.of', 'of')} {steps.length}
+              </span>
+            </div>
+            <div className="px-6 py-4 space-y-6">
+              {/* Progress Bar */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-gray-600 dark:text-gray-300">{t('onboarding.progress', 'Progress')}</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-300">{Math.round(getProgressPercentage())}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                  <div className="bg-blue-600 h-2.5 rounded-full transition-all" style={{ width: `${getProgressPercentage()}%` }} />
+                </div>
+              </div>
+              {/* Step Description */}
+              <span className="text-gray-600 dark:text-gray-300 text-md">{currentStepData.description}</span>
+              {/* Demo Content */}
+              {currentStepData.demo && (
+                <div>
+                  {currentStepData.id === 'demo-job' && (
+                    <div className="flex items-start p-4 bg-blue-50 border border-blue-200 rounded-md">
+                      <InfoIcon className="w-5 h-5 mr-2 mt-1" />
+                      <div>
+                        <span className="font-semibold">{t('onboarding.demoJobCreated', 'Demo Job Created!')}</span>
+                        <div className="text-sm text-gray-700 dark:text-gray-300">{t('onboarding.demoJobDescription', 'We\'ve created a sample job with queries like "restaurants in New York" and "coffee shops in San Francisco".')}</div>
+                      </div>
+                    </div>
+                  )}
+                  {currentStepData.id === 'view-results' && demoResults.length > 0 && (
+                    <div className="border border-gray-200 rounded-md p-4">
+                      <span className="font-bold mb-3 block">{t('onboarding.sampleResults', 'Sample Results:')}</span>
+                      <div className="space-y-2">
+                        {demoResults.slice(0, 3).map((result, index) => (
+                          <div key={index} className="p-3 bg-gray-50 rounded-md">
+                            <span className="font-bold">{result.business_name}</span>
+                            <span className="block text-sm text-gray-600">{result.address}</span>
+                            <div className="flex space-x-4 mt-1">
+                              {/* Add more fields as needed */}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* Feature Tips */}
+              {currentStepData.id === 'complete' && (
+                <div>
+                  <span className="font-bold mb-3 block">{t('onboarding.proTips', 'Pro Tips:')}</span>
+                  <div className="space-y-2">
+                    <div className="flex items-center">
+                      <StarIcon className="w-4 h-4 mr-2 text-yellow-500" />
+                      <span className="text-sm">{t('onboarding.specificQueries', 'Use specific queries for better results')}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <StarIcon className="w-4 h-4 mr-2 text-yellow-500" />
+                      <span className="text-sm">{t('onboarding.exportRegularly', 'Export data regularly to your CRM')}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <StarIcon className="w-4 h-4 mr-2 text-yellow-500" />
+                      <span className="text-sm">{t('onboarding.upgradeToPro', 'Upgrade to Pro for advanced features')}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {/* Feedback (final step) */}
+              {currentStepData.id === 'complete' && (
+                <div className="space-y-2">
+                  <label htmlFor="onboarding-feedback" className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('onboarding.howWasExperience', 'How was your onboarding experience?')}</label>
+                  <textarea id="onboarding-feedback" className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 p-2 text-sm" value={feedback} onChange={e => setFeedback(e.target.value)} />
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+              <button onClick={handlePrevious} disabled={currentStep === 0} className="inline-flex items-center px-4 py-2 rounded-md bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+                {t('onboarding.previous', 'Previous')}
+              </button>
+              <div className="flex space-x-2">
+                <button onClick={onClose} className="inline-flex items-center px-4 py-2 rounded-md bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200 font-medium">
+                  {t('onboarding.close', 'Close')}
+                </button>
+                <button onClick={handleNext} className="inline-flex items-center px-4 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                  {currentStep === steps.length - 1 ? t('onboarding.finish', 'Finish') : t('onboarding.next', 'Next')}
+                  <ArrowForwardIcon className="w-4 h-4 ml-2" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {toastMsg && (
+        <div className={`fixed bottom-4 left-1/2 -translate-x-1/2 bg-${toastMsg.status}-500 text-white px-4 py-2 rounded-md shadow-lg z-50`}>
+          <div className="flex items-center">
+            <span className="mr-2">{toastMsg.title}</span>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          </div>
+          <div className="mt-1 text-sm">{toastMsg.description}</div>
+        </div>
+      )}
+    </>
   );
 };
 
