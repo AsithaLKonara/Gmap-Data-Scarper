@@ -46,6 +46,7 @@ import {
 import { AddIcon, EditIcon, DeleteIcon, ViewIcon } from '@chakra-ui/icons';
 import * as api from '../api';
 import { LeadKanban, KanbanLead, LeadStage } from '../components/LeadKanban';
+import { AIAssistantSidebar } from '../components/AIAssistantSidebar';
 
 interface Lead {
   id: number;
