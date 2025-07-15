@@ -45,6 +45,7 @@ import {
 } from '@chakra-ui/react';
 import { AddIcon, EditIcon, DeleteIcon, ViewIcon } from '@chakra-ui/icons';
 import * as api from '../api';
+import { LeadKanban, KanbanLead, LeadStage } from '../components/LeadKanban';
 
 interface Lead {
   id: number;
@@ -224,6 +225,31 @@ const CRM: React.FC = () => {
   });
 
   const uniqueTags = [...new Set(leads.map(lead => lead.tag).filter(Boolean))];
+
+  // Map CRM lead status to Kanban stage
+  const statusToStage = (status: string): LeadStage => {
+    if (status === 'converted') return 'converted';
+    if (status === 'contacted' || status === 'qualified') return 'in_progress';
+    return 'to_contact';
+  };
+  const stageToStatus = (stage: LeadStage): string => {
+    if (stage === 'converted') return 'converted';
+    if (stage === 'in_progress') return 'contacted';
+    return 'new';
+  };
+  const kanbanLeads: KanbanLead[] = leads.map(l => ({
+    id: l.id.toString(),
+    name: l.name,
+    email: l.email,
+    company: l.company,
+    stage: statusToStage(l.status),
+  }));
+  const handleStageChange = (leadId: string, newStage: LeadStage) => {
+    const lead = leads.find(l => l.id.toString() === leadId);
+    if (lead) {
+      updateLead(lead.id, { status: stageToStatus(newStage) });
+    }
+  };
 
   return (
     <Box minH="100vh" bg={useColorModeValue('gray.100', 'gray.800')} data-tour="crm-main">
