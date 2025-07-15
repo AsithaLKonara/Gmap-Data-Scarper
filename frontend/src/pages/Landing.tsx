@@ -23,36 +23,38 @@ import {
   CheckCircleIcon,
   ArrowForwardIcon
 } from '@chakra-ui/icons';
+import { useTranslation } from 'react-i18next';
 
 const Landing = () => {
-const features = [
+  const { t } = useTranslation();
+  const features = [
     {
       icon: SearchIcon,
-      title: 'Advanced Search',
-      description: 'Powerful location-based filtering and custom queries'
+      title: t('landing.features.advancedSearch.title', 'Advanced Search'),
+      description: t('landing.features.advancedSearch.description', 'Powerful location-based filtering and custom queries')
     },
     {
       icon: DownloadIcon,
-      title: 'Multiple Formats',
-      description: 'Export in CSV, JSON, Excel and more formats'
+      title: t('landing.features.multipleFormats.title', 'Multiple Formats'),
+      description: t('landing.features.multipleFormats.description', 'Export in CSV, JSON, Excel and more formats')
     },
     {
       icon: StarIcon,
-      title: 'Premium Quality',
-      description: 'High-quality, accurate data extraction'
+      title: t('landing.features.premiumQuality.title', 'Premium Quality'),
+      description: t('landing.features.premiumQuality.description', 'High-quality, accurate data extraction')
     },
     {
       icon: CheckCircleIcon,
-      title: 'Easy to Use',
-      description: 'No coding required, simple interface'
+      title: t('landing.features.easyToUse.title', 'Easy to Use'),
+      description: t('landing.features.easyToUse.description', 'No coding required, simple interface')
     }
   ];
 
   const stats = [
-    { number: '10M+', label: 'Data Points Extracted', help: 'Reliable and accurate' },
-    { number: '50K+', label: 'Happy Customers', help: 'Trusted worldwide' },
-    { number: '99.9%', label: 'Uptime', help: 'Always available' },
-    { number: '24/7', label: 'Support', help: 'Round the clock' }
+    { number: '10M+', label: t('landing.stats.dataPoints', 'Data Points Extracted'), help: t('landing.stats.reliable', 'Reliable and accurate') },
+    { number: '50K+', label: t('landing.stats.happyCustomers', 'Happy Customers'), help: t('landing.stats.trusted', 'Trusted worldwide') },
+    { number: '99.9%', label: t('landing.stats.uptime', 'Uptime'), help: t('landing.stats.alwaysAvailable', 'Always available') },
+    { number: '24/7', label: t('landing.stats.support', 'Support'), help: t('landing.stats.roundClock', 'Round the clock') }
   ];
 
   return (
@@ -106,10 +108,10 @@ const features = [
           <VStack align="center" spacing={8} textAlign="center">
             <VStack align="center" spacing={6} maxW="800px">
                 <Heading size="4xl" className="gradient-text" lineHeight="1.1">
-                  Collect Leads from Google Maps, Facebook, Instagram, and WhatsApp
+                  {t('landing.hero.title', 'Collect Leads from Google Maps, Facebook, Instagram, and WhatsApp')}
                 </Heading>
                 <Text color="gray.200" fontSize="xl" lineHeight="1.6" maxW="600px">
-                  LeadTap is the most advanced multi-source lead generation platform. Extract business and contact data from Google Maps, Facebook, Instagram, and WhatsApp—all in one dashboard.
+                  {t('landing.hero.subtitle', 'LeadTap is the most advanced multi-source lead generation platform. Extract business and contact data from Google Maps, Facebook, Instagram, and WhatsApp—all in one dashboard.')}
                 </Text>
               </VStack>
 
@@ -121,7 +123,7 @@ const features = [
                   className="btn-modern"
                   rightIcon={<ArrowForwardIcon />}
                 >
-                  Get Started Free
+                  {t('landing.hero.getStarted', 'Get Started Free')}
                 </Button>
                 <Button
                   as={RouterLink}
@@ -135,7 +137,7 @@ const features = [
                     bg: "rgba(255, 255, 255, 0.05)"
                   }}
                 >
-                  View Pricing
+                  {t('landing.hero.viewPricing', 'View Pricing')}
                 </Button>
               </HStack>
             </VStack>
@@ -207,34 +209,34 @@ const features = [
           <VStack spacing={16}>
             <VStack spacing={6} textAlign="center">
               <Heading size="2xl" className="gradient-text">
-                Why Choose LeadTap?
+                {t('landing.features.whyChooseLeadTap.title', 'Why Choose LeadTap?')}
               </Heading>
               <Text color="gray.400" fontSize="xl" maxW="800px">
-                Our platform combines cutting-edge technology with user-friendly design 
-                to provide the most efficient data extraction solution.
+                {t('landing.features.whyChooseLeadTap.description', 'Our platform combines cutting-edge technology with user-friendly design 
+                to provide the most efficient data extraction solution.')}
               </Text>
             </VStack>
 
             <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={8}>
               <Box className="card-modern" p={6} textAlign="center">
                 <Icon as={SearchIcon} w={10} h={10} color="brand.400" mb={4} />
-                <Heading size="md" mb={3}>Google Maps Leads</Heading>
-                <Text color="gray.400">Extract business data from Google Maps with advanced search and filtering.</Text>
+                <Heading size="md" mb={3}>{t('landing.features.googleMapsLeads.title', 'Google Maps Leads')}</Heading>
+                <Text color="gray.400">{t('landing.features.googleMapsLeads.description', 'Extract business data from Google Maps with advanced search and filtering.')}</Text>
               </Box>
               <Box className="card-modern" p={6} textAlign="center">
                 <Icon as={CheckCircleIcon} w={10} h={10} color="brand.400" mb={4} />
-                <Heading size="md" mb={3}>Facebook Leads</Heading>
-                <Text color="gray.400">Collect leads from Facebook pages and groups using keywords and location.</Text>
+                <Heading size="md" mb={3}>{t('landing.features.facebookLeads.title', 'Facebook Leads')}</Heading>
+                <Text color="gray.400">{t('landing.features.facebookLeads.description', 'Collect leads from Facebook pages and groups using keywords and location.')}</Text>
               </Box>
               <Box className="card-modern" p={6} textAlign="center">
                 <Icon as={CheckCircleIcon} w={10} h={10} color="brand.400" mb={4} />
-                <Heading size="md" mb={3}>Instagram Leads</Heading>
-                <Text color="gray.400">Find leads on Instagram using hashtags and location targeting.</Text>
+                <Heading size="md" mb={3}>{t('landing.features.instagramLeads.title', 'Instagram Leads')}</Heading>
+                <Text color="gray.400">{t('landing.features.instagramLeads.description', 'Find leads on Instagram using hashtags and location targeting.')}</Text>
               </Box>
               <Box className="card-modern" p={6} textAlign="center">
                 <Icon as={CheckCircleIcon} w={10} h={10} color="brand.400" mb={4} />
-                <Heading size="md" mb={3}>WhatsApp Leads</Heading>
-                <Text color="gray.400">Extract WhatsApp leads using phone numbers and keywords for outreach.</Text>
+                <Heading size="md" mb={3}>{t('landing.features.whatsAppLeads.title', 'WhatsApp Leads')}</Heading>
+                <Text color="gray.400">{t('landing.features.whatsAppLeads.description', 'Extract WhatsApp leads using phone numbers and keywords for outreach.')}</Text>
               </Box>
             </SimpleGrid>
 
@@ -246,7 +248,7 @@ const features = [
                 className="btn-modern"
                 rightIcon={<ArrowForwardIcon />}
               >
-                Start Extracting Data Today
+                {t('landing.features.startExtractingDataToday', 'Start Extracting Data Today')}
               </Button>
             </VStack>
     </VStack>
