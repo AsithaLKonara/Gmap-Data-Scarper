@@ -87,6 +87,7 @@ import {
   FaInfoCircle
 } from 'react-icons/fa';
 import { api } from '../api';
+import { useTranslation } from 'react-i18next';
 
 interface WorkflowStep {
   id?: number;
@@ -128,6 +129,7 @@ interface WorkflowAnalytics {
 }
 
 const WhatsAppWorkflow: React.FC = () => {
+  const { t } = useTranslation();
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [templates, setTemplates] = useState<WorkflowTemplate[]>([]);
   const [analytics, setAnalytics] = useState<WorkflowAnalytics | null>(null);
@@ -193,7 +195,7 @@ const WhatsAppWorkflow: React.FC = () => {
     if (!currentWorkflow.name.trim()) {
       toast({
         title: 'Error',
-        description: 'Please enter a workflow name',
+        description: t('whatsappWorkflow.pleaseEnterWorkflowName'),
         status: 'error',
         duration: 3000,
       });
@@ -203,7 +205,7 @@ const WhatsAppWorkflow: React.FC = () => {
     if (currentWorkflow.steps.length === 0) {
       toast({
         title: 'Error',
-        description: 'Please add at least one step to the workflow',
+        description: t('whatsappWorkflow.pleaseAddAtLeastOneStep'),
         status: 'error',
         duration: 3000,
       });
@@ -215,7 +217,7 @@ const WhatsAppWorkflow: React.FC = () => {
       
       toast({
         title: 'Success',
-        description: 'Workflow created successfully',
+        description: t('whatsappWorkflow.workflowCreatedSuccessfully'),
         status: 'success',
         duration: 3000,
       });
@@ -243,7 +245,7 @@ const WhatsAppWorkflow: React.FC = () => {
 
   const handleAddStep = () => {
     const newStep: WorkflowStep = {
-      name: `Step ${currentWorkflow.steps.length + 1}`,
+      name: `${t('whatsappWorkflow.step')} ${currentWorkflow.steps.length + 1}`,
       step_type: 'message',
       content: '',
       order: currentWorkflow.steps.length + 1
@@ -303,7 +305,7 @@ const WhatsAppWorkflow: React.FC = () => {
       
       toast({
         title: 'Success',
-        description: 'Workflow execution started',
+        description: t('whatsappWorkflow.workflowExecutionStarted'),
         status: 'success',
         duration: 3000,
       });
@@ -339,18 +341,18 @@ const WhatsAppWorkflow: React.FC = () => {
 
   return (
     <Box p={6}>
-      <Heading size="lg" mb={6}>WhatsApp Workflow Automation</Heading>
+      <Heading size="lg" mb={6}>{t('whatsappWorkflow.whatsAppWorkflowAutomation')}</Heading>
       
       {/* Analytics Overview */}
       {analytics && (
         <Card mb={6} bg={bgColor} border="1px" borderColor={borderColor}>
           <CardHeader>
-            <Heading size="md">Workflow Analytics</Heading>
+            <Heading size="md">{t('whatsappWorkflow.workflowAnalytics')}</Heading>
           </CardHeader>
           <CardBody>
             <StatGroup>
               <Stat>
-                <StatLabel>Total Workflows</StatLabel>
+                <StatLabel>{t('whatsappWorkflow.totalWorkflows')}</StatLabel>
                 <StatNumber>{analytics.total_workflows}</StatNumber>
                 <StatHelpText>
                   <StatArrow type="increase" />
@@ -358,7 +360,7 @@ const WhatsAppWorkflow: React.FC = () => {
                 </StatHelpText>
               </Stat>
               <Stat>
-                <StatLabel>Active Workflows</StatLabel>
+                <StatLabel>{t('whatsappWorkflow.activeWorkflows')}</StatLabel>
                 <StatNumber>{analytics.active_workflows}</StatNumber>
                 <StatHelpText>
                   <StatArrow type="increase" />
@@ -366,7 +368,7 @@ const WhatsAppWorkflow: React.FC = () => {
                 </StatHelpText>
               </Stat>
               <Stat>
-                <StatLabel>Total Messages</StatLabel>
+                <StatLabel>{t('whatsappWorkflow.totalMessages')}</StatLabel>
                 <StatNumber>{analytics.total_messages}</StatNumber>
                 <StatHelpText>
                   <StatArrow type="increase" />
@@ -374,7 +376,7 @@ const WhatsAppWorkflow: React.FC = () => {
                 </StatHelpText>
               </Stat>
               <Stat>
-                <StatLabel>Success Rate</StatLabel>
+                <StatLabel>{t('whatsappWorkflow.successRate')}</StatLabel>
                 <StatNumber>{analytics.success_rate.toFixed(1)}%</StatNumber>
                 <StatHelpText>
                   <StatArrow type="increase" />
@@ -388,9 +390,9 @@ const WhatsAppWorkflow: React.FC = () => {
 
       <Tabs>
         <TabList>
-          <Tab>My Workflows</Tab>
-          <Tab>Create Workflow</Tab>
-          <Tab>Templates</Tab>
+          <Tab>{t('whatsappWorkflow.myWorkflows')}</Tab>
+          <Tab>{t('whatsappWorkflow.createWorkflow')}</Tab>
+          <Tab>{t('whatsappWorkflow.templates')}</Tab>
         </TabList>
 
         <TabPanels>
@@ -399,13 +401,13 @@ const WhatsAppWorkflow: React.FC = () => {
             <Card bg={bgColor} border="1px" borderColor={borderColor}>
               <CardHeader>
                 <Flex align="center" justify="space-between">
-                  <Heading size="md">My Workflows</Heading>
+                  <Heading size="md">{t('whatsappWorkflow.myWorkflows')}</Heading>
                   <Button
                     leftIcon={<FaPlus />}
                     colorScheme="blue"
                     onClick={onOpen}
                   >
-                    Create New Workflow
+                    {t('whatsappWorkflow.createNewWorkflow')}
                   </Button>
                 </Flex>
               </CardHeader>
@@ -413,9 +415,9 @@ const WhatsAppWorkflow: React.FC = () => {
                 {workflows.length === 0 ? (
                   <Alert status="info">
                     <AlertIcon />
-                    <AlertTitle>No workflows yet</AlertTitle>
+                    <AlertTitle>{t('whatsappWorkflow.noWorkflowsYet')}</AlertTitle>
                     <AlertDescription>
-                      Create your first workflow to start automating your WhatsApp messaging.
+                      {t('whatsappWorkflow.createYourFirstWorkflow')}
                     </AlertDescription>
                   </Alert>
                 ) : (
@@ -428,7 +430,7 @@ const WhatsAppWorkflow: React.FC = () => {
                               <HStack>
                                 <Heading size="md">{workflow.name}</Heading>
                                 <Badge colorScheme={workflow.is_active ? 'green' : 'red'}>
-                                  {workflow.is_active ? 'Active' : 'Inactive'}
+                                  {workflow.is_active ? t('whatsappWorkflow.active') : t('whatsappWorkflow.inactive')}
                                 </Badge>
                                 <Badge colorScheme={getTriggerTypeColor(workflow.trigger_type)}>
                                   {workflow.trigger_type}
@@ -438,23 +440,23 @@ const WhatsAppWorkflow: React.FC = () => {
                                 <Text color="gray.600">{workflow.description}</Text>
                               )}
                               <Text fontSize="sm" color="gray.500">
-                                {workflow.steps.length} steps • Created {new Date(workflow.created_at!).toLocaleDateString()}
+                                {workflow.steps.length} {t('whatsappWorkflow.steps')} • {t('whatsappWorkflow.createdAt', 'Created')} {new Date(workflow.created_at!).toLocaleDateString()}
                               </Text>
                             </VStack>
                             
                             <HStack spacing={2}>
-                              <Tooltip label="Execute Workflow">
+                              <Tooltip label={t('whatsappWorkflow.executeWorkflow')}>
                                 <IconButton
-                                  aria-label="Execute workflow"
+                                  aria-label={t('whatsappWorkflow.executeWorkflow')}
                                   icon={<FaPlay />}
                                   colorScheme="green"
                                   size="sm"
                                   onClick={() => handleExecuteWorkflow(workflow.id!)}
                                 />
                               </Tooltip>
-                              <Tooltip label="Edit Workflow">
+                              <Tooltip label={t('whatsappWorkflow.editWorkflow')}>
                                 <IconButton
-                                  aria-label="Edit workflow"
+                                  aria-label={t('whatsappWorkflow.editWorkflow')}
                                   icon={<FaEdit />}
                                   size="sm"
                                   variant="ghost"
@@ -464,17 +466,17 @@ const WhatsAppWorkflow: React.FC = () => {
                                   }}
                                 />
                               </Tooltip>
-                              <Tooltip label="Duplicate">
+                              <Tooltip label={t('whatsappWorkflow.duplicate')}>
                                 <IconButton
-                                  aria-label="Duplicate workflow"
+                                  aria-label={t('whatsappWorkflow.duplicateWorkflow')}
                                   icon={<FaCopy />}
                                   size="sm"
                                   variant="ghost"
                                 />
                               </Tooltip>
-                              <Tooltip label="Delete">
+                              <Tooltip label={t('whatsappWorkflow.delete')}>
                                 <IconButton
-                                  aria-label="Delete workflow"
+                                  aria-label={t('whatsappWorkflow.deleteWorkflow')}
                                   icon={<FaTrash />}
                                   size="sm"
                                   variant="ghost"
@@ -486,14 +488,14 @@ const WhatsAppWorkflow: React.FC = () => {
                           
                           {/* Workflow Steps Preview */}
                           <Box mt={4}>
-                            <Text fontSize="sm" fontWeight="bold" mb={2}>Steps:</Text>
+                            <Text fontSize="sm" fontWeight="bold" mb={2}>{t('whatsappWorkflow.steps')}:</Text>
                             <VStack spacing={2} align="stretch">
                               {workflow.steps.map((step, index) => (
                                 <HStack key={index} spacing={3}>
                                   {getStepIcon(step.step_type)}
                                   <Text fontSize="sm">{step.name}</Text>
                                   {step.step_type === 'delay' && step.delay_minutes && (
-                                    <Badge size="sm">{step.delay_minutes}min</Badge>
+                                    <Badge size="sm">{step.delay_minutes}{t('whatsappWorkflow.minutes')}</Badge>
                                   )}
                                 </HStack>
                               ))}
@@ -512,24 +514,24 @@ const WhatsAppWorkflow: React.FC = () => {
           <TabPanel>
             <Card bg={bgColor} border="1px" borderColor={borderColor}>
               <CardHeader>
-                <Heading size="md">Create New Workflow</Heading>
+                <Heading size="md">{t('whatsappWorkflow.createNewWorkflow')}</Heading>
               </CardHeader>
               <CardBody>
                 <VStack spacing={6} align="stretch">
                   {/* Basic Information */}
                   <FormControl>
-                    <FormLabel>Workflow Name</FormLabel>
+                    <FormLabel>{t('whatsappWorkflow.workflowName')}</FormLabel>
                     <Input
-                      placeholder="Enter workflow name"
+                      placeholder={t('whatsappWorkflow.enterWorkflowName')}
                       value={currentWorkflow.name}
                       onChange={(e) => setCurrentWorkflow({...currentWorkflow, name: e.target.value})}
                     />
                   </FormControl>
 
                   <FormControl>
-                    <FormLabel>Description</FormLabel>
+                    <FormLabel>{t('whatsappWorkflow.description')}</FormLabel>
                     <Textarea
-                      placeholder="Describe your workflow"
+                      placeholder={t('whatsappWorkflow.describeWorkflow')}
                       value={currentWorkflow.description}
                       onChange={(e) => setCurrentWorkflow({...currentWorkflow, description: e.target.value})}
                     />
@@ -537,20 +539,20 @@ const WhatsAppWorkflow: React.FC = () => {
 
                   <HStack spacing={4}>
                     <FormControl>
-                      <FormLabel>Trigger Type</FormLabel>
+                      <FormLabel>{t('whatsappWorkflow.triggerType')}</FormLabel>
                       <Select
                         value={currentWorkflow.trigger_type}
                         onChange={(e) => setCurrentWorkflow({...currentWorkflow, trigger_type: e.target.value})}
                       >
-                        <option value="manual">Manual</option>
-                        <option value="lead_created">Lead Created</option>
-                        <option value="lead_qualified">Lead Qualified</option>
-                        <option value="scheduled">Scheduled</option>
+                        <option value="manual">{t('whatsappWorkflow.manual')}</option>
+                        <option value="lead_created">{t('whatsappWorkflow.leadCreated')}</option>
+                        <option value="lead_qualified">{t('whatsappWorkflow.leadQualified')}</option>
+                        <option value="scheduled">{t('whatsappWorkflow.scheduled')}</option>
                       </Select>
                     </FormControl>
                     
                     <FormControl>
-                      <FormLabel>Active</FormLabel>
+                      <FormLabel>{t('whatsappWorkflow.active')}</FormLabel>
                       <Switch
                         isChecked={currentWorkflow.is_active}
                         onChange={(e) => setCurrentWorkflow({...currentWorkflow, is_active: e.target.checked})}
@@ -561,22 +563,22 @@ const WhatsAppWorkflow: React.FC = () => {
                   {/* Workflow Steps */}
                   <Box>
                     <Flex align="center" justify="space-between" mb={4}>
-                      <Heading size="sm">Workflow Steps</Heading>
+                      <Heading size="sm">{t('whatsappWorkflow.workflowSteps')}</Heading>
                       <Button
                         leftIcon={<FaPlus />}
                         size="sm"
                         onClick={handleAddStep}
                       >
-                        Add Step
+                        {t('whatsappWorkflow.addStep')}
                       </Button>
                     </Flex>
                     
                     {currentWorkflow.steps.length === 0 ? (
                       <Alert status="info">
                         <AlertIcon />
-                        <AlertTitle>No steps added</AlertTitle>
+                        <AlertTitle>{t('whatsappWorkflow.noStepsAdded')}</AlertTitle>
                         <AlertDescription>
-                          Add steps to your workflow to define the automation sequence.
+                          {t('whatsappWorkflow.addStepsDescription')}
                         </AlertDescription>
                       </Alert>
                     ) : (
@@ -594,7 +596,7 @@ const WhatsAppWorkflow: React.FC = () => {
                             <AccordionPanel>
                               <VStack spacing={4} align="stretch">
                                 <FormControl>
-                                  <FormLabel>Step Name</FormLabel>
+                                  <FormLabel>{t('whatsappWorkflow.stepName')}</FormLabel>
                                   <Input
                                     value={step.name}
                                     onChange={(e) => handleUpdateStep(index, 'name', e.target.value)}
@@ -602,23 +604,23 @@ const WhatsAppWorkflow: React.FC = () => {
                                 </FormControl>
                                 
                                 <FormControl>
-                                  <FormLabel>Step Type</FormLabel>
+                                  <FormLabel>{t('whatsappWorkflow.stepType')}</FormLabel>
                                   <Select
                                     value={step.step_type}
                                     onChange={(e) => handleUpdateStep(index, 'step_type', e.target.value)}
                                   >
-                                    <option value="message">Message</option>
-                                    <option value="delay">Delay</option>
-                                    <option value="condition">Condition</option>
-                                    <option value="action">Action</option>
+                                    <option value="message">{t('whatsappWorkflow.message')}</option>
+                                    <option value="delay">{t('whatsappWorkflow.delay')}</option>
+                                    <option value="condition">{t('whatsappWorkflow.condition')}</option>
+                                    <option value="action">{t('whatsappWorkflow.action')}</option>
                                   </Select>
                                 </FormControl>
                                 
                                 {step.step_type === 'message' && (
                                   <FormControl>
-                                    <FormLabel>Message Content</FormLabel>
+                                    <FormLabel>{t('whatsappWorkflow.messageContent')}</FormLabel>
                                     <Textarea
-                                      placeholder="Enter your message content. Use {{name}}, {{company}}, {{followers}} for variables."
+                                      placeholder={t('whatsappWorkflow.enterMessageContent')}
                                       value={step.content}
                                       onChange={(e) => handleUpdateStep(index, 'content', e.target.value)}
                                     />
@@ -627,7 +629,7 @@ const WhatsAppWorkflow: React.FC = () => {
                                 
                                 {step.step_type === 'delay' && (
                                   <FormControl>
-                                    <FormLabel>Delay (minutes)</FormLabel>
+                                    <FormLabel>{t('whatsappWorkflow.delayMinutes')}</FormLabel>
                                     <NumberInput
                                       value={step.delay_minutes}
                                       onChange={(value) => handleUpdateStep(index, 'delay_minutes', parseInt(value))}
@@ -646,7 +648,7 @@ const WhatsAppWorkflow: React.FC = () => {
                                 {step.step_type === 'condition' && (
                                   <VStack spacing={4} align="stretch">
                                     <FormControl>
-                                      <FormLabel>Minimum Followers</FormLabel>
+                                      <FormLabel>{t('whatsappWorkflow.minimumFollowers')}</FormLabel>
                                       <NumberInput
                                         value={step.conditions?.followers_min || 0}
                                         onChange={(value) => handleUpdateStep(index, 'conditions', {
@@ -660,7 +662,7 @@ const WhatsAppWorkflow: React.FC = () => {
                                     </FormControl>
                                     
                                     <FormControl>
-                                      <FormLabel>Minimum Engagement Score</FormLabel>
+                                      <FormLabel>{t('whatsappWorkflow.minimumEngagementScore')}</FormLabel>
                                       <NumberInput
                                         value={step.conditions?.engagement_score_min || 0}
                                         onChange={(value) => handleUpdateStep(index, 'conditions', {
@@ -675,7 +677,7 @@ const WhatsAppWorkflow: React.FC = () => {
                                     </FormControl>
                                     
                                     <FormControl>
-                                      <FormLabel>Required Contact Info</FormLabel>
+                                      <FormLabel>{t('whatsappWorkflow.requiredContactInfo')}</FormLabel>
                                       <VStack align="start" spacing={2}>
                                         <HStack>
                                           <Switch
@@ -691,7 +693,7 @@ const WhatsAppWorkflow: React.FC = () => {
                                               });
                                             }}
                                           />
-                                          <Text fontSize="sm">Email</Text>
+                                          <Text fontSize="sm">{t('whatsappWorkflow.email')}</Text>
                                         </HStack>
                                         <HStack>
                                           <Switch
@@ -707,7 +709,7 @@ const WhatsAppWorkflow: React.FC = () => {
                                               });
                                             }}
                                           />
-                                          <Text fontSize="sm">Phone</Text>
+                                          <Text fontSize="sm">{t('whatsappWorkflow.phone')}</Text>
                                         </HStack>
                                         <HStack>
                                           <Switch
@@ -723,7 +725,7 @@ const WhatsAppWorkflow: React.FC = () => {
                                               });
                                             }}
                                           />
-                                          <Text fontSize="sm">Website</Text>
+                                          <Text fontSize="sm">{t('whatsappWorkflow.website')}</Text>
                                         </HStack>
                                       </VStack>
                                     </FormControl>
@@ -732,7 +734,7 @@ const WhatsAppWorkflow: React.FC = () => {
                                 
                                 {step.step_type === 'action' && (
                                   <FormControl>
-                                    <FormLabel>Actions</FormLabel>
+                                    <FormLabel>{t('whatsappWorkflow.actions')}</FormLabel>
                                     <VStack align="start" spacing={2}>
                                       <HStack>
                                         <Switch
@@ -745,7 +747,7 @@ const WhatsAppWorkflow: React.FC = () => {
                                             handleUpdateStep(index, 'actions', newActions);
                                           }}
                                         />
-                                        <Text fontSize="sm">Add to CRM</Text>
+                                        <Text fontSize="sm">{t('whatsappWorkflow.addToCrm')}</Text>
                                       </HStack>
                                       <HStack>
                                         <Switch
@@ -758,7 +760,7 @@ const WhatsAppWorkflow: React.FC = () => {
                                             handleUpdateStep(index, 'actions', newActions);
                                           }}
                                         />
-                                        <Text fontSize="sm">Send Follow-up</Text>
+                                        <Text fontSize="sm">{t('whatsappWorkflow.sendFollowUp')}</Text>
                                       </HStack>
                                       <HStack>
                                         <Switch
@@ -771,7 +773,7 @@ const WhatsAppWorkflow: React.FC = () => {
                                             handleUpdateStep(index, 'actions', newActions);
                                           }}
                                         />
-                                        <Text fontSize="sm">Update Status</Text>
+                                        <Text fontSize="sm">{t('whatsappWorkflow.updateStatus')}</Text>
                                       </HStack>
                                       <HStack>
                                         <Switch
@@ -784,7 +786,7 @@ const WhatsAppWorkflow: React.FC = () => {
                                             handleUpdateStep(index, 'actions', newActions);
                                           }}
                                         />
-                                        <Text fontSize="sm">Create Task</Text>
+                                        <Text fontSize="sm">{t('whatsappWorkflow.createTask')}</Text>
                                       </HStack>
                                     </VStack>
                                   </FormControl>
@@ -797,7 +799,7 @@ const WhatsAppWorkflow: React.FC = () => {
                                   variant="outline"
                                   onClick={() => handleRemoveStep(index)}
                                 >
-                                  Remove Step
+                                  {t('whatsappWorkflow.removeStep')}
                                 </Button>
                               </VStack>
                             </AccordionPanel>
@@ -813,7 +815,7 @@ const WhatsAppWorkflow: React.FC = () => {
                     onClick={handleCreateWorkflow}
                     isDisabled={currentWorkflow.steps.length === 0}
                   >
-                    Create Workflow
+                    {t('whatsappWorkflow.createWorkflow')}
                   </Button>
                 </VStack>
               </CardBody>
@@ -824,7 +826,7 @@ const WhatsAppWorkflow: React.FC = () => {
           <TabPanel>
             <Card bg={bgColor} border="1px" borderColor={borderColor}>
               <CardHeader>
-                <Heading size="md">Workflow Templates</Heading>
+                <Heading size="md">{t('whatsappWorkflow.workflowTemplates')}</Heading>
               </CardHeader>
               <CardBody>
                 <Grid templateColumns="repeat(auto-fit, minmax(300px, 1fr))" gap={6}>
@@ -841,14 +843,14 @@ const WhatsAppWorkflow: React.FC = () => {
                               {template.trigger_type}
                             </Badge>
                             
-                            <Text fontSize="sm" fontWeight="bold">Steps:</Text>
+                            <Text fontSize="sm" fontWeight="bold">{t('whatsappWorkflow.steps')}:</Text>
                             <VStack align="start" spacing={2}>
                               {template.steps.map((step, index) => (
                                 <HStack key={index} spacing={2}>
                                   {getStepIcon(step.step_type)}
                                   <Text fontSize="sm">{step.name}</Text>
                                   {step.step_type === 'delay' && step.delay_minutes && (
-                                    <Badge size="sm">{step.delay_minutes}min</Badge>
+                                    <Badge size="sm">{step.delay_minutes}{t('whatsappWorkflow.minutes')}</Badge>
                                   )}
                                 </HStack>
                               ))}
@@ -860,7 +862,7 @@ const WhatsAppWorkflow: React.FC = () => {
                               size="sm"
                               onClick={() => handleUseTemplate(template)}
                             >
-                              Use Template
+                              {t('whatsappWorkflow.useTemplate')}
                             </Button>
                           </VStack>
                         </CardBody>
@@ -879,17 +881,17 @@ const WhatsAppWorkflow: React.FC = () => {
         <ModalOverlay />
         <ModalContent>
           <ModalHeader>
-            {selectedWorkflow ? 'Edit Workflow' : 'Create New Workflow'}
+            {selectedWorkflow ? t('whatsappWorkflow.editWorkflow') : t('whatsappWorkflow.createNewWorkflow')}
           </ModalHeader>
           <ModalBody>
             {/* Workflow creation form would go here - same as in the Create Workflow tab */}
           </ModalBody>
           <ModalFooter>
             <Button variant="ghost" mr={3} onClick={onClose}>
-              Cancel
+              {t('whatsappWorkflow.cancel')}
             </Button>
             <Button colorScheme="blue" onClick={handleCreateWorkflow}>
-              {selectedWorkflow ? 'Update' : 'Create'} Workflow
+              {selectedWorkflow ? t('whatsappWorkflow.updateWorkflow') : t('whatsappWorkflow.createWorkflow')}
             </Button>
           </ModalFooter>
         </ModalContent>
