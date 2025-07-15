@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Sparkles } from 'lucide-react';
+import { Select } from './ui/input';
 
 const examplePrompts = [
   'What are my top 5 leads this week?',
@@ -19,10 +20,19 @@ const smartRecommendations = [
   { name: 'Carol Jones', reason: 'Scored as Hot Lead' },
 ];
 
+const leadsList = [
+  { id: '1', name: 'Alice Smith' },
+  { id: '2', name: 'Bob Lee' },
+  { id: '3', name: 'Carol Jones' },
+];
+
 export const AIAssistantSidebar: React.FC = () => {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<{ role: 'user' | 'ai'; text: string }[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedLeadId, setSelectedLeadId] = useState('');
+  const [summary, setSummary] = useState('');
+  const [summarizing, setSummarizing] = useState(false);
 
   const sendPrompt = async (prompt: string) => {
     setMessages(msgs => [...msgs, { role: 'user', text: prompt }]);
@@ -31,6 +41,15 @@ export const AIAssistantSidebar: React.FC = () => {
     setTimeout(() => {
       setMessages(msgs => [...msgs, { role: 'ai', text: 'AI response for: ' + prompt }]);
       setLoading(false);
+    }, 1200);
+  };
+
+  const handleSummarize = () => {
+    if (!selectedLeadId) return;
+    setSummarizing(true);
+    setTimeout(() => {
+      setSummary('Summary for ' + (leadsList.find(l => l.id === selectedLeadId)?.name || '') + ': This lead has high engagement and recently responded to your outreach.');
+      setSummarizing(false);
     }, 1200);
   };
 
@@ -51,6 +70,22 @@ export const AIAssistantSidebar: React.FC = () => {
               </div>
             ))}
           </div>
+        </div>
+        <div className="mb-4">
+          <div className="font-semibold mb-1">Auto-Summary</div>
+          <div className="flex gap-2 items-center mb-2">
+            <select
+              className="border rounded px-2 py-1 text-sm"
+              value={selectedLeadId}
+              onChange={e => setSelectedLeadId(e.target.value)}
+            >
+              <option value="">Select Lead</option>
+              {leadsList.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+            </select>
+            <Button size="sm" onClick={handleSummarize} disabled={!selectedLeadId || summarizing}>Summarize</Button>
+          </div>
+          {summarizing && <div className="text-xs text-muted-foreground">Generating summary...</div>}
+          {summary && <div className="bg-muted rounded p-2 text-sm mt-1">{summary}</div>}
         </div>
         <div className="flex flex-col gap-2 mb-2">
           {examplePrompts.map((p, i) => (
