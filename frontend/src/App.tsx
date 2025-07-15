@@ -25,6 +25,7 @@ import { AuthProvider } from './hooks/useAuth';
 import './styles/global.css';
 import LiveChatWidget from './components/LiveChatWidget';
 import LeadCollection from './pages/LeadCollection';
+import { CustomDashboard } from './pages/CustomDashboard';
 
 const CRM = lazy(() => import('./pages/CRM'));
 const Analytics = lazy(() => import('./pages/Analytics'));
@@ -143,6 +144,7 @@ function App() {
                       <LeadCollection />
                     </ProtectedRoute>
                   } />
+                  <Route path="/custom-dashboard" element={<CustomDashboard />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>

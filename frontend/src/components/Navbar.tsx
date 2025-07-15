@@ -16,6 +16,7 @@ const Navbar = () => {
 
   const navItems = [
     { path: '/dashboard', label: 'Dashboard' },
+    { path: '/custom-dashboard', label: 'Custom Dashboard' },
     { path: '/lead-collection', label: 'Leads' },
     { path: '/crm', label: 'CRM' },
     { path: '/analytics', label: 'Analytics' },
