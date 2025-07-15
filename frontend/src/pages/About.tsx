@@ -8,38 +8,40 @@ import {
   CheckCircleIcon,
   TimeIcon
 } from '@chakra-ui/icons';
+import { useTranslation } from 'react-i18next';
 
 const About = () => {
+  const { t } = useTranslation();
   const features = [
     {
       icon: SearchIcon,
-      title: 'Advanced Search',
-      description: 'Powerful search capabilities with location-based filtering and custom queries'
+      title: t('about.features.advancedSearch.title', 'Advanced Search'),
+      description: t('about.features.advancedSearch.description', 'Powerful search capabilities with location-based filtering and custom queries')
     },
     {
       icon: DownloadIcon,
-      title: 'Multiple Export Formats',
-      description: 'Export your data in CSV, JSON, Excel, and other popular formats'
+      title: t('about.features.multipleExportFormats.title', 'Multiple Export Formats'),
+      description: t('about.features.multipleExportFormats.description', 'Export your data in CSV, JSON, Excel, and other popular formats')
     },
     {
       icon: LockIcon,
-      title: 'Secure & Reliable',
-      description: 'Enterprise-grade security with 99.9% uptime and data protection'
+      title: t('about.features.secureReliable.title', 'Secure & Reliable'),
+      description: t('about.features.secureReliable.description', 'Enterprise-grade security with 99.9% uptime and data protection')
     },
     {
       icon: StarIcon,
-      title: 'Premium Quality',
-      description: 'High-quality, accurate data extraction with validation and verification'
+      title: t('about.features.premiumQuality.title', 'Premium Quality'),
+      description: t('about.features.premiumQuality.description', 'High-quality, accurate data extraction with validation and verification')
     },
     {
       icon: CheckCircleIcon,
-      title: 'Easy to Use',
-      description: 'No coding required. Simple interface for users of all skill levels'
+      title: t('about.features.easyToUse.title', 'Easy to Use'),
+      description: t('about.features.easyToUse.description', 'No coding required. Simple interface for users of all skill levels')
     },
     {
       icon: TimeIcon,
-      title: 'Real-time Updates',
-      description: 'Access the latest business information and contact details'
+      title: t('about.features.realTimeUpdates.title', 'Real-time Updates'),
+      description: t('about.features.realTimeUpdates.description', 'Access the latest business information and contact details')
     }
   ];
 
@@ -49,13 +51,10 @@ const About = () => {
         <VStack spacing={16}>
           <VStack spacing={6} textAlign="center">
             <Heading size="3xl" className="gradient-text">
-              About LeadTap
+              {t('about.heading', 'About LeadTap')}
             </Heading>
             <Text color="gray.400" fontSize="xl" maxW="800px" lineHeight="1.6">
-              LeadTap is a powerful Google Maps data extraction platform designed to help 
-              businesses, researchers, and marketers gather comprehensive location data 
-              efficiently and accurately. Our advanced technology makes it easy to extract 
-              business information, contact details, and location data from Google Maps.
+              {t('about.description', 'LeadTap is a powerful Google Maps data extraction platform designed to help businesses, researchers, and marketers gather comprehensive location data efficiently and accurately. Our advanced technology makes it easy to extract business information, contact details, and location data from Google Maps.')}
             </Text>
           </VStack>
 
@@ -91,13 +90,10 @@ const About = () => {
 
           <VStack spacing={6} textAlign="center" pt={8}>
             <Heading size="lg" color="white">
-              Why Choose LeadTap?
+              {t('about.whyChoose.heading', 'Why Choose LeadTap?')}
             </Heading>
             <Text color="gray.400" fontSize="lg" maxW="800px" lineHeight="1.6">
-              Our platform combines cutting-edge technology with user-friendly design to 
-              provide the most efficient and reliable Google Maps data extraction solution. 
-              Whether you're a small business looking for leads or an enterprise requiring 
-              bulk data extraction, LeadTap has the tools and features you need to succeed.
+              {t('about.whyChoose.description', 'Our platform combines cutting-edge technology with user-friendly design to provide the most efficient and reliable Google Maps data extraction solution. Whether you\'re a small business looking for leads or an enterprise requiring bulk data extraction, LeadTap has the tools and features you need to succeed.')}
             </Text>
           </VStack>
         </VStack>
