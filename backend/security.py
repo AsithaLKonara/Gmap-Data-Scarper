@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Body, Request
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from models import User, AuditLog, Role, Permission, UserRole
 from database import get_db
@@ -11,6 +11,7 @@ import json
 import logging
 from datetime import datetime, timedelta
 from enum import Enum
+from audit import audit_log
 
 router = APIRouter(prefix="/api/security", tags=["security"])
 logger = logging.getLogger("security")
@@ -33,24 +34,37 @@ class RoleType(str, Enum):
     VIEWER = "viewer"
     USER = "user"
 
-# Pydantic models
+# --- Pydantic Models for OpenAPI ---
 class BackupCode(BaseModel):
-    code: str
-    used: bool = False
+    code: str = Field(..., description="Backup code string.")
+    used: bool = Field(False, description="Whether the code has been used.")
 
 class TwoFactorSetup(BaseModel):
-    secret: str
-    qr_code: str
-    backup_codes: List[str]
+    secret: str = Field(..., description="TOTP secret for 2FA.")
+    qr_code: str = Field(..., description="QR code URI for authenticator apps.")
+    backup_codes: List[str] = Field(..., description="List of backup codes.")
+
+class TwoFactorVerifyRequest(BaseModel):
+    code: str = Field(..., description="TOTP or backup code to verify.")
+
+class TwoFactorDisableResponse(BaseModel):
+    success: bool
+    message: str
 
 class RoleCreate(BaseModel):
+    name: str = Field(..., description="Role name.")
+    description: str = Field(..., description="Role description.")
+    permissions: List[str] = Field(..., description="List of permissions for the role.")
+
+class RoleOut(BaseModel):
+    id: int
     name: str
     description: str
     permissions: List[str]
 
 class PermissionCheck(BaseModel):
-    resource: str
-    action: str
+    resource: str = Field(..., description="Resource name.")
+    action: str = Field(..., description="Action name.")
 
 class AuditLogEntry(BaseModel):
     user_id: int
@@ -59,6 +73,26 @@ class AuditLogEntry(BaseModel):
     details: Optional[Dict[str, Any]] = None
     ip_address: Optional[str] = None
     user_agent: Optional[str] = None
+
+class SecurityAuditLogOut(BaseModel):
+    id: int
+    user_id: int
+    action: str
+    resource: str
+    details: Optional[Dict[str, Any]]
+    ip_address: Optional[str]
+    user_agent: Optional[str]
+    timestamp: datetime
+
+class SecurityAuditLogListResponse(BaseModel):
+    results: List[SecurityAuditLogOut]
+    total: int
+
+class SecurityStatusResponse(BaseModel):
+    two_fa_enabled: bool
+    roles: List[str]
+    permissions: List[str]
+    security_score: int
 
 # Security utilities
 def generate_backup_codes(count: int = 10) -> List[str]:
@@ -166,13 +200,13 @@ def require_permission(resource: str, action: str):
     return decorator
 
 # Enhanced 2FA endpoints
-@router.post("/2fa/setup", response_model=TwoFactorSetup)
+@router.post("/2fa/setup", response_model=TwoFactorSetup, summary="Setup 2FA", description="Setup 2FA with QR code and backup codes.")
 def setup_2fa(
     request: Request,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Setup 2FA with QR code and backup codes"""
+    """Setup 2FA with QR code and backup codes."""
     if user.two_fa_enabled:
         raise HTTPException(status_code=400, detail="2FA is already enabled")
     
@@ -210,14 +244,14 @@ def setup_2fa(
         "backup_codes": backup_codes
     }
 
-@router.post("/2fa/verify-and-enable")
+@router.post("/2fa/verify-and-enable", response_model=TwoFactorSetup, summary="Verify and enable 2FA", description="Verify 2FA code and enable 2FA for the user.")
 def verify_and_enable_2fa(
-    code: str = Body(...),
+    code: str = Body(..., embed=True, description="TOTP or backup code to verify."),
     request: Request = None,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Verify 2FA code and enable 2FA"""
+    """Verify 2FA code and enable 2FA for the user."""
     if not user.two_fa_secret:
         raise HTTPException(status_code=400, detail="2FA setup not initiated")
     
@@ -249,14 +283,14 @@ def verify_and_enable_2fa(
     
     return {"status": "2FA enabled successfully"}
 
-@router.post("/2fa/verify-login")
+@router.post("/2fa/verify-login", response_model=TwoFactorSetup, summary="Verify 2FA login", description="Verify 2FA code during login.")
 def verify_2fa_login(
-    code: str = Body(...),
+    code: str = Body(..., embed=True, description="TOTP or backup code to verify."),
     request: Request = None,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Verify 2FA code during login"""
+    """Verify 2FA code during login."""
     if not user.two_fa_enabled:
         raise HTTPException(status_code=400, detail="2FA not enabled")
     
@@ -293,13 +327,13 @@ def verify_2fa_login(
     )
     raise HTTPException(status_code=400, detail="Invalid 2FA code")
 
-@router.post("/2fa/disable")
+@router.post("/2fa/disable", response_model=TwoFactorDisableResponse, summary="Disable 2FA", description="Disable 2FA for the user.")
 def disable_2fa(
     request: Request = None,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Disable 2FA"""
+    """Disable 2FA for the user."""
     if not user.two_fa_enabled:
         raise HTTPException(status_code=400, detail="2FA not enabled")
     
@@ -319,13 +353,13 @@ def disable_2fa(
     
     return {"status": "2FA disabled successfully"}
 
-@router.post("/2fa/regenerate-backup-codes")
+@router.post("/2fa/regenerate-backup-codes", response_model=TwoFactorSetup, summary="Regenerate backup codes", description="Regenerate backup codes for 2FA.")
 def regenerate_backup_codes(
     request: Request = None,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Regenerate backup codes"""
+    """Regenerate backup codes for 2FA."""
     if not user.two_fa_enabled:
         raise HTTPException(status_code=400, detail="2FA not enabled")
     
@@ -345,9 +379,9 @@ def regenerate_backup_codes(
     return {"backup_codes": backup_codes}
 
 # RBAC endpoints
-@router.get("/roles")
+@router.get("/roles", response_model=List[RoleOut], summary="List roles", description="Get all available roles.")
 def get_roles(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    """Get all available roles"""
+    """Get all available roles."""
     if not check_permission(user, "roles", "read", db):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
     
@@ -362,13 +396,14 @@ def get_roles(db: Session = Depends(get_db), user: User = Depends(get_current_us
         for role in roles
     ]
 
-@router.post("/roles")
+@router.post("/roles", response_model=RoleOut, summary="Create role", description="Create a new role.")
+@audit_log(action="create_role", target_type="role")
 def create_role(
     role_data: RoleCreate,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Create a new role"""
+    """Create a new role."""
     if not check_permission(user, "roles", "write", db):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
     
@@ -391,14 +426,66 @@ def create_role(
     
     return {"id": role.id, "name": role.name}
 
-@router.post("/users/{user_id}/roles/{role_id}")
+@router.put("/roles/{role_id}", response_model=RoleOut, summary="Update role", description="Update a role by ID.")
+@audit_log(action="update_role", target_type="role", target_id_param="role_id")
+def update_role(
+    role_id: int = Field(..., description="ID of the role."),
+    role_data: RoleCreate = Body(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """Update a role by ID."""
+    if not check_permission(user, "roles", "write", db):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    role = db.query(Role).filter(Role.id == role_id).first()
+    if not role:
+        raise HTTPException(status_code=404, detail="Role not found")
+    role.name = role_data.name
+    role.description = role_data.description
+    role.permissions = json.dumps(role_data.permissions)
+    db.commit()
+    log_security_event(
+        user_id=user.id,
+        action="role_updated",
+        resource="roles",
+        details={"role_id": role_id, "role_name": role_data.name, "permissions": role_data.permissions},
+        db=db
+    )
+    return {"id": role.id, "name": role.name}
+
+@router.delete("/roles/{role_id}", summary="Delete role", description="Delete a role by ID.")
+@audit_log(action="delete_role", target_type="role", target_id_param="role_id")
+def delete_role(
+    role_id: int = Field(..., description="ID of the role."),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """Delete a role by ID."""
+    if not check_permission(user, "roles", "delete", db):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    role = db.query(Role).filter(Role.id == role_id).first()
+    if not role:
+        raise HTTPException(status_code=404, detail="Role not found")
+    db.delete(role)
+    db.commit()
+    log_security_event(
+        user_id=user.id,
+        action="role_deleted",
+        resource="roles",
+        details={"role_id": role_id},
+        db=db
+    )
+    return {"status": "Role deleted successfully"}
+
+@router.post("/users/{user_id}/roles/{role_id}", summary="Assign role to user", description="Assign a role to a user by user ID and role ID.")
+@audit_log(action="assign_role", target_type="user", target_id_param="user_id")
 def assign_role(
-    user_id: int,
-    role_id: int,
+    user_id: int = Field(..., description="ID of the user."),
+    role_id: int = Field(..., description="ID of the role."),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Assign a role to a user"""
+    """Assign a role to a user by user ID and role ID."""
     if not check_permission(current_user, "users", "write", db):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
     
@@ -433,8 +520,33 @@ def assign_role(
     
     return {"status": "Role assigned successfully"}
 
+@router.delete("/users/{user_id}/roles/{role_id}", summary="Remove role from user", description="Remove a role from a user by user ID and role ID.")
+@audit_log(action="remove_role", target_type="user", target_id_param="user_id")
+def remove_role_from_user(
+    user_id: int = Field(..., description="ID of the user."),
+    role_id: int = Field(..., description="ID of the role."),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Remove a role from a user by user ID and role ID."""
+    if not check_permission(current_user, "users", "write", db):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    user_role = db.query(UserRole).filter(UserRole.user_id == user_id, UserRole.role_id == role_id).first()
+    if not user_role:
+        raise HTTPException(status_code=404, detail="Role assignment not found")
+    db.delete(user_role)
+    db.commit()
+    log_security_event(
+        user_id=current_user.id,
+        action="role_removed",
+        resource="users",
+        details={"target_user_id": user_id, "role_id": role_id},
+        db=db
+    )
+    return {"status": "Role removed from user successfully"}
+
 # Security audit endpoints
-@router.get("/audit-logs")
+@router.get("/audit-logs", response_model=SecurityAuditLogListResponse, summary="Get security audit logs", description="Get a paginated list of security audit logs with optional filters.")
 def get_security_audit_logs(
     page: int = 1,
     page_size: int = 20,
@@ -444,7 +556,7 @@ def get_security_audit_logs(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Get security audit logs"""
+    """Get a paginated list of security audit logs with optional filters."""
     if not check_permission(current_user, "audit", "read", db):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
     
@@ -479,12 +591,12 @@ def get_security_audit_logs(
         "page_size": page_size
     }
 
-@router.get("/security-status")
+@router.get("/security-status", response_model=SecurityStatusResponse, summary="Get security status", description="Get the current user's security status, roles, permissions, and security score.")
 def get_security_status(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Get user's security status"""
+    """Get the current user's security status, roles, permissions, and security score."""
     return {
         "two_fa_enabled": user.two_fa_enabled,
         "two_fa_enabled_at": user.two_fa_enabled_at.isoformat() if user.two_fa_enabled_at else None,

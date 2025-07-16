@@ -26,7 +26,8 @@ def create_default_users():
             user = User(
                 email="user@leadtap.com",
                 hashed_password=get_password_hash("1234"),
-                plan="free"
+                plan="free",
+                role="user"
             )
             db.add(user)
             print("✅ [SETUP] Created user account: user@leadtap.com / 1234")
@@ -39,7 +40,8 @@ def create_default_users():
             admin = User(
                 email="admin@leadtap.com",
                 hashed_password=get_password_hash("1234"),
-                plan="business"
+                plan="business",
+                role="admin"
             )
             db.add(admin)
             print("✅ [SETUP] Created admin account: admin@leadtap.com / 1234")

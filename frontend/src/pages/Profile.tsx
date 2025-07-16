@@ -32,6 +32,10 @@ import {
 } from '@chakra-ui/react';
 import { EditIcon, CheckIcon, CloseIcon } from '@chakra-ui/icons';
 import * as api from '../api';
+import { useEffect, useState } from 'react';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { toast } from '../hooks/use-toast';
 
 interface UserProfile {
   id: number;
@@ -86,9 +90,16 @@ const Profile: React.FC = () => {
     timezone: 'UTC',
   });
 
+  const [referral, setReferral] = useState<any>(null);
+  const [referralStatus, setReferralStatus] = useState<any[]>([]);
+  const [referralLoading, setReferralLoading] = useState(false);
+  const [applyCode, setApplyCode] = useState('');
+
   useEffect(() => {
     loadUserInfo();
     loadUserStats();
+    loadReferral();
+    loadReferralStatus();
   }, []);
 
   const loadUserInfo = async () => {
@@ -130,6 +141,49 @@ const Profile: React.FC = () => {
       setUserStats(null);
     } finally {
       setStatsLoading(false);
+    }
+  };
+
+  const loadReferral = async () => {
+    setReferralLoading(true);
+    try {
+      const res = await api.generateReferralCode();
+      setReferral(res);
+    } catch (e) {
+      setReferral(null);
+    } finally {
+      setReferralLoading(false);
+    }
+  };
+
+  const loadReferralStatus = async () => {
+    try {
+      const res = await api.getReferralStatus();
+      setReferralStatus(res);
+    } catch (e) {
+      setReferralStatus([]);
+    }
+  };
+
+  const handleCopyReferral = () => {
+    if (referral?.code) {
+      navigator.clipboard.writeText(referral.code);
+      toast({ title: 'Copied', status: 'success' });
+    }
+  };
+
+  const handleApplyReferral = async () => {
+    if (!applyCode.trim()) return;
+    setReferralLoading(true);
+    try {
+      const res = await api.applyReferralCode(applyCode.trim());
+      toast({ title: res.message, status: res.success ? 'success' : 'error' });
+      setApplyCode('');
+      loadReferralStatus();
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, status: 'error' });
+    } finally {
+      setReferralLoading(false);
     }
   };
 
@@ -264,6 +318,49 @@ const Profile: React.FC = () => {
               </Grid>
             )}
           </Box>
+
+          {/* Referral Section */}
+          <div className="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 className="text-lg font-semibold text-blue-600 mb-2">Referral Program</h2>
+            <p className="text-gray-600 text-sm mb-4">Invite friends and earn rewards! Share your referral code or link below.</p>
+            {referralLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            ) : referral ? (
+              <div className="flex flex-col gap-2 mb-4">
+                <div className="flex items-center gap-2">
+                  <Input value={referral.code} readOnly className="w-40 font-mono" />
+                  <Button onClick={handleCopyReferral}>Copy Code</Button>
+                  <Button onClick={() => {navigator.clipboard.writeText(window.location.origin + '/register?ref=' + referral.code); toast({ title: 'Link copied', status: 'success' });}}>Copy Link</Button>
+                </div>
+                <div className="text-xs text-gray-500">Share this code or link with your friends. Both of you get rewards when they sign up!</div>
+              </div>
+            ) : (
+              <div className="text-gray-500">Unable to load referral code.</div>
+            )}
+            <form onSubmit={e => { e.preventDefault(); handleApplyReferral(); }} className="flex gap-2 mb-4">
+              <Input placeholder="Enter referral code" value={applyCode} onChange={e => setApplyCode(e.target.value)} className="w-40" />
+              <Button type="submit" disabled={referralLoading}>Apply Code</Button>
+            </form>
+            <div className="mt-4">
+              <h3 className="font-semibold text-blue-500 mb-2 text-sm">Your Referrals</h3>
+              {referralStatus.length === 0 ? (
+                <div className="text-gray-500 text-sm">No referrals yet.</div>
+              ) : (
+                <div className="space-y-2">
+                  {referralStatus.map((r, i) => (
+                    <div key={i} className="flex items-center gap-4 text-sm">
+                      <span className="font-mono bg-gray-100 px-2 py-1 rounded">{r.code}</span>
+                      <span>{r.used_by ? 'Used' : 'Unused'}</span>
+                      {r.used_at && <span className="text-gray-400">{new Date(r.used_at).toLocaleString()}</span>}
+                      <span className="text-green-600">{r.rewards && r.rewards.leads ? `+${r.rewards.leads} leads` : ''}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
 
           <Divider my={6} />
 

@@ -13,6 +13,7 @@ from enum import Enum
 import schedule
 import time
 import threading
+from audit import audit_log
 
 logger = logging.getLogger("scheduler")
 
@@ -77,6 +78,9 @@ class ScheduledJobOut(BaseModel):
     created_at: str
     class Config:
         orm_mode = True
+
+class DeleteScheduledJobResponse(BaseModel):
+    status: str
 
 # In-memory scheduler (in production, use Redis or database)
 scheduled_jobs: Dict[int, Dict] = {}
@@ -308,7 +312,8 @@ def update_scheduled_job(
         logger.exception("Error updating scheduled job")
         raise HTTPException(status_code=500, detail="Failed to update scheduled job")
 
-@router.delete("/jobs/{job_id}")
+@router.delete("/jobs/{job_id}", response_model=DeleteScheduledJobResponse, summary="Delete scheduled job", description="Delete a scheduled job by job ID.")
+@audit_log(action="delete_scheduled_job", target_type="scheduled_job", target_id_param="job_id")
 def delete_scheduled_job(job_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     try:
         job_data = scheduled_jobs.get(job_id)
@@ -318,7 +323,7 @@ def delete_scheduled_job(job_id: int, db: Session = Depends(get_db), user: User 
         del scheduled_jobs[job_id]
         
         logger.info(f"Scheduled job deleted: {job_id} by user {user.id}")
-        return {"message": "Scheduled job deleted successfully"}
+        return DeleteScheduledJobResponse(status="deleted")
     except HTTPException:
         raise
     except Exception as e:
@@ -389,14 +394,15 @@ def update_scheduled_job(job_id: int, data: ScheduledJobIn, db: Session = Depend
     db.refresh(sj)
     return sj
 
-@router.delete("/{job_id}")
+@router.delete("/{job_id}", response_model=DeleteScheduledJobResponse, summary="Delete scheduled job", description="Delete a scheduled job by job ID.")
+@audit_log(action="delete_scheduled_job", target_type="scheduled_job", target_id_param="job_id")
 def delete_scheduled_job(job_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     sj = db.query(ScheduledJob).filter(ScheduledJob.id == job_id, ScheduledJob.user_id == user.id).first()
     if not sj:
         raise HTTPException(status_code=404, detail="Scheduled job not found")
     db.delete(sj)
     db.commit()
-    return {"status": "deleted"}
+    return DeleteScheduledJobResponse(status="deleted")
 
 @router.post("/{job_id}/activate")
 def activate_scheduled_job(job_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from models import User, OnboardingStep, DemoProject
 from database import get_db
@@ -10,16 +10,17 @@ from datetime import datetime
 
 router = APIRouter(prefix="/api/onboarding", tags=["onboarding"])
 
+# --- Pydantic Models for OpenAPI ---
 class OnboardingStepUpdate(BaseModel):
-    step_id: str
-    completed: bool
-    data: Optional[Dict[str, Any]] = None
+    step_id: str = Field(..., description="ID of the onboarding step.")
+    completed: bool = Field(..., description="Whether the step is completed.")
+    data: Optional[Dict[str, Any]] = Field(None, description="Additional data for the step.")
 
 class DemoProjectCreate(BaseModel):
-    name: str
-    description: str
-    queries: List[str]
-    tags: Optional[List[str]] = None
+    name: str = Field(..., description="Name of the demo project.")
+    description: str = Field(..., description="Description of the demo project.")
+    queries: List[str] = Field(..., description="List of queries for the demo project.")
+    tags: Optional[List[str]] = Field(None, description="Tags for the demo project.")
 
 class OnboardingProgress(BaseModel):
     user_id: int
@@ -29,12 +30,25 @@ class OnboardingProgress(BaseModel):
     progress_percentage: float
     estimated_time_remaining: int  # minutes
 
-@router.get("/progress", response_model=OnboardingProgress)
+class DemoProjectOut(BaseModel):
+    id: int
+    name: str
+    description: str
+    queries: List[str]
+    tags: List[str]
+    is_demo: bool
+    created_at: datetime
+
+class OnboardingStepStatusResponse(BaseModel):
+    status: str
+    step_id: str
+
+@router.get("/progress", response_model=OnboardingProgress, summary="Get onboarding progress", description="Get the current user's onboarding progress.")
 def get_onboarding_progress(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Get user's onboarding progress"""
+    """Get user's onboarding progress."""
     steps = db.query(OnboardingStep).filter(OnboardingStep.user_id == user.id).all()
     
     if not steps:
@@ -87,13 +101,13 @@ def get_onboarding_progress(
         estimated_time_remaining=estimated_time_remaining
     )
 
-@router.post("/step")
+@router.post("/step", response_model=OnboardingStepStatusResponse, summary="Update onboarding step", description="Update onboarding step completion status.")
 def update_onboarding_step(
     step_update: OnboardingStepUpdate,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Update onboarding step completion status"""
+    """Update onboarding step completion status."""
     step = db.query(OnboardingStep).filter(
         OnboardingStep.user_id == user.id,
         OnboardingStep.step_id == step_update.step_id
@@ -111,13 +125,13 @@ def update_onboarding_step(
     
     return {"status": "updated", "step_id": step_update.step_id}
 
-@router.post("/demo-project", response_model=Dict[str, Any])
+@router.post("/demo-project", response_model=DemoProjectOut, summary="Create demo project", description="Create a demo project for onboarding.")
 def create_demo_project(
     project_data: DemoProjectCreate,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Create a demo project for onboarding"""
+    """Create a demo project for onboarding."""
     demo_project = DemoProject(
         user_id=user.id,
         name=project_data.name,
@@ -152,12 +166,12 @@ def create_demo_project(
         "created_at": demo_project.created_at
     }
 
-@router.get("/demo-projects", response_model=List[Dict[str, Any]])
+@router.get("/demo-projects", response_model=List[DemoProjectOut], summary="List demo projects", description="Get all demo projects for the current user.")
 def get_demo_projects(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Get user's demo projects"""
+    """Get user's demo projects."""
     projects = db.query(DemoProject).filter(
         DemoProject.user_id == user.id,
         DemoProject.is_demo == True
@@ -175,12 +189,12 @@ def get_demo_projects(
         for project in projects
     ]
 
-@router.get("/suggestions")
+@router.get("/suggestions", summary="Get onboarding suggestions", description="Get personalized onboarding suggestions based on user progress.")
 def get_onboarding_suggestions(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Get personalized onboarding suggestions based on user progress"""
+    """Get personalized onboarding suggestions based on user progress."""
     progress = get_onboarding_progress(db, user)
     
     suggestions = []
@@ -225,12 +239,12 @@ def get_onboarding_suggestions(
     
     return {"suggestions": suggestions}
 
-@router.post("/complete")
+@router.post("/complete", summary="Complete onboarding", description="Mark onboarding as complete for the current user.")
 def complete_onboarding(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Mark onboarding as complete"""
+    """Mark onboarding as complete for the current user."""
     # Mark all steps as completed
     steps = db.query(OnboardingStep).filter(OnboardingStep.user_id == user.id).all()
     

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Body, Query
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import json
 import asyncio
@@ -28,38 +28,38 @@ logger = logging.getLogger("social-scraper")
 
 # Pydantic models
 class SocialScrapingRequest(BaseModel):
-    platform: str  # facebook, instagram, twitter, linkedin, tiktok
-    keywords: List[str]
-    location: Optional[str] = None
-    max_results: int = 100
-    filters: Optional[Dict[str, Any]] = None
-    include_engagement: bool = True
-    include_contact_info: bool = True
+    platform: str = Field(..., description="Social media platform to scrape (facebook, instagram, twitter, linkedin, tiktok)", example="facebook")
+    keywords: List[str] = Field(..., description="List of keywords or hashtags to search.", example=["marketing", "startup"])
+    location: Optional[str] = Field(None, description="Location filter for the search.", example="New York")
+    max_results: int = Field(100, description="Maximum number of results to fetch.", example=100)
+    filters: Optional[Dict[str, Any]] = Field(None, description="Additional filters for the search.")
+    include_engagement: bool = Field(True, description="Whether to include engagement metrics in the results.")
+    include_contact_info: bool = Field(True, description="Whether to include contact information in the results.")
 
 class SocialLeadResponse(BaseModel):
-    id: int
-    platform: str
-    platform_id: str
-    username: Optional[str]
-    display_name: Optional[str]
-    email: Optional[str]
-    phone: Optional[str]
-    bio: Optional[str]
-    followers_count: Optional[int]
-    following_count: Optional[int]
-    posts_count: Optional[int]
-    location: Optional[str]
-    website: Optional[str]
-    profile_url: Optional[str]
-    avatar_url: Optional[str]
-    verified: bool
-    business_category: Optional[str]
-    engagement_score: Optional[float]
-    status: str
-    tags: List[str]
-    notes: Optional[str]
-    created_at: datetime
-    updated_at: datetime
+    id: int = Field(..., description="Unique identifier for the social lead.")
+    platform: str = Field(..., description="Social media platform.", example="facebook")
+    platform_id: str = Field(..., description="Platform-specific ID for the lead.")
+    username: Optional[str] = Field(None, description="Username or handle.")
+    display_name: Optional[str] = Field(None, description="Display name or full name.")
+    email: Optional[str] = Field(None, description="Email address.")
+    phone: Optional[str] = Field(None, description="Phone number.")
+    bio: Optional[str] = Field(None, description="Profile bio or description.")
+    followers_count: Optional[int] = Field(None, description="Number of followers.")
+    following_count: Optional[int] = Field(None, description="Number of accounts followed.")
+    posts_count: Optional[int] = Field(None, description="Number of posts.")
+    location: Optional[str] = Field(None, description="Location of the lead.")
+    website: Optional[str] = Field(None, description="Website URL.")
+    profile_url: Optional[str] = Field(None, description="Profile URL.")
+    avatar_url: Optional[str] = Field(None, description="Avatar image URL.")
+    verified: bool = Field(..., description="Whether the profile is verified.")
+    business_category: Optional[str] = Field(None, description="Business category or industry.")
+    engagement_score: Optional[float] = Field(None, description="Calculated engagement score.")
+    status: str = Field(..., description="Status of the lead (new, contacted, etc.)")
+    tags: List[str] = Field(..., description="Tags associated with the lead.")
+    notes: Optional[str] = Field(None, description="Additional notes.")
+    created_at: datetime = Field(..., description="Timestamp when the lead was created.")
+    updated_at: datetime = Field(..., description="Timestamp when the lead was last updated.")
 
 # Social Media Scraping Engine
 class SocialMediaScraper:
@@ -623,14 +623,19 @@ class SocialMediaScraper:
 scraper = SocialMediaScraper()
 
 # API endpoints
-@router.post("/scrape", response_model=Dict[str, Any])
+@router.post(
+    "/scrape",
+    response_model=Dict[str, Any],
+    summary="Start social media scraping job",
+    description="Start a background job to scrape social media platforms for leads. Requires Pro or Business plan."
+)
 async def scrape_social_media(
-    request: SocialScrapingRequest,
-    background_tasks: BackgroundTasks,
+    request: SocialScrapingRequest = Body(..., description="Scraping job parameters."),
+    background_tasks: BackgroundTasks = Depends(),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Scrape social media platforms for leads"""
+    """Scrape social media platforms for leads (background job)."""
     if current_user.plan not in ['pro', 'business']:
         raise HTTPException(status_code=403, detail="Pro or Business plan required")
     
@@ -756,16 +761,21 @@ async def scrape_social_media_task(
     finally:
         db.close()
 
-@router.get("/leads", response_model=List[SocialLeadResponse])
+@router.get(
+    "/leads",
+    response_model=List[SocialLeadResponse],
+    summary="Get social media leads",
+    description="Get a paginated list of social media leads for the authenticated user. Filter by platform and status."
+)
 async def get_social_leads(
-    platform: Optional[str] = Query(None),
-    status: Optional[str] = Query(None),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    platform: Optional[str] = Query(None, description="Filter by social media platform (facebook, instagram, etc.)"),
+    status: Optional[str] = Query(None, description="Filter by lead status (new, contacted, etc.)"),
+    page: int = Query(1, ge=1, description="Page number for pagination."),
+    page_size: int = Query(20, ge=1, le=100, description="Number of leads per page."),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get social media leads"""
+    """Get social media leads (paginated, filterable)."""
     query = db.query(SocialMediaLead).filter(SocialMediaLead.user_id == current_user.id)
     
     if platform:
@@ -807,12 +817,17 @@ async def get_social_leads(
         for lead in leads
     ]
 
-@router.get("/analytics", response_model=Dict[str, Any])
+@router.get(
+    "/analytics",
+    response_model=Dict[str, Any],
+    summary="Get social media analytics",
+    description="Get analytics and statistics for social media scraping jobs and leads."
+)
 async def get_social_analytics(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get social media scraping analytics"""
+    """Get social media scraping analytics and statistics."""
     # Get lead counts by platform
     platform_counts = db.query(
         SocialMediaLead.platform,

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request, Body
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from models import User, UserProfile, Job, Lead
 from database import get_db
@@ -12,19 +12,21 @@ import os
 import shutil
 from fastapi.responses import JSONResponse
 import secrets
+from audit import audit_log
 
 logger = logging.getLogger("profiles")
 
 router = APIRouter(prefix="/api/profiles", tags=["profiles"])
 
+# --- Pydantic Models for OpenAPI ---
 class ProfileUpdateRequest(BaseModel):
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    phone: Optional[str] = None
-    company: Optional[str] = None
-    website: Optional[str] = None
-    bio: Optional[str] = None
-    timezone: Optional[str] = None
+    first_name: Optional[str] = Field(None, description="First name of the user.")
+    last_name: Optional[str] = Field(None, description="Last name of the user.")
+    phone: Optional[str] = Field(None, description="Phone number of the user.")
+    company: Optional[str] = Field(None, description="Company name.")
+    website: Optional[str] = Field(None, description="Website URL.")
+    bio: Optional[str] = Field(None, description="User bio.")
+    timezone: Optional[str] = Field(None, description="Timezone.")
 
 class ProfileResponse(BaseModel):
     id: int
@@ -53,8 +55,49 @@ class UserInfoResponse(BaseModel):
     class Config:
         from_attributes = True
 
-@router.get("/me", response_model=UserInfoResponse)
+class AvatarUploadResponse(BaseModel):
+    message: str
+    avatar_url: str
+
+class AvatarDeleteResponse(BaseModel):
+    message: str
+
+class UserStatsResponse(BaseModel):
+    total_jobs: int
+    completed_jobs: int
+    success_rate: float
+    total_leads: int
+    account_age_days: int
+
+class ExportDataResponse(BaseModel):
+    jobs: list
+    leads: list
+
+class DeleteAccountResponse(BaseModel):
+    status: str
+
+class ReferralInfoResponse(BaseModel):
+    code: str
+    stats: dict
+
+class ReferralUseResponse(BaseModel):
+    message: str
+
+class ReferralStatsResponse(BaseModel):
+    referred_users: int
+    total_credits: int
+
+class UsageResponse(BaseModel):
+    jobs_count: int
+    exports_count: int
+
+class CreditsPurchaseResponse(BaseModel):
+    message: str
+    credits_added: int
+
+@router.get("/me", response_model=UserInfoResponse, summary="Get user info", description="Get the authenticated user's profile and plan information.")
 def get_user_info(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Get the authenticated user's profile and plan information."""
     try:
         # Get or create profile
         profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
@@ -75,8 +118,9 @@ def get_user_info(db: Session = Depends(get_db), user: User = Depends(get_curren
         logger.exception("Error getting user info")
         raise HTTPException(status_code=500, detail="Failed to get user information. Please try again later.")
 
-@router.put("/me", response_model=ProfileResponse)
+@router.put("/me", response_model=ProfileResponse, summary="Update user profile", description="Update the authenticated user's profile information.")
 def update_profile(profile_update: ProfileUpdateRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Update the authenticated user's profile information."""
     try:
         # Get or create profile
         profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
@@ -100,8 +144,9 @@ def update_profile(profile_update: ProfileUpdateRequest, db: Session = Depends(g
         db.rollback()
         raise HTTPException(status_code=500, detail="Failed to update profile. Please try again later.")
 
-@router.post("/me/avatar")
-def upload_avatar(file: UploadFile = File(...), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+@router.post("/me/avatar", response_model=AvatarUploadResponse, summary="Upload avatar", description="Upload a new avatar image for the authenticated user.")
+def upload_avatar(file: UploadFile = File(..., description="Avatar image file"), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Upload a new avatar image for the authenticated user."""
     try:
         # Validate file type
         if not file.content_type.startswith('image/'):
@@ -139,8 +184,9 @@ def upload_avatar(file: UploadFile = File(...), db: Session = Depends(get_db), u
         db.rollback()
         raise HTTPException(status_code=500, detail="Failed to upload avatar. Please try again later.")
 
-@router.delete("/me/avatar")
+@router.delete("/me/avatar", response_model=AvatarDeleteResponse, summary="Delete avatar", description="Delete the authenticated user's avatar image.")
 def delete_avatar(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Delete the authenticated user's avatar image."""
     try:
         profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
         if profile and profile.avatar:
@@ -164,8 +210,9 @@ def delete_avatar(db: Session = Depends(get_db), user: User = Depends(get_curren
         db.rollback()
         raise HTTPException(status_code=500, detail="Failed to delete avatar. Please try again later.")
 
-@router.get("/me/stats")
+@router.get("/me/stats", response_model=UserStatsResponse, summary="Get user stats", description="Get statistics for the authenticated user's account (jobs, leads, etc.).")
 def get_user_stats(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Get statistics for the authenticated user's account (jobs, leads, etc.)."""
     try:
         # Get user statistics
         total_jobs = db.query(user.jobs).count()
@@ -186,8 +233,9 @@ def get_user_stats(db: Session = Depends(get_db), user: User = Depends(get_curre
         logger.exception("Error getting user stats")
         raise HTTPException(status_code=500, detail="Failed to get user statistics. Please try again later.")
 
-@router.post("/export-data")
+@router.post("/export-data", response_model=ExportDataResponse, summary="Export user data", description="Export all data related to the authenticated user's account.")
 def export_data(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Export all data related to the authenticated user's account."""
     # Gather user data (profile, jobs, leads, etc.)
     jobs = db.query(Job).filter(Job.user_id == user.id).all()
     leads = db.query(Lead).filter(Lead.user_id == user.id).all()
@@ -200,15 +248,18 @@ def export_data(db: Session = Depends(get_db), user: User = Depends(get_current_
     }
     return JSONResponse(content=data)
 
-@router.post("/delete-account")
+@router.post("/delete-account", response_model=DeleteAccountResponse, summary="Delete user account", description="Delete the authenticated user's account.")
+@audit_log(action="delete_account", target_type="user")
 def delete_account(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Delete the authenticated user's account."""
     # For demo, delete immediately (real: mark for deletion, delay, admin review)
     db.delete(user)
     db.commit()
-    return {"status": "deleted"} 
+    return DeleteAccountResponse(status="deleted") 
 
-@router.get("/referral")
+@router.get("/referral", response_model=ReferralInfoResponse, summary="Get referral info", description="Get the authenticated user's referral code and stats.")
 def get_referral_info(db: Session = Depends(get_db), user: User = Depends(get_current_user), request: Request = None):
+    """Get the authenticated user's referral code and stats."""
     if not user.referral_code:
         # Generate a referral code if not present
         code = secrets.token_urlsafe(8)
@@ -224,8 +275,9 @@ def get_referral_info(db: Session = Depends(get_db), user: User = Depends(get_cu
         "referral_credits": user.referral_credits
     }
 
-@router.post("/referral/use")
-def use_referral_code(code: str = Body(...), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+@router.post("/referral/use", response_model=ReferralUseResponse, summary="Use referral code", description="Apply a referral code to the authenticated user's account.")
+def use_referral_code(code: str = Body(..., description="Referral code to apply"), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Apply a referral code to the authenticated user's account."""
     if user.referred_by:
         raise HTTPException(status_code=400, detail="Referral already used")
     referrer = db.query(User).filter(User.referral_code == code).first()
@@ -237,8 +289,9 @@ def use_referral_code(code: str = Body(...), db: Session = Depends(get_db), user
     db.commit()
     return {"status": "referral applied", "referrer": referrer.email, "credits": user.referral_credits}
 
-@router.get("/referral/stats")
+@router.get("/referral/stats", response_model=ReferralStatsResponse, summary="Get referral stats", description="Get stats for users referred by the authenticated user.")
 def get_referral_stats(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Get stats for users referred by the authenticated user."""
     referred_users = db.query(User).filter(User.referred_by == user.id).all()
     return {
         "referred": [
@@ -248,7 +301,7 @@ def get_referral_stats(db: Session = Depends(get_db), user: User = Depends(get_c
         "total_credits": user.referral_credits
     } 
 
-@router.get("/usage")
+@router.get("/usage", response_model=UsageResponse, summary="Get usage", description="Get usage statistics for the authenticated user.")
 def get_usage(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     # Count jobs and exports (stub: jobs only)
     today = datetime.utcnow().date()
@@ -267,8 +320,8 @@ def get_usage(db: Session = Depends(get_db), user: User = Depends(get_current_us
         'referral_credits': user.referral_credits
     }
 
-@router.post("/credits/purchase")
-def purchase_credits(amount: int = Body(...), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+@router.post("/credits/purchase", response_model=CreditsPurchaseResponse, summary="Purchase credits", description="Purchase additional credits for the authenticated user.")
+def purchase_credits(amount: int = Body(..., description="Amount of credits to purchase"), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     # Simulate payment and add credits
     if amount <= 0:
         raise HTTPException(status_code=400, detail="Amount must be positive")

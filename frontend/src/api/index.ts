@@ -593,52 +593,47 @@ export async function getMyAuditLogs() {
   return apiFetch('/api/audit/my');
 } 
 
-export async function enable2FA() {
-  return apiFetch('/api/auth/2fa/enable', { method: 'POST' });
+// Enhanced 2FA (Security) API
+export async function setup2FA() {
+  return apiFetch('/api/security/2fa/setup', { method: 'POST' });
 }
 
-export async function verify2FA(code: string) {
-  return apiFetch('/api/auth/2fa/verify', {
+export async function verifyAndEnable2FA(code: string) {
+  return apiFetch('/api/security/2fa/verify-and-enable', {
     method: 'POST',
     body: JSON.stringify({ code }),
   });
 }
 
-export async function disable2FA() {
-  return apiFetch('/api/auth/2fa/disable', { method: 'POST' });
+export async function disable2FAEnhanced() {
+  return apiFetch('/api/security/2fa/disable', { method: 'POST' });
 } 
 
-export async function exportUserData() {
-  return apiFetch('/api/profiles/export-data', { method: 'POST' });
-}
-
-export async function deleteAccount() {
-  return apiFetch('/api/profiles/delete-account', { method: 'POST' });
+export async function regenerate2FABackupCodes() {
+  return apiFetch('/api/security/2fa/regenerate-backup-codes', { method: 'POST' });
 } 
 
-export async function getReferralInfo() {
-  return apiFetch('/api/profiles/referral');
+export async function getSecurityStatus() {
+  return apiFetch('/api/security/security-status');
 }
 
-export async function useReferralCode(code: string) {
-  return apiFetch('/api/profiles/referral/use', {
+// Affiliate Program API
+export async function generateAffiliateCode() {
+  return apiFetch('/api/affiliate/generate', { method: 'POST' });
+}
+
+export async function getAffiliateStats() {
+  return apiFetch('/api/affiliate/stats');
+} 
+
+export async function listAffiliateCommissions() {
+  return apiFetch('/api/affiliate/commissions');
+}
+
+export async function requestAffiliatePayout(amount: number, notes?: string) {
+  return apiFetch('/api/affiliate/payout', {
     method: 'POST',
-    body: JSON.stringify({ code }),
-  });
-}
-
-export async function getReferralStats() {
-  return apiFetch('/api/profiles/referral/stats');
-} 
-
-export async function getUsage() {
-  return apiFetch('/api/profiles/usage');
-}
-
-export async function purchaseCredits(amount: number) {
-  return apiFetch('/api/profiles/credits/purchase', {
-    method: 'POST',
-    body: JSON.stringify({ amount }),
+    body: JSON.stringify({ amount, notes }),
   });
 } 
 
@@ -852,4 +847,50 @@ export async function executeWhatsAppWorkflow(data: {
 
 export async function getWhatsAppWorkflowAnalytics() {
   return apiFetch('/api/whatsapp-workflow/analytics');
+} 
+
+export async function login2FA(userId: number, code: string) {
+  const data = await apiFetch('/api/auth/login/2fa', {
+    method: 'POST',
+    body: JSON.stringify({ user_id: userId, code }),
+  });
+  setToken(data.access_token);
+  return data;
+} 
+
+// RBAC/Role Management API
+export async function getRoles() {
+  return apiFetch('/api/security/roles');
+}
+
+export async function createRole(data: { name: string; description: string; permissions: string[] }) {
+  return apiFetch('/api/security/roles', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateRole(roleId: number, data: { name: string; description: string; permissions: string[] }) {
+  return apiFetch(`/api/security/roles/${roleId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteRole(roleId: number) {
+  return apiFetch(`/api/security/roles/${roleId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function assignRoleToUser(userId: number, roleId: number) {
+  return apiFetch(`/api/security/users/${userId}/roles/${roleId}`, {
+    method: 'POST',
+  });
+}
+
+export async function removeRoleFromUser(userId: number, roleId: number) {
+  return apiFetch(`/api/security/users/${userId}/roles/${roleId}`, {
+    method: 'DELETE',
+  });
 } 

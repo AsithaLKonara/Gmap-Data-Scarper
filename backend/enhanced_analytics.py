@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from models import User, Goal, AnalyticsEvent, Job, Lead
 from database import get_db
@@ -12,60 +12,70 @@ from enum import Enum
 router = APIRouter(prefix="/api/analytics", tags=["enhanced-analytics"])
 
 class GoalType(str, Enum):
+    """Type of analytics goal."""
     LEADS = "leads"
     REVENUE = "revenue"
     JOBS = "jobs"
     EXPORTS = "exports"
 
 class GoalPeriod(str, Enum):
+    """Period for analytics goal."""
     DAILY = "daily"
     WEEKLY = "weekly"
     MONTHLY = "monthly"
 
 class GoalCreate(BaseModel):
-    name: str
-    target: float
-    goal_type: GoalType
-    period: GoalPeriod
-    deadline: datetime
-    description: Optional[str] = None
+    name: str = Field(..., description="Goal name.", example="Close 10 deals")
+    target: float = Field(..., description="Target value for the goal.", example=10)
+    goal_type: GoalType = Field(..., description="Type of goal.", example="leads")
+    period: GoalPeriod = Field(..., description="Goal period.", example="monthly")
+    deadline: datetime = Field(..., description="Deadline for the goal.", example="2024-06-30T23:59:59Z")
+    description: Optional[str] = Field(None, description="Goal description.", example="Achieve 10 new leads this month.")
 
 class GoalResponse(BaseModel):
-    id: int
-    name: str
-    target: float
-    current: float
-    goal_type: str
-    period: str
-    deadline: datetime
-    progress_percentage: float
-    completed: bool
-    created_at: datetime
+    id: int = Field(..., description="Goal ID.", example=1)
+    name: str = Field(..., description="Goal name.", example="Close 10 deals")
+    target: float = Field(..., description="Target value for the goal.", example=10)
+    current: float = Field(..., description="Current progress value.", example=5)
+    goal_type: str = Field(..., description="Type of goal.", example="leads")
+    period: str = Field(..., description="Goal period.", example="monthly")
+    deadline: datetime = Field(..., description="Deadline for the goal.", example="2024-06-30T23:59:59Z")
+    progress_percentage: float = Field(..., description="Progress as a percentage.", example=50.0)
+    completed: bool = Field(..., description="Whether the goal is completed.", example=False)
+    created_at: datetime = Field(..., description="Goal creation timestamp.", example="2024-06-01T12:00:00Z")
 
 class FunnelStage(BaseModel):
-    stage: str
-    count: int
-    conversion_rate: float
-    drop_off_rate: float
+    stage: str = Field(..., description="Funnel stage name.", example="Jobs Created")
+    count: int = Field(..., description="Count at this stage.", example=100)
+    conversion_rate: float = Field(..., description="Conversion rate at this stage.", example=80.0)
+    drop_off_rate: float = Field(..., description="Drop-off rate at this stage.", example=20.0)
 
 class AnalyticsInsight(BaseModel):
-    type: str
-    title: str
-    description: str
-    severity: str  # info, warning, success, error
-    action_required: bool
+    type: str = Field(..., description="Insight type.", example="performance")
+    title: str = Field(..., description="Insight title.", example="Excellent Job Success Rate")
+    description: str = Field(..., description="Insight description.", example="Your job success rate is 90%.")
+    severity: str = Field(..., description="Severity level (info, warning, success, error).", example="success")
+    action_required: bool = Field(..., description="Whether user action is required.", example=False)
 
-@router.post("/goals", response_model=GoalResponse)
+class DeleteGoalResponse(BaseModel):
+    status: str
+    goal_id: int
+
+@router.post(
+    "/goals",
+    response_model=GoalResponse,
+    summary="Create a new analytics goal",
+    description="Create a new analytics goal for the current user.",
+    response_description="The created goal."
+)
 def create_goal(
     goal_data: GoalCreate,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Create a new analytics goal"""
-    
+    """Create a new analytics goal for the current user."""
     # Calculate current progress based on goal type
     current_value = calculate_current_value(user.id, goal_data.goal_type, goal_data.period, db)
-    
     goal = Goal(
         user_id=user.id,
         name=goal_data.name,
@@ -77,13 +87,10 @@ def create_goal(
         description=goal_data.description,
         created_at=datetime.utcnow()
     )
-    
     db.add(goal)
     db.commit()
     db.refresh(goal)
-    
     progress_percentage = min((goal.current / goal.target) * 100, 100) if goal.target > 0 else 0
-    
     return GoalResponse(
         id=goal.id,
         name=goal.name,
@@ -97,21 +104,24 @@ def create_goal(
         created_at=goal.created_at
     )
 
-@router.get("/goals", response_model=List[GoalResponse])
+@router.get(
+    "/goals",
+    response_model=List[GoalResponse],
+    summary="Get analytics goals",
+    description="Get all analytics goals for the current user.",
+    response_description="List of goals."
+)
 def get_goals(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Get user's analytics goals"""
-    
+    """Get all analytics goals for the current user."""
     goals = db.query(Goal).filter(Goal.user_id == user.id).all()
-    
     result = []
     for goal in goals:
         # Update current value
         goal.current = calculate_current_value(user.id, GoalType(goal.goal_type), GoalPeriod(goal.period), db)
         progress_percentage = min((goal.current / goal.target) * 100, 100) if goal.target > 0 else 0
-        
         result.append(GoalResponse(
             id=goal.id,
             name=goal.name,
@@ -124,90 +134,93 @@ def get_goals(
             completed=progress_percentage >= 100,
             created_at=goal.created_at
         ))
-    
     return result
 
-@router.put("/goals/{goal_id}")
+@router.put(
+    "/goals/{goal_id}",
+    summary="Update analytics goal",
+    description="Update an existing analytics goal for the current user.",
+    response_model=dict,
+    response_description="Status and goal ID."
+)
 def update_goal(
     goal_id: int,
     goal_data: GoalCreate,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Update an existing goal"""
-    
+    """Update an existing analytics goal for the current user."""
     goal = db.query(Goal).filter(
         Goal.id == goal_id,
         Goal.user_id == user.id
     ).first()
-    
     if not goal:
         raise HTTPException(status_code=404, detail="Goal not found")
-    
     goal.name = goal_data.name
     goal.target = goal_data.target
     goal.goal_type = goal_data.goal_type.value
     goal.period = goal_data.period.value
     goal.deadline = goal_data.deadline
     goal.description = goal_data.description
-    
     db.commit()
-    
     return {"status": "updated", "goal_id": goal_id}
 
-@router.delete("/goals/{goal_id}")
+@router.delete(
+    "/goals/{goal_id}",
+    summary="Delete analytics goal",
+    description="Delete an analytics goal for the current user.",
+    response_model=DeleteGoalResponse,
+    response_description="Status and goal ID."
+)
 def delete_goal(
     goal_id: int,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Delete a goal"""
-    
+    """Delete an analytics goal for the current user."""
     goal = db.query(Goal).filter(
         Goal.id == goal_id,
         Goal.user_id == user.id
     ).first()
-    
     if not goal:
         raise HTTPException(status_code=404, detail="Goal not found")
-    
     db.delete(goal)
     db.commit()
-    
-    return {"status": "deleted", "goal_id": goal_id}
+    return DeleteGoalResponse(status="deleted", goal_id=goal_id)
 
-@router.get("/funnel", response_model=List[FunnelStage])
+@router.get(
+    "/funnel",
+    response_model=List[FunnelStage],
+    summary="Get conversion funnel analysis",
+    description="Get conversion funnel analysis for the current user.",
+    response_description="List of funnel stages."
+)
 def get_conversion_funnel(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Get conversion funnel analysis"""
-    
+    """Get conversion funnel analysis for the current user."""
     # Calculate funnel stages
     total_jobs = db.query(Job).filter(Job.user_id == user.id).count()
     completed_jobs = db.query(Job).filter(
         Job.user_id == user.id,
         Job.status == 'completed'
     ).count()
-    
     total_leads = db.query(Lead).filter(Lead.user_id == user.id).count()
     crm_leads = db.query(Lead).filter(
         Lead.user_id == user.id,
         Lead.status.in_(['new', 'contacted', 'qualified', 'converted'])
     ).count()
-    
     # Estimate exports (jobs with results)
     exported_jobs = db.query(Job).filter(
         Job.user_id == user.id,
         Job.status == 'completed'
     ).count()  # Simplified - assume completed jobs are exported
-    
     # Estimate conversions (leads with status 'converted')
     converted_leads = db.query(Lead).filter(
         Lead.user_id == user.id,
         Lead.status == 'converted'
     ).count()
-    
     funnel_stages = [
         FunnelStage(
             stage="Jobs Created",
@@ -246,7 +259,6 @@ def get_conversion_funnel(
             drop_off_rate=((total_leads - converted_leads) / total_leads * 100) if total_leads > 0 else 0
         )
     ]
-    
     return funnel_stages
 
 @router.get("/insights", response_model=List[AnalyticsInsight])

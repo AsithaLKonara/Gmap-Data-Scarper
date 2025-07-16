@@ -39,6 +39,8 @@ from whatsapp_workflow import router as whatsapp_workflow_router
 from graphql import router as graphql_router
 from realtime import router as realtime_router
 from payments import router as payments_router
+from webhooks import router as webhooks_router
+from affiliate import router as affiliate_router
 
 # Sentry integration
 SENTRY_DSN = os.getenv("SENTRY_DSN")
@@ -108,6 +110,8 @@ app.include_router(whatsapp_workflow_router)
 app.include_router(graphql_router)
 app.include_router(realtime_router)
 app.include_router(payments_router)
+app.include_router(webhooks_router)
+app.include_router(affiliate_router)
 
 @app.on_event("startup")
 def on_startup():

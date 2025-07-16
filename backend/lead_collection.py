@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Body, Query
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import json
 import asyncio
@@ -15,17 +15,35 @@ import secrets
 router = APIRouter(prefix="/api/lead-collection", tags=["lead-collection"])
 logger = logging.getLogger("lead_collection")
 
-# Pydantic models
+# --- Pydantic Models for OpenAPI ---
 class LeadSourceCreate(BaseModel):
+    name: str = Field(..., description="Name of the lead source.")
+    type: str = Field(..., description="Type of the lead source (e.g., facebook, instagram, whatsapp).")
+    config: Optional[Dict[str, Any]] = Field(None, description="Configuration for the lead source.")
+
+class LeadSourceStatus(BaseModel):
+    id: int
     name: str
     type: str
-    config: Optional[Dict[str, Any]] = None
+    status: str
+    last_sync: Optional[datetime]
+    config: Optional[Dict[str, Any]]
 
 class LeadCollectionCreate(BaseModel):
+    name: str = Field(..., description="Name of the lead collection.")
+    description: Optional[str] = Field(None, description="Description of the collection.")
+    source_id: int = Field(..., description="ID of the lead source.")
+    config: Optional[Dict[str, Any]] = Field(None, description="Configuration for the collection.")
+
+class LeadCollectionStatus(BaseModel):
+    id: int
     name: str
-    description: Optional[str] = None
+    description: Optional[str]
     source_id: int
-    config: Optional[Dict[str, Any]] = None
+    status: str
+    last_run: Optional[datetime]
+    next_run: Optional[datetime]
+    created_at: datetime
 
 class SocialMediaLeadResponse(BaseModel):
     id: int
@@ -52,22 +70,15 @@ class SocialMediaLeadResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-class LeadSourceStatus(BaseModel):
-    id: int
-    name: str
-    type: str
-    status: str
-    last_sync: Optional[datetime]
-    config: Optional[Dict[str, Any]]
+# --- Endpoints with OpenAPI docs ---
 
-# Lead source management
-@router.post("/sources", response_model=Dict[str, Any])
+@router.post("/sources", response_model=Dict[str, Any], summary="Create lead source", description="Create a new lead source (Pro/Business only).")
 async def create_lead_source(
     source_data: LeadSourceCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Create a new lead source"""
+    """Create a new lead source. Pro/Business plan required."""
     if current_user.plan not in ['pro', 'business']:
         raise HTTPException(status_code=403, detail="Pro or Business plan required")
     
@@ -88,7 +99,7 @@ async def create_lead_source(
         "config": json.loads(source.config) if source.config else None
     }
 
-@router.get("/sources", response_model=List[LeadSourceStatus], summary="List available lead sources", response_description="List of lead sources and their status")
+@router.get("/sources", response_model=List[LeadSourceStatus], summary="List available lead sources", description="Get all available lead sources and their connection status.")
 def list_lead_sources(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
@@ -108,13 +119,13 @@ def list_lead_sources(
     return result
 
 # Lead collection management
-@router.post("/collections", response_model=Dict[str, Any])
+@router.post("/collections", response_model=Dict[str, Any], summary="Create lead collection", description="Create a new lead collection (Pro/Business only).")
 async def create_lead_collection(
     collection_data: LeadCollectionCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Create a new lead collection"""
+    """Create a new lead collection. Pro/Business plan required."""
     if current_user.plan not in ['pro', 'business']:
         raise HTTPException(status_code=403, detail="Pro or Business plan required")
     
@@ -144,12 +155,12 @@ async def create_lead_collection(
         "created_at": collection.created_at
     }
 
-@router.get("/collections", response_model=List[Dict[str, Any]])
+@router.get("/collections", response_model=List[LeadCollectionStatus], summary="List lead collections", description="Get all lead collections for the authenticated user.")
 async def get_lead_collections(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get user's lead collections"""
+    """Get all lead collections for the authenticated user."""
     collections = db.query(LeadCollection).filter(LeadCollection.user_id == current_user.id).all()
     return [
         {
@@ -166,16 +177,21 @@ async def get_lead_collections(
     ]
 
 # Social media lead collection
-@router.post("/collect/facebook")
+class FacebookCollectRequest(BaseModel):
+    keywords: List[str] = Field(..., description="Keywords to search for.")
+    location: Optional[str] = Field(None, description="Location filter.")
+    max_results: int = Field(100, description="Maximum number of results.")
+
+@router.post("/collect/facebook", summary="Collect Facebook leads", description="Collect leads from Facebook (Pro/Business only).")
 async def collect_facebook_leads(
     background_tasks: BackgroundTasks,
-    keywords: List[str] = Body(...),
-    location: Optional[str] = Body(None),
-    max_results: int = Body(100),
+    keywords: List[str] = Body(..., description="Keywords to search for."),
+    location: Optional[str] = Body(None, description="Location filter."),
+    max_results: int = Body(100, description="Maximum number of results."),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Collect leads from Facebook"""
+    """Collect leads from Facebook. Pro/Business plan required."""
     if current_user.plan not in ['pro', 'business']:
         raise HTTPException(status_code=403, detail="Pro or Business plan required")
     
@@ -212,16 +228,21 @@ async def collect_facebook_leads(
         "message": "Facebook lead collection started"
     }
 
-@router.post("/collect/instagram")
+class InstagramCollectRequest(BaseModel):
+    hashtags: List[str] = Field(..., description="Hashtags to search for.")
+    location: Optional[str] = Field(None, description="Location filter.")
+    max_results: int = Field(100, description="Maximum number of results.")
+
+@router.post("/collect/instagram", summary="Collect Instagram leads", description="Collect leads from Instagram (Pro/Business only).")
 async def collect_instagram_leads(
     background_tasks: BackgroundTasks,
-    hashtags: List[str] = Body(...),
-    location: Optional[str] = Body(None),
-    max_results: int = Body(100),
+    hashtags: List[str] = Body(..., description="Hashtags to search for."),
+    location: Optional[str] = Body(None, description="Location filter."),
+    max_results: int = Body(100, description="Maximum number of results."),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Collect leads from Instagram"""
+    """Collect leads from Instagram. Pro/Business plan required."""
     if current_user.plan not in ['pro', 'business']:
         raise HTTPException(status_code=403, detail="Pro or Business plan required")
     
@@ -256,15 +277,19 @@ async def collect_instagram_leads(
         "message": "Instagram lead collection started"
     }
 
-@router.post("/collect/whatsapp")
+class WhatsAppCollectRequest(BaseModel):
+    phone_numbers: List[str] = Field(..., description="Phone numbers to search for.")
+    keywords: List[str] = Field(..., description="Keywords to search for.")
+
+@router.post("/collect/whatsapp", summary="Collect WhatsApp leads", description="Collect leads from WhatsApp (Pro/Business only).")
 async def collect_whatsapp_leads(
     background_tasks: BackgroundTasks,
-    phone_numbers: List[str] = Body(...),
-    keywords: List[str] = Body(...),
+    phone_numbers: List[str] = Body(..., description="Phone numbers to search for."),
+    keywords: List[str] = Body(..., description="Keywords to search for."),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Collect leads from WhatsApp Business"""
+    """Collect leads from WhatsApp. Pro/Business plan required."""
     if current_user.plan != 'business':
         raise HTTPException(status_code=403, detail="Business plan required")
     
@@ -465,17 +490,17 @@ async def collect_whatsapp_leads_task(
         db.close()
 
 # Get collected leads
-@router.get("/leads", response_model=List[SocialMediaLeadResponse])
+@router.get("/leads", response_model=List[SocialMediaLeadResponse], summary="List social media leads", description="Get social media leads with optional filters for platform, status, and collection.")
 async def get_social_media_leads(
-    platform: Optional[str] = Query(None),
-    status: Optional[str] = Query(None),
-    collection_id: Optional[int] = Query(None),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    platform: Optional[str] = Query(None, description="Platform filter (facebook, instagram, whatsapp)."),
+    status: Optional[str] = Query(None, description="Status filter."),
+    collection_id: Optional[int] = Query(None, description="Collection ID filter."),
+    page: int = Query(1, ge=1, description="Page number for pagination."),
+    page_size: int = Query(20, ge=1, le=100, description="Number of leads per page."),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get collected social media leads"""
+    """Get social media leads with optional filters for platform, status, and collection."""
     query = db.query(SocialMediaLead).filter(SocialMediaLead.user_id == current_user.id)
     
     if platform:

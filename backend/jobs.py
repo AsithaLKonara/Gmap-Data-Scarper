@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, BackgroundTasks, HTTPException, Query, Body, Request
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
-from typing import List
+from pydantic import BaseModel, Field
+from typing import List, Optional, Dict, Any
 import json
 import os
 from datetime import datetime, timezone
@@ -13,6 +13,7 @@ from fastapi.responses import StreamingResponse
 import logging
 import secrets
 from tenant_utils import get_tenant_from_request
+from security import check_permission
 
 router = APIRouter(prefix="/api/scrape", tags=["scrape"])
 
@@ -26,18 +27,26 @@ PLAN_LIMITS = {
 }
 
 class ScrapeRequest(BaseModel):
-    queries: List[str]
+    queries: List[str] = Field(..., description="List of Google Maps search queries to run.", example=["coffee shops in New York", "bookstores in San Francisco"])
 
 class JobStatus(BaseModel):
-    job_id: int
-    status: str
+    job_id: int = Field(..., description="ID of the scraping job.")
+    status: str = Field(..., description="Current status of the job (pending, running, completed, failed, etc.)")
 
 class JobResult(BaseModel):
-    job_id: int
-    result: List[dict]
+    job_id: int = Field(..., description="ID of the scraping job.")
+    status: str = Field(..., description="Current status of the job.")
+    result: List[Dict[str, Any]] = Field(..., description="List of result objects for the job.")
 
-@router.post("/", response_model=JobStatus)
+class BulkDeleteRequest(BaseModel):
+    job_ids: List[int] = Field(..., description="List of job IDs to delete.", example=[1,2,3])
+
+class BulkDeleteResponse(BaseModel):
+    deleted: int = Field(..., description="Number of jobs deleted.")
+
+@router.post("/", response_model=JobStatus, summary="Create a new scraping job", description="Create a new Google Maps scraping job for the authenticated user.")
 def create_scrape_job(req: ScrapeRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Create a new Google Maps scraping job for the authenticated user.\n\n- **queries**: List of search queries (one per line or array).\n- **Returns**: Job ID and status.\n- **Errors**: 403 if plan limits exceeded."""
     try:
         print(f"📝 [JOB] Creating new scraping job - User: {user.email}, Queries: {len(req.queries)}")
         
@@ -68,8 +77,9 @@ def create_scrape_job(req: ScrapeRequest, background_tasks: BackgroundTasks, db:
         logger.exception("Error creating scrape job")
         raise HTTPException(status_code=500, detail="Failed to create job. Please try again later.")
 
-@router.post("/upgrade_plan")
-def upgrade_plan(new_plan: str, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+@router.post("/upgrade_plan", summary="Upgrade user plan", description="Upgrade the authenticated user's plan (free, pro, business).", response_model=Dict[str, str])
+def upgrade_plan(new_plan: str = Body(..., description="New plan to upgrade to (free, pro, business)", example="pro"), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Upgrade the authenticated user's plan.\n\n- **new_plan**: Target plan (free, pro, business).\n- **Returns**: Status and new plan."""
     try:
         if new_plan not in PLAN_LIMITS:
             raise HTTPException(status_code=400, detail="Invalid plan")
@@ -80,8 +90,9 @@ def upgrade_plan(new_plan: str, db: Session = Depends(get_db), user: User = Depe
         logger.exception("Error upgrading plan")
         raise
 
-@router.get("/{job_id}/status", response_model=JobStatus)
-def get_job_status(job_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)):
+@router.get("/{job_id}/status", response_model=JobStatus, summary="Get job status", description="Get the status of a specific scraping job by job ID.")
+def get_job_status(job_id: int = Field(..., description="ID of the job to check."), db: Session = Depends(get_db), user=Depends(get_current_user)):
+    """Get the status of a specific scraping job by job ID.\n\n- **job_id**: ID of the job.\n- **Returns**: Job ID and status.\n- **Errors**: 404 if job not found."""
     try:
         print(f"🔍 [JOB] Checking job status - Job ID: {job_id}, User: {user.email}")
         
@@ -97,16 +108,17 @@ def get_job_status(job_id: int, db: Session = Depends(get_db), user=Depends(get_
         print(f"❌ [JOB] Job status check failed - Error: {e}")
         raise HTTPException(status_code=500, detail="Failed to get job status")
 
-@router.get("/{job_id}/results", response_model=JobResult)
+@router.get("/{job_id}/results", response_model=JobResult, summary="Get job results", description="Get the results of a completed scraping job by job ID. Supports filtering by status, company, and date range.")
 def get_job_results(
-    job_id: int,
-    status: str = Query(None),
-    company: str = Query(None),
-    date_from: str = Query(None),
-    date_to: str = Query(None),
+    job_id: int = Field(..., description="ID of the job to get results for."),
+    status: Optional[str] = Query(None, description="Filter results by status (completed, failed, etc.)"),
+    company: Optional[str] = Query(None, description="Filter results by company name"),
+    date_from: Optional[str] = Query(None, description="Filter results from this date (ISO format)"),
+    date_to: Optional[str] = Query(None, description="Filter results up to this date (ISO format)"),
     db: Session = Depends(get_db),
     user=Depends(get_current_user)
 ):
+    """Get the results of a completed scraping job by job ID.\n\n- **job_id**: ID of the job.\n- **status/company/date_from/date_to**: Optional filters.\n- **Returns**: Job ID, status, and result list.\n- **Errors**: 404 if job/results not found."""
     try:
         print(f"📋 [JOB] Getting job results - Job ID: {job_id}, User: {user.email}")
         job = db.query(Job).filter(Job.id == job_id, Job.user_id == user.id).first()
@@ -141,8 +153,9 @@ def get_job_results(
         print(f"❌ [JOB] Job results retrieval failed - Error: {e}")
         raise HTTPException(status_code=500, detail="Failed to get job results")
 
-@router.get("/{job_id}/csv")
-def download_csv(job_id: int, db: Session = Depends(get_db), user=Depends(get_current_user)):
+@router.get("/{job_id}/csv", summary="Download job results as CSV", description="Download the results of a completed scraping job as a CSV file.")
+def download_csv(job_id: int = Field(..., description="ID of the job to download CSV for."), db: Session = Depends(get_db), user=Depends(get_current_user)):
+    """Download the results of a completed scraping job as a CSV file.\n\n- **job_id**: ID of the job.\n- **Returns**: CSV file.\n- **Errors**: 404 if CSV not found."""
     try:
         print(f"📄 [JOB] Getting job CSV - Job ID: {job_id}, User: {user.email}")
         
@@ -162,8 +175,9 @@ def download_csv(job_id: int, db: Session = Depends(get_db), user=Depends(get_cu
         print(f"❌ [JOB] CSV download failed - Error: {e}")
         raise HTTPException(status_code=500, detail="Failed to download CSV")
 
-@router.get("/jobs")
+@router.get("/jobs", summary="List user jobs", description="List all scraping jobs for the authenticated user.", response_model=Dict[str, Any])
 def list_user_jobs(request: Request, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """List all scraping jobs for the authenticated user.\n\n- **Returns**: List of jobs with ID, queries, status, created/updated timestamps."""
     tenant = get_tenant_from_request(request, db)
     try:
         jobs = db.query(Job).filter(Job.user_id == user.id).order_by(Job.id.desc()).all()
@@ -183,17 +197,21 @@ def list_user_jobs(request: Request, db: Session = Depends(get_db), user: User =
         print(f"❌ [JOB] Job listing failed - Error: {e}")
         raise HTTPException(status_code=500, detail="Failed to list jobs")
 
-@router.post("/bulk-delete")
-def bulk_delete_jobs(job_ids: list = Body(...), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    jobs = db.query(Job).filter(Job.id.in_(job_ids), Job.user_id == user.id).all()
+@router.post("/bulk-delete", summary="Bulk delete jobs", description="Delete multiple scraping jobs by their IDs.", response_model=BulkDeleteResponse)
+def bulk_delete_jobs(req: BulkDeleteRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    # RBAC: Only allow if user has jobs:delete permission
+    if not check_permission(user, "jobs", "delete", db):
+        raise HTTPException(status_code=403, detail="Insufficient permissions to bulk delete jobs")
+    jobs = db.query(Job).filter(Job.id.in_(req.job_ids), Job.user_id == user.id).all()
     count = len(jobs)
     for job in jobs:
         db.delete(job)
     db.commit()
-    return {"deleted": count}
+    return BulkDeleteResponse(deleted=count)
 
-@router.post("/{job_id}/share")
-def share_job(job_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+@router.post("/{job_id}/share", summary="Share a job", description="Generate a shareable link for a scraping job.", response_model=Dict[str, str])
+def share_job(job_id: int = Field(..., description="ID of the job to share."), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Generate a shareable link for a scraping job.\n\n- **job_id**: ID of the job.\n- **Returns**: Shareable URL."""
     job = db.query(Job).filter(Job.id == job_id, Job.user_id == user.id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -204,8 +222,9 @@ def share_job(job_id: int, db: Session = Depends(get_db), user: User = Depends(g
     db.commit()
     return {"share_token": token, "url": f"/api/scrape/shared/{token}"}
 
-@router.post("/{job_id}/unshare")
-def unshare_job(job_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+@router.post("/{job_id}/unshare", summary="Unshare a job", description="Disable the shareable link for a scraping job.", response_model=Dict[str, str])
+def unshare_job(job_id: int = Field(..., description="ID of the job to unshare."), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Disable the shareable link for a scraping job.\n\n- **job_id**: ID of the job.\n- **Returns**: Status message."""
     job = db.query(Job).filter(Job.id == job_id, Job.user_id == user.id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -213,8 +232,9 @@ def unshare_job(job_id: int, db: Session = Depends(get_db), user: User = Depends
     db.commit()
     return {"status": "unshared"}
 
-@router.get("/shared/{share_token}")
-def get_shared_job(share_token: str, db: Session = Depends(get_db)):
+@router.get("/shared/{share_token}", summary="Get shared job", description="Get a shared scraping job by its share token.", response_model=Dict[str, Any])
+def get_shared_job(share_token: str = Field(..., description="Share token for the job."), db: Session = Depends(get_db)):
+    """Get a shared scraping job by its share token.\n\n- **share_token**: Token from the shareable link.\n- **Returns**: Job details if valid."""
     job = db.query(Job).filter(Job.share_token == share_token).first()
     if not job:
         raise HTTPException(status_code=404, detail="Shared job not found")

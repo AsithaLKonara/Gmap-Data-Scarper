@@ -7,14 +7,18 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredPlan?: 'free' | 'pro' | 'business';
   adminOnly?: boolean;
+  requiredRoles?: string[];
+  requiredPermissions?: string[];
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
   requiredPlan = 'free',
-  adminOnly = false 
+  adminOnly = false,
+  requiredRoles = [],
+  requiredPermissions = []
 }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, hasRole, hasPermission } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -42,6 +46,16 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Check admin requirements
   if (adminOnly && user.plan !== 'business') {
     return <Navigate to="/dashboard" replace />;
+  }
+
+  // Check required roles
+  if (requiredRoles.length > 0 && !requiredRoles.some(r => hasRole(r))) {
+    return <Box p={8} textAlign="center">You do not have the required role to access this page.</Box>;
+  }
+
+  // Check required permissions
+  if (requiredPermissions.length > 0 && !requiredPermissions.some(p => hasPermission(p))) {
+    return <Box p={8} textAlign="center">You do not have the required permission to access this page.</Box>;
   }
 
   return <>{children}</>;

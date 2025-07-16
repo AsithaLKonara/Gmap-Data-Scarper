@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from models import User, SystemLog, Job, User as UserModel
 from database import get_db
 from auth import get_current_user
+from security import check_permission
 import logging
 import json
 import psutil
@@ -16,15 +17,16 @@ logger = logging.getLogger("system")
 
 router = APIRouter(prefix="/api/system", tags=["system"])
 
+# --- Pydantic Models for OpenAPI ---
 class SystemHealthResponse(BaseModel):
-    status: str
-    timestamp: datetime
-    uptime: float
-    cpu_usage: float
-    memory_usage: float
-    disk_usage: float
-    active_connections: int
-    database_status: str
+    status: str = Field(..., description="System health status.")
+    timestamp: datetime = Field(..., description="Timestamp of the health check.")
+    uptime: float = Field(..., description="System uptime in seconds.")
+    cpu_usage: float = Field(..., description="CPU usage percentage.")
+    memory_usage: float = Field(..., description="Memory usage percentage.")
+    disk_usage: float = Field(..., description="Disk usage percentage.")
+    active_connections: int = Field(..., description="Number of active network connections.")
+    database_status: str = Field(..., description="Database connection status.")
 
 class SystemLogResponse(BaseModel):
     id: int
@@ -41,19 +43,19 @@ class SystemLogResponse(BaseModel):
         from_attributes = True
 
 class PerformanceMetrics(BaseModel):
-    cpu_usage: float
-    memory_usage: float
-    disk_usage: float
-    active_jobs: int
-    total_users: int
-    total_jobs: int
-    average_response_time: float
+    cpu_usage: Optional[float]
+    memory_usage: Optional[float]
+    disk_usage: Optional[float]
+    active_jobs: Optional[int]
+    total_users: Optional[int]
+    total_jobs: Optional[int]
+    average_response_time: Optional[float]
+    message: Optional[str] = None
 
-@router.get("/health", response_model=SystemHealthResponse)
+@router.get("/health", response_model=SystemHealthResponse, summary="Get system health", description="Get system health metrics and status.")
 def get_system_health(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     try:
-        # Check if user is admin
-        if user.plan != 'business' and not user.is_admin:
+        if not check_permission(user, "system", "read", db):
             raise HTTPException(status_code=403, detail="Access denied. Admin privileges required.")
         
         # Get system metrics
@@ -90,11 +92,10 @@ def get_system_health(db: Session = Depends(get_db), user: User = Depends(get_cu
         logger.exception("Error getting system health")
         raise HTTPException(status_code=500, detail="Failed to get system health. Please try again later.")
 
-@router.get("/performance", response_model=PerformanceMetrics)
+@router.get("/performance", response_model=PerformanceMetrics, summary="Get system performance", description="Get system performance metrics.")
 def get_performance_metrics(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     try:
-        # Check if user is admin
-        if user.plan != 'business' and not getattr(user, 'is_admin', False):
+        if not check_permission(user, "system", "read", db):
             raise HTTPException(status_code=403, detail="Access denied. Admin privileges required.")
         # TODO: Implement real system performance metrics
         return {
@@ -113,7 +114,7 @@ def get_performance_metrics(db: Session = Depends(get_db), user: User = Depends(
         logger.exception("Error getting performance metrics")
         raise HTTPException(status_code=500, detail="Failed to get performance metrics. Please try again later.")
 
-@router.get("/logs", response_model=List[SystemLogResponse])
+@router.get("/logs", response_model=List[SystemLogResponse], summary="Get system logs", description="Get recent system logs with optional filters.")
 def get_system_logs(
     level: Optional[str] = None,
     module: Optional[str] = None,
@@ -123,8 +124,7 @@ def get_system_logs(
     user: User = Depends(get_current_user)
 ):
     try:
-        # Check if user is admin
-        if user.plan != 'business' and not user.is_admin:
+        if not check_permission(user, "system", "read", db):
             raise HTTPException(status_code=403, detail="Access denied. Admin privileges required.")
         
         # Calculate time range
@@ -146,11 +146,10 @@ def get_system_logs(
         logger.exception("Error getting system logs")
         raise HTTPException(status_code=500, detail="Failed to get system logs. Please try again later.")
 
-@router.get("/info")
+@router.get("/info", summary="Get system info", description="Get system and environment information.")
 def get_system_info(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     try:
-        # Check if user is admin
-        if user.plan != 'business' and not user.is_admin:
+        if not check_permission(user, "system", "read", db):
             raise HTTPException(status_code=403, detail="Access denied. Admin privileges required.")
         
         return {

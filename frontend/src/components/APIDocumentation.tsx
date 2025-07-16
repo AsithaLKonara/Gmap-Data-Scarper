@@ -51,12 +51,11 @@ import {
   ListItem,
   ListIcon,
   SimpleGrid,
+  Spinner,
 } from '@chakra-ui/react';
 import {
-  CodeIcon,
   LinkIcon,
   DownloadIcon,
-  PlayIcon,
   CopyIcon,
   CheckIcon,
   ExternalLinkIcon,
@@ -104,10 +103,31 @@ const APIDocumentation: React.FC = () => {
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(false);
+  const [openapi, setOpenapi] = useState<any>(null);
+  const [openapiLoading, setOpenapiLoading] = useState(true);
+  const [openapiError, setOpenapiError] = useState<string | null>(null);
 
   const toast = useToast();
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
+
+  useEffect(() => {
+    async function fetchOpenAPI() {
+      setOpenapiLoading(true);
+      setOpenapiError(null);
+      try {
+        const res = await fetch('/openapi.json');
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        setOpenapi(data);
+      } catch (e: any) {
+        setOpenapiError(e.message || 'Failed to load OpenAPI spec');
+      } finally {
+        setOpenapiLoading(false);
+      }
+    }
+    fetchOpenAPI();
+  }, []);
 
   // Remove mock webhooks/integrations useEffect and replace with real API calls
   useEffect(() => {
@@ -212,45 +232,89 @@ const APIDocumentation: React.FC = () => {
             Use this API key in the Authorization header: <code className="bg-gray-100 px-1 rounded">Authorization: Bearer YOUR_API_KEY</code>
           </span>
         </div>
+        {/* Usage Examples & Postman Collection */}
+        <div className="rounded-lg border bg-white dark:bg-gray-900 p-6 shadow mb-8">
+          <span className="text-lg font-bold mb-4 block">Usage Examples & Postman Collection</span>
+          <div className="mb-4">
+            <span className="font-semibold block mb-2">cURL Example</span>
+            <pre className="bg-gray-100 rounded p-2 text-xs overflow-x-auto">curl -X GET "https://api.leadtap.com/api/jobs" -H "Authorization: Bearer YOUR_API_KEY"</pre>
+          </div>
+          <div className="mb-4">
+            <span className="font-semibold block mb-2">JavaScript (fetch) Example</span>
+            <pre className="bg-gray-100 rounded p-2 text-xs overflow-x-auto">fetch('https://api.leadtap.com/api/jobs', {
+  headers: { 'Authorization': 'Bearer YOUR_API_KEY' }
+})
+  .then(res => res.json())
+  .then(data => console.log(data));</pre>
+          </div>
+          <div className="mb-4">
+            <span className="font-semibold block mb-2">Postman Collection</span>
+            <a
+              href="/docs/LeadTap-API-Postman-Collection.json"
+              download
+              className="inline-flex items-center px-3 py-2 rounded-md bg-primary text-primary-foreground font-medium hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 text-sm"
+            >
+              Download Postman Collection
+            </a>
+            <span className="block text-xs text-gray-500 mt-1">Import this collection into Postman to explore and test the API.</span>
+          </div>
+        </div>
         {/* API Documentation */}
         <div className="rounded-lg border bg-white dark:bg-gray-900 p-6 shadow">
           <span className="text-lg font-bold mb-4 block">API Endpoints</span>
-          <div>
-            <div className="flex border-b border-gray-200 mb-4">
-              <button className="px-4 py-2 text-sm font-medium text-gray-700 border-b-2 border-primary">{t('apiDocs.jobs', 'Jobs')}</button>
-              <button className="px-4 py-2 text-sm font-medium text-gray-500">{t('apiDocs.leads', 'Leads')}</button>
-              <button className="px-4 py-2 text-sm font-medium text-gray-500">{t('apiDocs.exports', 'Exports')}</button>
-              <button className="px-4 py-2 text-sm font-medium text-gray-500">{t('apiDocs.webhooks', 'Webhooks')}</button>
-            </div>
+          {openapiLoading ? (
+            <div className="flex justify-center py-8"><Spinner size="xl" /></div>
+          ) : openapiError ? (
+            <div className="text-red-500">{openapiError}</div>
+          ) : openapi ? (
             <div>
-              {/* Jobs TabPanel */}
-              <div>
-                <div className="flex items-start p-4 bg-blue-50 border border-blue-200 rounded-md">
-                  <span className="text-blue-500 mr-2">ℹ️</span>
-                  <div>
-                    <span className="font-semibold block">{t('apiDocs.apiEndpoints', 'API Endpoints')}</span>
-                    <span className="text-sm text-gray-700 dark:text-gray-300 block">
-                      API endpoints are currently being fetched from the backend. Please check back later or contact support for more details.
-                    </span>
-                  </div>
+              {Object.entries(openapi.paths).length === 0 ? (
+                <div className="text-gray-500">No endpoints found in OpenAPI spec.</div>
+              ) : (
+                <div>
+                  {Object.entries(openapi.paths).map(([path, methods]: any) => (
+                    <div key={path} className="mb-6">
+                      <div className="font-mono text-blue-700 text-sm mb-1">{path}</div>
+                      {Object.entries(methods).map(([method, details]: any) => (
+                        <div key={method} className="mb-2 pl-4 border-l-2 border-blue-200">
+                          <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold mr-2 ${getMethodColor(method.toUpperCase()) === 'green' ? 'bg-green-100 text-green-700' : getMethodColor(method.toUpperCase()) === 'blue' ? 'bg-blue-100 text-blue-700' : getMethodColor(method.toUpperCase()) === 'yellow' ? 'bg-yellow-100 text-yellow-700' : getMethodColor(method.toUpperCase()) === 'red' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>{method.toUpperCase()}</span>
+                          <span className="font-semibold">{details.summary || details.operationId}</span>
+                          {details.description && <div className="text-xs text-gray-600 mt-1">{details.description}</div>}
+                          {details.parameters && details.parameters.length > 0 && (
+                            <div className="mt-1">
+                              <span className="font-bold text-xs">Parameters:</span>
+                              <ul className="ml-4 list-disc text-xs">
+                                {details.parameters.map((param: any) => (
+                                  <li key={param.name}><span className="font-mono">{param.name}</span> <span className="text-gray-500">({param.in})</span>: {param.description}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {details.requestBody && (
+                            <div className="mt-1">
+                              <span className="font-bold text-xs">Request Body:</span>
+                              <pre className="bg-gray-100 rounded p-2 text-xs overflow-x-auto">{JSON.stringify(details.requestBody.content, null, 2)}</pre>
+                            </div>
+                          )}
+                          {details.responses && (
+                            <div className="mt-1">
+                              <span className="font-bold text-xs">Responses:</span>
+                              <ul className="ml-4 list-disc text-xs">
+                                {Object.entries(details.responses).map(([code, resp]: any) => (
+                                  <li key={code}><span className="font-mono">{code}</span>: {resp.description}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
                 </div>
-              </div>
-              {/* Leads TabPanel */}
-              <div className="hidden">
-                <span>{t('apiDocs.leadsComingSoon', 'Lead management endpoints coming soon...')}</span>
-              </div>
-              {/* Exports TabPanel */}
-              <div className="hidden">
-                <span>{t('apiDocs.exportsComingSoon', 'Export endpoints coming soon...')}</span>
-              </div>
-              {/* Webhooks TabPanel */}
-              <div className="hidden">
-                <span>{t('apiDocs.webhooksComingSoon', 'Webhook endpoints coming soon...')}</span>
-              </div>
+              )}
             </div>
-          </div>
+          ) : null}
         </div>
-
         {/* Webhooks */}
         <div className="rounded-lg border bg-white dark:bg-gray-900 p-6 shadow">
           <div className="flex items-center justify-between mb-4">

@@ -175,6 +175,7 @@ const AdminDashboard: React.FC = () => {
         <ShadCNButton variant="ghost" justifyContent={sidebarOpen ? 'flex-start' : 'center'} leftIcon={<span>👥</span>} size="lg">{sidebarOpen && 'Users'}</ShadCNButton>
         <ShadCNButton variant="ghost" justifyContent={sidebarOpen ? 'flex-start' : 'center'} leftIcon={<span>🗂️</span>} size="lg">{sidebarOpen && 'Jobs'}</ShadCNButton>
         <ShadCNButton variant="ghost" justifyContent={sidebarOpen ? 'flex-start' : 'center'} leftIcon={<span>📈</span>} size="lg">{sidebarOpen && 'Analytics'}</ShadCNButton>
+        <ShadCNButton variant="ghost" justifyContent={sidebarOpen ? 'flex-start' : 'center'} leftIcon={<span>📝</span>} size="lg" onClick={() => window.location.href = '/admin/audit-log'}>{sidebarOpen && 'Audit Log'}</ShadCNButton>
         <ShadCNButton variant="ghost" justifyContent={sidebarOpen ? 'flex-start' : 'center'} leftIcon={<span>📝</span>} size="lg">{sidebarOpen && 'CRM'}</ShadCNButton>
         <ShadCNButton variant="ghost" justifyContent={sidebarOpen ? 'flex-start' : 'center'} leftIcon={<span>⚙️</span>} size="lg">{sidebarOpen && 'Settings'}</ShadCNButton>
       </VStack>

@@ -7,6 +7,15 @@ from auth import get_current_user
 from jose import JWTError
 import sqlalchemy
 
+"""
+GraphQL API for LeadTap: Unified endpoint for querying and mutating user, lead, notification, and analytics data.
+- Authenticated via Bearer token (JWT)
+- Exposes queries for users, leads, notifications, analytics
+- Exposes mutations for lead CRUD, importing leads, marking notifications as read
+- Context injection for current_user
+- See /api/graphql for the interactive GraphQL playground
+"""
+
 class UserType(graphene.ObjectType):
     id = graphene.Int()
     email = graphene.String()
@@ -258,32 +267,45 @@ class Mutation(graphene.ObjectType):
 
 schema = graphene.Schema(query=Query, mutation=Mutation)
 
-router = APIRouter()
+# OpenAPI router for GraphQL endpoint
+router = APIRouter(prefix="/api", tags=["graphql"])
 
 # Custom GraphQLApp to inject current_user into context
+def get_graphql_context(request: Request):
+    """
+    Extracts the current user from the Authorization header and injects it into the GraphQL context.
+    """
+    db = SessionLocal()
+    user = None
+    try:
+        auth_header = request.headers.get("authorization")
+        if auth_header and auth_header.lower().startswith("bearer "):
+            token = auth_header.split(" ", 1)[1]
+            try:
+                from jose import jwt
+                from config import SECRET_KEY, ALGORITHM
+                payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+                user_id = payload.get("sub")
+                if user_id:
+                    user = db.query(User).filter(User.id == int(user_id)).first()
+            except JWTError:
+                pass
+    finally:
+        db.close()
+    return {"request": request, "current_user": user}
+
 class AuthGraphQLApp(GraphQLApp):
     def __call__(self, scope, receive, send):
         async def app(request: Request):
-            db = SessionLocal()
-            user = None
-            try:
-                auth_header = request.headers.get("authorization")
-                if auth_header and auth_header.lower().startswith("bearer "):
-                    token = auth_header.split(" ", 1)[1]
-                    try:
-                        # Use the same logic as get_current_user
-                        from jose import jwt
-                        from config import SECRET_KEY, ALGORITHM
-                        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-                        user_id = payload.get("sub")
-                        if user_id:
-                            user = db.query(User).filter(User.id == int(user_id)).first()
-                    except JWTError:
-                        pass
-            finally:
-                db.close()
-            context = {"request": request, "current_user": user}
+            context = get_graphql_context(request)
             return await super().__call__(scope, receive, send, context=context)
         return app
 
-router.add_route("/graphql", AuthGraphQLApp(schema=schema)) 
+# Add the /api/graphql endpoint with OpenAPI summary/description
+router.add_route(
+    "/graphql",
+    AuthGraphQLApp(schema=schema),
+    methods=["GET", "POST"],
+    summary="GraphQL API endpoint",
+    description="Unified GraphQL endpoint for querying and mutating user, lead, notification, and analytics data. Requires Bearer token authentication."
+) 

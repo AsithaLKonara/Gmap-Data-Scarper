@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { getWebhookUrl, setWebhookUrl, deleteWebhookUrl, testWebhook, connectCRM, getCRMStatus, disconnectCRM, enable2FA, verify2FA, disable2FA, exportUserData, deleteAccount, getReferralInfo, useReferralCode, getReferralStats, getUsage, purchaseCredits, getTenantSsoConfig, updateTenantSsoConfig, getTenantPlan, updateTenantPlan, getTenantBilling, updateTenantBilling, createPayHereSession, getTenant, updateTenant } from '../api';
+import { getWebhookUrl, setWebhookUrl, deleteWebhookUrl, testWebhook, connectCRM, getCRMStatus, disconnectCRM, setup2FA, verifyAndEnable2FA, disable2FAEnhanced, regenerate2FABackupCodes, getSecurityStatus, getTenantSsoConfig, updateTenantSsoConfig, getTenantPlan, updateTenantPlan, getTenantBilling, updateTenantBilling, createPayHereSession, getTenant, updateTenant } from '../api';
 import { Box, Heading, Text, HStack, Input, Button, useToast } from '@chakra-ui/react';
-import { Link as RouterLink } from 'react-router-dom';
-import QRCode from 'qrcode.react';
+import { Link, Link as RouterLink } from 'react-router-dom';
+import { QRCode } from 'qrcode.react';
 import { useTranslation } from 'react-i18next';
+import { Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, useDisclosure, VStack, IconButton } from '@chakra-ui/react';
+import { CopyIcon } from '@chakra-ui/icons';
 const bgColor = 'white'; // or useColorModeValue('white', 'gray.800') if Chakra hook is available
 const borderColor = 'gray.200'; // or useColorModeValue('gray.200', 'gray.700')
 
@@ -48,7 +50,20 @@ function Settings() {
   const [customDomain, setCustomDomain] = useState('');
   const [customDomainLoading, setCustomDomainLoading] = useState(false);
   const [customDomainEdit, setCustomDomainEdit] = useState(false);
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const { isOpen: isBackupModalOpen, onOpen: openBackupModal, onClose: closeBackupModal } = useDisclosure();
   const tenantId = localStorage.getItem('tenantId') || '';
+
+  // 2FA state for enhanced security endpoints
+  const [securityStatus, setSecurityStatus] = useState<any>(null);
+  const [show2FASetup, setShow2FASetup] = useState(false);
+  const [setup2FASecret, setSetup2FASecret] = useState<string | null>(null);
+  const [setup2FAQr, setSetup2FAQr] = useState<string | null>(null);
+  const [setup2FABackupCodes, setSetup2FABackupCodes] = useState<string[]>([]);
+  const [setup2FACode, setSetup2FACode] = useState('');
+  const [setup2FAStatus, setSetup2FAStatus] = useState<string | null>(null);
+
+  const [ssoEnabled, setSsoEnabled] = useState(!!ssoConfig?.enabled);
 
   const toast = useToast();
 
@@ -63,6 +78,7 @@ function Settings() {
       getTenantSsoConfig(tenantId).then(cfg => {
         setSsoConfig(cfg);
         setSsoForm(cfg || { entity_id: '', sso_url: '', cert: '' });
+        setSsoEnabled(!!cfg?.enabled);
       }).finally(() => setSsoLoading(false));
       setPlanLoading(true);
       getTenantPlan(tenantId).then(info => {
@@ -76,6 +92,7 @@ function Settings() {
       }).finally(() => setBillingLoading(false));
       getTenant(tenantId).then(t => setCustomDomain(t.custom_domain || ''));
     }
+    getSecurityStatus().then(setSecurityStatus);
   }, [tenantId]);
 
   const handleSaveWebhook = async () => {
@@ -144,10 +161,12 @@ function Settings() {
   const handleEnable2FA = async () => {
     setTwoFALoading(true);
     try {
-      const res = await enable2FA();
-      setTwoFASecret(res.secret);
-      setTwoFAUri(res.uri);
-      setTwoFAStatus(t('settings.2faScan', 'Scan the QR code or enter the secret in your authenticator app.'));
+      const res = await setup2FA();
+      setSetup2FASecret(res.secret);
+      setSetup2FAQr(res.qr_code);
+      setSetup2FABackupCodes(res.backup_codes || []);
+      setShow2FASetup(true);
+      setSetup2FAStatus(null);
     } catch (e: any) {
       toast({ title: t('error', 'Error'), description: e.message, status: 'error' });
     } finally {
@@ -157,12 +176,17 @@ function Settings() {
   const handleVerify2FA = async () => {
     setTwoFALoading(true);
     try {
-      await verify2FA(twoFACode);
-      setTwoFAEnabled(true);
-      setTwoFAStatus(t('settings.2faEnabled', '2FA enabled!'));
+      await verifyAndEnable2FA(setup2FACode);
+      setShow2FASetup(false);
+      setSetup2FASecret(null);
+      setSetup2FAQr(null);
+      setSetup2FABackupCodes([]);
+      setSetup2FACode('');
+      setSetup2FAStatus(t('settings.2faEnabled', '2FA enabled!'));
       toast({ title: t('settings.2faEnabled', '2FA enabled!'), status: 'success' });
+      getSecurityStatus().then(setSecurityStatus);
     } catch (e: any) {
-      setTwoFAStatus(t('settings.2faInvalidCode', 'Invalid code.'));
+      setSetup2FAStatus(t('settings.2faInvalidCode', 'Invalid code.'));
       toast({ title: t('error', 'Error'), description: e.message, status: 'error' });
     } finally {
       setTwoFALoading(false);
@@ -171,12 +195,9 @@ function Settings() {
   const handleDisable2FA = async () => {
     setTwoFALoading(true);
     try {
-      await disable2FA();
-      setTwoFAEnabled(false);
-      setTwoFASecret(null);
-      setTwoFAUri(null);
-      setTwoFAStatus(t('settings.2faDisabled', '2FA disabled.'));
+      await disable2FAEnhanced();
       toast({ title: t('settings.2faDisabled', '2FA disabled.'), status: 'info' });
+      getSecurityStatus().then(setSecurityStatus);
     } catch (e: any) {
       toast({ title: t('error', 'Error'), description: e.message, status: 'error' });
     } finally {
@@ -313,8 +334,128 @@ function Settings() {
     }
   };
 
+  const handleGenerateBackupCodes = async () => {
+    setTwoFALoading(true);
+    try {
+      const res = await regenerate2FABackupCodes();
+      setBackupCodes(res.backup_codes || []);
+      openBackupModal();
+      toast({ title: t('settings.2faBackupCodesGenerated', 'Backup codes generated!'), status: 'success' });
+    } catch (e: any) {
+      toast({ title: t('error', 'Error'), description: e.message, status: 'error' });
+    } finally {
+      setTwoFALoading(false);
+    }
+  };
+
+  const handleEnhanced2FASetup = async () => {
+    setTwoFALoading(true);
+    try {
+      const res = await setup2FA();
+      setSetup2FASecret(res.secret);
+      setSetup2FAQr(res.qr_code);
+      setSetup2FABackupCodes(res.backup_codes || []);
+      setShow2FASetup(true);
+      setSetup2FAStatus(null);
+    } catch (e: any) {
+      toast({ title: t('error', 'Error'), description: e.message, status: 'error' });
+    } finally {
+      setTwoFALoading(false);
+    }
+  };
+
+  const handleEnhanced2FAVerify = async () => {
+    setTwoFALoading(true);
+    try {
+      await verifyAndEnable2FA(setup2FACode);
+      setShow2FASetup(false);
+      setSetup2FASecret(null);
+      setSetup2FAQr(null);
+      setSetup2FABackupCodes([]);
+      setSetup2FACode('');
+      setSetup2FAStatus(t('settings.2faEnabled', '2FA enabled!'));
+      toast({ title: t('settings.2faEnabled', '2FA enabled!'), status: 'success' });
+      getSecurityStatus().then(setSecurityStatus);
+    } catch (e: any) {
+      setSetup2FAStatus(t('settings.2faInvalidCode', 'Invalid code.'));
+      toast({ title: t('error', 'Error'), description: e.message, status: 'error' });
+    } finally {
+      setTwoFALoading(false);
+    }
+  };
+
+  const handleEnhanced2FADisable = async () => {
+    setTwoFALoading(true);
+    try {
+      await disable2FAEnhanced();
+      toast({ title: t('settings.2faDisabled', '2FA disabled.'), status: 'info' });
+      getSecurityStatus().then(setSecurityStatus);
+    } catch (e: any) {
+      toast({ title: t('error', 'Error'), description: e.message, status: 'error' });
+    } finally {
+      setTwoFALoading(false);
+    }
+  };
+
+  const handleEnhancedBackupCodes = async () => {
+    setTwoFALoading(true);
+    try {
+      const res = await regenerate2FABackupCodes();
+      setBackupCodes(res.backup_codes || []);
+      openBackupModal();
+      toast({ title: t('settings.2faBackupCodesGenerated', 'Backup codes generated!'), status: 'success' });
+      getSecurityStatus().then(setSecurityStatus);
+    } catch (e: any) {
+      toast({ title: t('error', 'Error'), description: e.message, status: 'error' });
+    } finally {
+      setTwoFALoading(false);
+    }
+  };
+
+  const handleToggleSso = async () => {
+    setSsoLoading(true);
+    try {
+      if (tenantId) {
+        const newConfig = { ...ssoConfig, enabled: !ssoEnabled };
+        await updateTenantSsoConfig(tenantId, { sso_config: newConfig });
+        setSsoConfig(newConfig);
+        setSsoEnabled(!ssoEnabled);
+        toast({ title: ssoEnabled ? t('settings.ssoDisabled', 'SSO disabled') : t('settings.ssoEnabled', 'SSO enabled'), status: ssoEnabled ? 'info' : 'success' });
+      }
+    } catch (e: any) {
+      toast({ title: t('error', 'Error'), description: e.message, status: 'error' });
+    } finally {
+      setSsoLoading(false);
+    }
+  };
+
+  const handleDownloadMetadata = async () => {
+    if (!tenantId) return;
+    try {
+      const res = await fetch(`/api/auth/sso/metadata?tenant=${tenantId}`);
+      if (!res.ok) throw new Error(await res.text());
+      const xml = await res.text();
+      const blob = new Blob([xml], { type: 'application/xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `saml_metadata_${tenantId}.xml`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      toast({ title: t('error', 'Error'), description: e.message, status: 'error' });
+    }
+  };
+
   return (
     <>
+      <div className="flex justify-end mb-4">
+        <Link to="/affiliate">
+          <Button colorScheme="blue" variant="outline">Affiliate Portal</Button>
+        </Link>
+      </div>
       <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" mb={8} data-tour="settings-webhook-section">
         <Heading size="md" mb={2} data-tour="settings-webhook-title">{t('settings.webhookManagement', 'Webhook Management')}</Heading>
         <Text fontSize="sm" color="gray.600" mb={2}>{t('settings.webhookDescription', 'Receive real-time notifications in your own systems or Zapier. Enter your webhook URL below.')}</Text>
@@ -327,21 +468,11 @@ function Settings() {
         {webhookTestResult && <Text mt={2}>{webhookTestResult}</Text>}
       </Box>
 
+      {/* Remove the Integrations section from Settings and replace with a link to the new Integrations page */}
       <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" mb={8}>
         <Heading size="md" mb={2}>{t('settings.integrations', 'Integrations')}</Heading>
-        <Box mb={4}>
-          <Heading size="sm" mb={2}>{t('settings.crmIntegration', 'CRM Integration')}</Heading>
-          <Input placeholder={t('settings.crmProviderPlaceholder', 'CRM Provider (e.g., HubSpot)')} value={crmProvider} onChange={e => setCrmProvider(e.target.value)} mb={2} />
-          <Input placeholder={t('settings.crmConfigPlaceholder', 'CRM Config (JSON)')} value={JSON.stringify(crmConfig)} onChange={e => setCrmConfig(JSON.parse(e.target.value || '{}'))} mb={2} />
-          <Button colorScheme="blue" onClick={handleConnectCRM} isLoading={crmLoading}>{t('settings.connectCrm', 'Connect CRM')}</Button>
-          <Text mt={2}>{t('settings.currentCrmStatus', 'Current: {{provider}} {{config}}', { provider: crmStatus.provider || '-', config: crmStatus.config ? JSON.stringify(crmStatus.config) : '' })}</Text>
-        </Box>
-        <Box>
-          <Heading size="sm" mb={2}>{t('settings.webhookIntegration', 'Webhook Integration')}</Heading>
-          <Input placeholder={t('settings.webhookUrlPlaceholder', 'Webhook URL')} value={webhookUrl} onChange={e => setWebhookUrlState(e.target.value)} mb={2} />
-          <Button colorScheme="blue" onClick={handleSaveWebhook} isLoading={webhookLoading}>{t('settings.saveWebhook', 'Save Webhook')}</Button>
-          <Text mt={2}>{t('settings.currentWebhookUrl', 'Current: {{url}}', { url: webhookUrl || '-' })}</Text>
-        </Box>
+        <Text fontSize="sm" color="gray.600" mb={2}>{t('settings.integrationsMoved', 'Integrations have moved to a dedicated page.')}</Text>
+        <Button colorScheme="blue" as={RouterLink} to="/integrations">{t('settings.goToIntegrations', 'Go to Integrations')}</Button>
       </Box>
 
       <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" mb={8} data-tour="settings-crm-section">
@@ -365,25 +496,65 @@ function Settings() {
         <Text fontSize="sm" color="gray.600" mb={2}>
           {t('settings.twoFactorAuthDescription', 'Protect your account with an extra layer of security. Use an authenticator app (Google Authenticator, Authy, etc.).')}
         </Text>
-        {twoFAEnabled ? (
-          <Button colorScheme="red" onClick={handleDisable2FA} isLoading={twoFALoading}>{t('settings.disableTwoFactorAuth', 'Disable 2FA')}</Button>
+        {securityStatus?.two_fa_enabled ? (
+          <>
+            <Text mb={2} color="green.600">{t('settings.2faCurrentlyEnabled', '2FA is currently enabled.')}</Text>
+            <Text fontSize="sm" mb={2}>{t('settings.2faEnabledAt', 'Enabled at: {{date}}', { date: securityStatus.two_fa_enabled_at || '-' })}</Text>
+            <Text fontSize="sm" mb={2}>{t('settings.2faBackupCodesRemaining', 'Backup codes remaining: {{count}}', { count: securityStatus.backup_codes_remaining })}</Text>
+            <HStack>
+              <Button colorScheme="red" onClick={handleEnhanced2FADisable} isLoading={twoFALoading}>{t('settings.disableTwoFactorAuth', 'Disable 2FA')}</Button>
+              <Button colorScheme="blue" onClick={handleEnhancedBackupCodes} isLoading={twoFALoading}>{t('settings.generateBackupCodes', 'Regenerate Backup Codes')}</Button>
+            </HStack>
+          </>
         ) : (
-          <Button colorScheme="blue" onClick={handleEnable2FA} isLoading={twoFALoading}>{t('settings.enableTwoFactorAuth', 'Enable 2FA')}</Button>
+          <Button colorScheme="blue" onClick={handleEnhanced2FASetup} isLoading={twoFALoading}>{t('settings.enableTwoFactorAuth', 'Enable 2FA')}</Button>
         )}
-        {twoFAUri && (
+        {show2FASetup && (
           <Box mt={4}>
             <Text mb={2}>{t('settings.twoFactorAuthScan', 'Scan this QR code in your authenticator app:')}</Text>
-            <QRCode value={twoFAUri} size={180} />
-            <Text mt={2} fontSize="sm">{t('settings.twoFactorAuthSecret', 'Or enter this secret: <b>{{secret}}</b>', { secret: twoFASecret })}</Text>
+            {setup2FAQr && <QRCode value={setup2FAQr} size={180} />}
+            <Text mt={2} fontSize="sm">{t('settings.twoFactorAuthSecret', 'Or enter this secret: <b>{{secret}}</b>', { secret: setup2FASecret })}</Text>
             <Box mt={2}>
               <Text mb={1}>{t('settings.twoFactorAuthEnterCode', 'Enter code from app:')}</Text>
-              <input value={twoFACode} onChange={e => setTwoFACode(e.target.value)} placeholder={t('settings.twoFactorAuthCodePlaceholder', '123456')} style={{ padding: 8, border: '1px solid #ccc', borderRadius: 4 }} />
-              <Button ml={2} colorScheme="green" onClick={handleVerify2FA} isLoading={twoFALoading}>{t('settings.verifyTwoFactorAuth', 'Verify')}</Button>
+              <input value={setup2FACode} onChange={e => setSetup2FACode(e.target.value)} placeholder={t('settings.twoFactorAuthCodePlaceholder', '123456')} style={{ padding: 8, border: '1px solid #ccc', borderRadius: 4 }} />
+              <Button ml={2} colorScheme="green" onClick={handleEnhanced2FAVerify} isLoading={twoFALoading}>{t('settings.verifyTwoFactorAuth', 'Verify')}</Button>
             </Box>
-            {twoFAStatus && <Text mt={2}>{twoFAStatus}</Text>}
+            {setup2FAStatus && <Text mt={2}>{setup2FAStatus}</Text>}
+            <Box mt={4}>
+              <Text mb={2}>{t('settings.backupCodesTitle', 'Your 2FA Backup Codes')}</Text>
+              <VStack align="stretch" spacing={2}>
+                {setup2FABackupCodes.map((code, idx) => (
+                  <HStack key={code}>
+                    <Text fontFamily="mono" fontSize="lg">{code}</Text>
+                    <IconButton aria-label="Copy code" icon={<CopyIcon />} size="sm" onClick={() => {navigator.clipboard.writeText(code); toast({ title: t('settings.codeCopied', 'Code copied!'), status: 'success' });}} />
+                  </HStack>
+                ))}
+              </VStack>
+            </Box>
           </Box>
         )}
       </Box>
+      <Modal isOpen={isBackupModalOpen} onClose={closeBackupModal} isCentered>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>{t('settings.backupCodesTitle', 'Your 2FA Backup Codes')}</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Text mb={2}>{t('settings.backupCodesDescription', 'Store these codes in a safe place. Each code can be used once if you lose access to your authenticator app.')}</Text>
+            <VStack align="stretch" spacing={2}>
+              {backupCodes.map((code, idx) => (
+                <HStack key={code}>
+                  <Text fontFamily="mono" fontSize="lg">{code}</Text>
+                  <IconButton aria-label="Copy code" icon={<CopyIcon />} size="sm" onClick={() => {navigator.clipboard.writeText(code); toast({ title: t('settings.codeCopied', 'Code copied!'), status: 'success' });}} />
+                </HStack>
+              ))}
+            </VStack>
+          </ModalBody>
+          <ModalFooter>
+            <Button onClick={closeBackupModal}>{t('settings.close', 'Close')}</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
 
       <Box bg={bgColor} p={6} borderRadius="lg" border="1px" borderColor={borderColor} boxShadow="md" mb={8} data-tour="settings-gdpr-section">
         <Heading size="md" mb={2} data-tour="settings-gdpr-title">{t('settings.gdprPrivacy', 'GDPR & Privacy')}</Heading>
@@ -447,6 +618,12 @@ function Settings() {
         <Heading size="md" mb={2} data-tour="settings-sso-title">{t('settings.ssoSamlConfig', 'SSO/SAML Configuration')}</Heading>
         {ssoLoading ? <Text>{t('settings.loading', 'Loading...')}</Text> : (
           <>
+            <Button onClick={handleToggleSso} colorScheme={ssoEnabled ? 'red' : 'green'} mb={2}>
+              {ssoEnabled ? t('settings.disableSso', 'Disable SSO') : t('settings.enableSso', 'Enable SSO')}
+            </Button>
+            <Button onClick={handleDownloadMetadata} colorScheme="blue" mb={2} ml={2}>
+              {t('settings.downloadSsoMetadata', 'Download SAML Metadata')}
+            </Button>
             {!ssoEdit ? (
               <>
                 <Text>{t('settings.ssoEntityId', 'Entity ID: {{id}}', { id: ssoConfig.entity_id || '-' })}</Text>

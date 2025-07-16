@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 from models import User, Testimonial
 from database import get_db
@@ -10,22 +10,27 @@ from datetime import datetime
 router = APIRouter(prefix="/api/showcase", tags=["showcase"])
 
 class TestimonialIn(BaseModel):
-    name: str
-    company: Optional[str] = None
-    message: str
-    avatar_url: Optional[str] = None
-    featured: bool = False
+    name: str = Field(..., description="Name of the person giving the testimonial.", example="Alice Smith")
+    company: Optional[str] = Field(None, description="Company or organization.", example="Acme Inc.")
+    message: str = Field(..., description="Testimonial message.", example="LeadTap helped us grow our business!")
+    avatar_url: Optional[str] = Field(None, description="URL to the avatar image.", example="https://example.com/avatar.jpg")
+    featured: bool = Field(False, description="Whether this testimonial is featured.")
 
 class TestimonialOut(BaseModel):
-    id: int
-    name: str
-    company: Optional[str]
-    message: str
-    avatar_url: Optional[str]
-    featured: bool
-    created_at: datetime
+    id: int = Field(..., description="Unique identifier for the testimonial.")
+    name: str = Field(..., description="Name of the person giving the testimonial.")
+    company: Optional[str] = Field(None, description="Company or organization.")
+    message: str = Field(..., description="Testimonial message.")
+    avatar_url: Optional[str] = Field(None, description="URL to the avatar image.")
+    featured: bool = Field(..., description="Whether this testimonial is featured.")
+    created_at: datetime = Field(..., description="Timestamp when the testimonial was created.")
 
-@router.post("/testimonials", response_model=TestimonialOut)
+@router.post(
+    "/testimonials",
+    response_model=TestimonialOut,
+    summary="Submit a testimonial",
+    description="Submit a new testimonial. User authentication required."
+)
 def submit_testimonial(
     testimonial: TestimonialIn,
     db: Session = Depends(get_db),
@@ -54,9 +59,14 @@ def submit_testimonial(
         created_at=t.created_at
     )
 
-@router.get("/testimonials", response_model=List[TestimonialOut])
+@router.get(
+    "/testimonials",
+    response_model=List[TestimonialOut],
+    summary="List testimonials",
+    description="List public testimonials. Optionally filter by featured status."
+)
 def list_testimonials(
-    featured: Optional[bool] = None,
+    featured: Optional[bool] = Field(None, description="If true, only return featured testimonials."),
     db: Session = Depends(get_db)
 ):
     """List public testimonials (optionally only featured)."""

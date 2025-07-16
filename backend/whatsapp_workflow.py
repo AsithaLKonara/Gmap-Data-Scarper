@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Body, Query
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import json
 import asyncio
@@ -17,33 +17,33 @@ logger = logging.getLogger("whatsapp-workflow")
 
 # Pydantic models
 class WorkflowStepCreate(BaseModel):
-    name: str
-    step_type: str  # message, delay, condition, action
-    content: Optional[str] = None
-    delay_minutes: Optional[int] = 0
-    conditions: Optional[Dict[str, Any]] = None
-    actions: Optional[List[str]] = None
-    order: int
+    name: str = Field(..., description="Step name.", example="Send Welcome Message")
+    step_type: str = Field(..., description="Type of step (message, delay, condition, action)", example="message")
+    content: Optional[str] = Field(None, description="Message content or step details.", example="Hi {{name}}, welcome!")
+    delay_minutes: Optional[int] = Field(0, description="Delay in minutes for delay steps.", example=60)
+    conditions: Optional[Dict[str, Any]] = Field(None, description="Conditions for conditional steps.")
+    actions: Optional[List[str]] = Field(None, description="Actions to perform in this step.")
+    order: int = Field(..., description="Order of the step in the workflow.", example=1)
 
 class WorkflowCreate(BaseModel):
-    name: str
-    description: Optional[str] = None
-    trigger_type: str  # lead_created, lead_qualified, manual, scheduled
-    trigger_conditions: Optional[Dict[str, Any]] = None
-    steps: List[WorkflowStepCreate]
-    is_active: bool = True
+    name: str = Field(..., description="Workflow name.", example="Welcome Sequence")
+    description: Optional[str] = Field(None, description="Workflow description.", example="Welcome new leads with a 3-step sequence.")
+    trigger_type: str = Field(..., description="Trigger type (lead_created, lead_qualified, manual, scheduled)", example="lead_created")
+    trigger_conditions: Optional[Dict[str, Any]] = Field(None, description="Conditions for triggering the workflow.")
+    steps: List[WorkflowStepCreate] = Field(..., description="List of workflow steps.")
+    is_active: bool = Field(True, description="Whether the workflow is active.")
 
 class WorkflowTrigger(BaseModel):
-    workflow_id: int
-    lead_id: Optional[int] = None
-    social_lead_id: Optional[int] = None
-    trigger_data: Optional[Dict[str, Any]] = None
+    workflow_id: int = Field(..., description="ID of the workflow to trigger.")
+    lead_id: Optional[int] = Field(None, description="CRM lead ID to use as input.")
+    social_lead_id: Optional[int] = Field(None, description="Social media lead ID to use as input.")
+    trigger_data: Optional[Dict[str, Any]] = Field(None, description="Additional data for the trigger.")
 
 class WorkflowExecution(BaseModel):
-    workflow_id: int
-    lead_id: Optional[int] = None
-    social_lead_id: Optional[int] = None
-    execution_data: Optional[Dict[str, Any]] = None
+    workflow_id: int = Field(..., description="ID of the workflow to execute.")
+    lead_id: Optional[int] = Field(None, description="CRM lead ID to use as input.")
+    social_lead_id: Optional[int] = Field(None, description="Social media lead ID to use as input.")
+    execution_data: Optional[Dict[str, Any]] = Field(None, description="Additional data for the execution.")
 
 # WhatsApp Workflow Engine
 class WhatsAppWorkflowEngine:
@@ -282,13 +282,18 @@ class WhatsAppWorkflowEngine:
 workflow_engine = WhatsAppWorkflowEngine()
 
 # API endpoints
-@router.post("/workflows", response_model=Dict[str, Any])
+@router.post(
+    "/workflows",
+    response_model=Dict[str, Any],
+    summary="Create WhatsApp workflow",
+    description="Create a new WhatsApp workflow. Requires Pro or Business plan."
+)
 async def create_workflow(
-    workflow_data: WorkflowCreate,
+    workflow_data: WorkflowCreate = Body(..., description="Workflow creation payload."),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Create a new WhatsApp workflow"""
+    """Create a new WhatsApp workflow."""
     if current_user.plan not in ['pro', 'business']:
         raise HTTPException(status_code=403, detail="Pro or Business plan required")
     
@@ -331,12 +336,17 @@ async def create_workflow(
         "created_at": workflow.created_at
     }
 
-@router.get("/workflows", response_model=List[Dict[str, Any]])
+@router.get(
+    "/workflows",
+    response_model=List[Dict[str, Any]],
+    summary="List WhatsApp workflows",
+    description="Get all WhatsApp workflows for the authenticated user."
+)
 async def get_workflows(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get user's WhatsApp workflows"""
+    """Get user's WhatsApp workflows."""
     workflows = db.query(WhatsAppWorkflow).filter(
         WhatsAppWorkflow.user_id == current_user.id
     ).all()
@@ -373,14 +383,19 @@ async def get_workflows(
     
     return result
 
-@router.post("/trigger", response_model=Dict[str, Any])
+@router.post(
+    "/trigger",
+    response_model=Dict[str, Any],
+    summary="Trigger WhatsApp workflow",
+    description="Trigger a WhatsApp workflow for a lead. Starts execution in the background."
+)
 async def trigger_workflow(
-    trigger_data: WorkflowTrigger,
-    background_tasks: BackgroundTasks,
+    trigger_data: WorkflowTrigger = Body(..., description="Workflow trigger payload."),
+    background_tasks: BackgroundTasks = Depends(),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Trigger a WhatsApp workflow"""
+    """Trigger a WhatsApp workflow for a lead (background execution)."""
     workflow = db.query(WhatsAppWorkflow).filter(
         WhatsAppWorkflow.id == trigger_data.workflow_id,
         WhatsAppWorkflow.user_id == current_user.id
@@ -449,14 +464,19 @@ async def trigger_workflow(
         "message": "Workflow execution started"
     }
 
-@router.post("/execute", response_model=Dict[str, Any])
+@router.post(
+    "/execute",
+    response_model=Dict[str, Any],
+    summary="Execute WhatsApp workflow manually",
+    description="Manually execute a WhatsApp workflow for a lead. Starts execution in the background."
+)
 async def execute_workflow(
-    execution_data: WorkflowExecution,
-    background_tasks: BackgroundTasks,
+    execution_data: WorkflowExecution = Body(..., description="Workflow execution payload."),
+    background_tasks: BackgroundTasks = Depends(),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Execute a WhatsApp workflow manually"""
+    """Manually execute a WhatsApp workflow for a lead (background execution)."""
     workflow = db.query(WhatsAppWorkflow).filter(
         WhatsAppWorkflow.id == execution_data.workflow_id,
         WhatsAppWorkflow.user_id == current_user.id
@@ -522,11 +542,16 @@ async def execute_workflow(
         "message": "Workflow execution started"
     }
 
-@router.get("/templates", response_model=List[Dict[str, Any]])
+@router.get(
+    "/templates",
+    response_model=List[Dict[str, Any]],
+    summary="Get workflow templates",
+    description="Get predefined WhatsApp workflow templates."
+)
 async def get_workflow_templates(
     current_user: User = Depends(get_current_user)
 ):
-    """Get predefined workflow templates"""
+    """Get predefined workflow templates."""
     templates = [
         {
             "id": "welcome_sequence",
@@ -610,12 +635,17 @@ async def get_workflow_templates(
     
     return templates
 
-@router.get("/analytics", response_model=Dict[str, Any])
+@router.get(
+    "/analytics",
+    response_model=Dict[str, Any],
+    summary="Get workflow analytics",
+    description="Get analytics and statistics for WhatsApp workflows and messages."
+)
 async def get_workflow_analytics(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get workflow analytics"""
+    """Get WhatsApp workflow analytics and statistics."""
     # Get workflow statistics
     total_workflows = db.query(WhatsAppWorkflow).filter(
         WhatsAppWorkflow.user_id == current_user.id

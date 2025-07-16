@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from models import Tenant
 from database import get_db
 import os
+from audit import audit_log
 
 router = APIRouter(prefix="/api/payhere", tags=["payhere"])
 
@@ -12,6 +13,7 @@ PAYHERE_CANCEL_URL = os.getenv('PAYHERE_CANCEL_URL', 'https://yourapp.com/payher
 PAYHERE_NOTIFY_URL = os.getenv('PAYHERE_NOTIFY_URL', 'https://yourapp.com/api/payhere/webhook')
 
 @router.post("/create-session", response_model=dict)
+@audit_log(action="create_payhere_session", target_type="tenant", target_id_param="tenant_id")
 async def create_payhere_session(request: Request, db: Session = Depends(get_db)):
     data = await request.json()
     plan = data.get('plan')
@@ -42,6 +44,7 @@ async def create_payhere_session(request: Request, db: Session = Depends(get_db)
     return {"payhere_url": payhere_url}
 
 @router.post("/webhook", response_model=dict)
+@audit_log(action="payhere_webhook", target_type="tenant", target_id_param="tenant_id")
 async def payhere_webhook(request: Request, db: Session = Depends(get_db)):
     data = await request.form()
     order_id = data.get('order_id')

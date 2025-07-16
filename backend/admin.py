@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session, joinedload
 from models import User, Job, AuditLog
 from database import get_db
 from auth import get_current_user, get_password_hash
+from security import check_permission
 import os
 from fastapi.responses import StreamingResponse
 import csv
@@ -11,29 +12,158 @@ import json
 from datetime import datetime, timedelta, date
 import time
 import logging
+from typing import Optional, List, Dict, Any
+from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 # Setup logging for exceptions
 logger = logging.getLogger("admin")
 
-def admin_required(user=Depends(get_current_user)):
-    print(f"🔒 [ADMIN] Checking admin access for user: {user.email}, Plan: {user.plan}")
-    if user.plan != "business":
-        print(f"❌ [ADMIN] Access denied - User {user.email} does not have admin privileges")
-        raise HTTPException(status_code=403, detail="Admin access required")
-    print(f"✅ [ADMIN] Admin access granted for user: {user.email}")
-    return user
+# --- Pydantic Models for OpenAPI ---
+class UserOut(BaseModel):
+    id: int
+    email: str
+    plan: str
+    created_at: Optional[datetime]
+    queries_today: Optional[int]
+    last_query_date: Optional[datetime]
 
-@router.get("/users")
+class UserListResponse(BaseModel):
+    results: List[UserOut]
+    total: int
+
+class JobOut(BaseModel):
+    id: int
+    queries: List[str]
+    status: str
+    result: Optional[Any]
+    csv_path: Optional[str]
+    user_id: int
+    user_email: Optional[str]
+    created_at: Optional[datetime]
+    updated_at: Optional[datetime]
+
+class JobListResponse(BaseModel):
+    results: List[JobOut]
+    total: int
+
+class SiteStatsResponse(BaseModel):
+    user_count: int
+    job_count: int
+    active_users_today: int
+
+class LogResponse(BaseModel):
+    logs: List[str]
+
+class AuditLogOut(BaseModel):
+    id: int
+    admin_email: str
+    action: str
+    target_type: Optional[str]
+    target_id: Optional[int]
+    target_email: Optional[str]
+    details: Optional[Dict[str, Any]]
+    created_at: Optional[str]
+
+class AuditLogListResponse(BaseModel):
+    results: List[AuditLogOut]
+    total: int
+
+class BanUserRequest(BaseModel):
+    user_id: int = Field(..., description="ID of the user to ban.")
+
+class UnbanUserRequest(BaseModel):
+    user_id: int = Field(..., description="ID of the user to unban.")
+
+class ResetPasswordRequest(BaseModel):
+    user_id: int = Field(..., description="ID of the user to reset password for.")
+    new_password: str = Field(..., description="New password for the user.")
+
+class SimpleStatusResponse(BaseModel):
+    status: str
+    user_id: int
+
+class ExportFormat(str):
+    csv = "csv"
+    json = "json"
+
+class UserGrowthData(BaseModel):
+    date: str
+    new_users: int
+    total_users: int
+
+class UserGrowthResponse(BaseModel):
+    period_days: int
+    data: List[UserGrowthData]
+
+class JobTrendsData(BaseModel):
+    date: str
+    pending: int
+    completed: int
+    failed: int
+    total: int
+
+class JobTrendsResponse(BaseModel):
+    period_days: int
+    data: List[JobTrendsData]
+
+class PlanDistributionItem(BaseModel):
+    plan: str
+    count: int
+
+class PlanDistributionResponse(BaseModel):
+    plans: List[PlanDistributionItem]
+
+class ActiveUsersData(BaseModel):
+    date: str
+    active_users: int
+
+class ActiveUsersResponse(BaseModel):
+    period_days: int
+    data: List[ActiveUsersData]
+
+class SystemHealthResponse(BaseModel):
+    timestamp: str
+    system: Dict[str, Any]
+    database: Dict[str, Any]
+    api: Dict[str, Any]
+    error: Optional[str] = None
+    status: Optional[str] = None
+
+class SystemPerformanceResponse(BaseModel):
+    period_hours: int
+    data: List[Any]
+    message: str
+
+class RecentSystemLogItem(BaseModel):
+    timestamp: str
+    level: str
+    message: str
+    details: Dict[str, Any]
+
+class RecentSystemLogsResponse(BaseModel):
+    logs: List[RecentSystemLogItem]
+
+class CRMAnalyticsResponse(BaseModel):
+    crm_leads: Optional[Any]
+    crm_conversion_rate: Optional[Any]
+    message: Optional[str]
+
+# --- Endpoints with OpenAPI docs ---
+
+@router.get("/users", response_model=UserListResponse, summary="List users", description="List all users with optional filters for email and plan.")
 def list_users(
     db: Session = Depends(get_db),
-    user=Depends(admin_required),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
-    email: str = Query(None),
-    plan: str = Query(None)
+    user: User = Depends(get_current_user),
+    page: int = Query(1, ge=1, description="Page number for pagination."),
+    page_size: int = Query(20, ge=1, le=100, description="Number of users per page."),
+    email: Optional[str] = Query(None, description="Filter users by email (partial match)."),
+    plan: Optional[str] = Query(None, description="Filter users by plan name.")
 ):
+    """Get a paginated list of users. Admin access required."""
+    if not check_permission(user, "admin", "read", db):
+        raise HTTPException(status_code=403, detail="Admin access required")
     try:
         print(f"📋 [ADMIN] Listing users - Page: {page}, Page Size: {page_size}, Email Filter: {email}, Plan Filter: {plan}")
         
@@ -69,15 +199,18 @@ def list_users(
         logger.exception("Error listing users")
         raise HTTPException(status_code=500, detail="Failed to list users. Please try again later.")
 
-@router.get("/jobs")
+@router.get("/jobs", response_model=JobListResponse, summary="List jobs", description="List all jobs with optional filters for user email and status.")
 def list_jobs(
     db: Session = Depends(get_db),
-    user=Depends(admin_required),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
-    user_email: str = Query(None),
-    status: str = Query(None)
+    user: User = Depends(get_current_user),
+    page: int = Query(1, ge=1, description="Page number for pagination."),
+    page_size: int = Query(20, ge=1, le=100, description="Number of jobs per page."),
+    user_email: Optional[str] = Query(None, description="Filter jobs by user email (partial match)."),
+    status: Optional[str] = Query(None, description="Filter jobs by status.")
 ):
+    """Get a paginated list of jobs. Admin access required."""
+    if not check_permission(user, "admin", "read", db):
+        raise HTTPException(status_code=403, detail="Admin access required")
     print(f"📋 [ADMIN] Listing jobs - Page: {page}, Page Size: {page_size}, User Email Filter: {user_email}, Status Filter: {status}")
     
     query = db.query(Job).options(joinedload(Job.user))
@@ -117,8 +250,11 @@ def list_jobs(
         "total": total
     }
 
-@router.get("/stats")
-def site_stats(db: Session = Depends(get_db), user=Depends(admin_required)):
+@router.get("/stats", response_model=SiteStatsResponse, summary="Get site statistics", description="Get overall statistics for users, jobs, and active users today.")
+def site_stats(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Get site-wide statistics. Admin access required."""
+    if not check_permission(user, "admin", "read", db):
+        raise HTTPException(status_code=403, detail="Admin access required")
     print(f"📊 [ADMIN] Getting site statistics")
     
     user_count = db.query(User).count()
@@ -135,8 +271,11 @@ def site_stats(db: Session = Depends(get_db), user=Depends(admin_required)):
         "active_users_today": active_users_today
     }
 
-@router.get("/logs")
-def get_logs(user=Depends(admin_required)):
+@router.get("/logs", response_model=LogResponse, summary="Get system logs", description="Get the last 100 lines of the system error log file.")
+def get_logs(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Get the last 100 lines of the system error log file. Admin access required."""
+    if not check_permission(user, "admin", "read", db):
+        raise HTTPException(status_code=403, detail="Admin access required")
     print(f"📋 [ADMIN] Getting system logs")
     log_path = "/app/gmap_script_errors.log"
     if not os.path.exists(log_path):
@@ -164,16 +303,19 @@ def log_admin_action(db: Session, admin_user: User, action: str, target_type: st
     db.commit()
     print(f"✅ [AUDIT] Audit log saved successfully")
 
-@router.get("/audit-logs")
+@router.get("/audit-logs", response_model=AuditLogListResponse, summary="Get audit logs", description="Get a paginated list of admin audit logs with optional filters.")
 def get_audit_logs(
     db: Session = Depends(get_db),
-    user=Depends(admin_required),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
-    action: str = Query(None),
-    admin_email: str = Query(None),
-    target_type: str = Query(None)
+    user: User = Depends(get_current_user),
+    page: int = Query(1, ge=1, description="Page number for pagination."),
+    page_size: int = Query(20, ge=1, le=100, description="Number of logs per page."),
+    action: Optional[str] = Query(None, description="Filter logs by action type."),
+    admin_email: Optional[str] = Query(None, description="Filter logs by admin email (partial match)."),
+    target_type: Optional[str] = Query(None, description="Filter logs by target type.")
 ):
+    """Get a paginated list of admin audit logs. Admin access required."""
+    if not check_permission(user, "admin", "read", db):
+        raise HTTPException(status_code=403, detail="Admin access required")
     print(f"📋 [ADMIN] Getting audit logs - Page: {page}, Page Size: {page_size}")
     
     query = db.query(AuditLog)
@@ -210,8 +352,15 @@ def get_audit_logs(
         "total": total
     }
 
-@router.post("/ban_user")
-def ban_user(user_id: int = Body(...), db: Session = Depends(get_db), user=Depends(admin_required)):
+@router.post("/ban_user", response_model=SimpleStatusResponse, summary="Ban a user", description="Ban a user by user ID. Admin access required.")
+def ban_user(
+    user_id: int = Body(..., embed=True, description="ID of the user to ban."),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    # RBAC: Only allow if user has admin:write permission
+    if not check_permission(user, "admin", "write", db):
+        raise HTTPException(status_code=403, detail="Admin access required")
     print(f"🚫 [ADMIN] Banning user - User ID: {user_id}, Admin: {user.email}")
     
     target = db.query(User).filter(User.id == user_id).first()
@@ -237,8 +386,15 @@ def ban_user(user_id: int = Body(...), db: Session = Depends(get_db), user=Depen
     
     return {"status": "banned", "user_id": user_id}
 
-@router.post("/unban_user")
-def unban_user(user_id: int = Body(...), db: Session = Depends(get_db), user=Depends(admin_required)):
+@router.post("/unban_user", response_model=SimpleStatusResponse, summary="Unban a user", description="Unban a user by user ID. Admin access required.")
+def unban_user(
+    user_id: int = Body(..., embed=True, description="ID of the user to unban."),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """Unban a user by user ID. Admin access required."""
+    if not check_permission(user, "admin", "write", db):
+        raise HTTPException(status_code=403, detail="Admin access required")
     print(f"✅ [ADMIN] Unbanning user - User ID: {user_id}, Admin: {user.email}")
     
     target = db.query(User).filter(User.id == user_id).first()
@@ -265,8 +421,16 @@ def unban_user(user_id: int = Body(...), db: Session = Depends(get_db), user=Dep
     
     return {"status": "unbanned", "user_id": user_id}
 
-@router.post("/reset_password")
-def reset_password(user_id: int = Body(...), new_password: str = Body(...), db: Session = Depends(get_db), user=Depends(admin_required)):
+@router.post("/reset_password", response_model=SimpleStatusResponse, summary="Reset user password", description="Reset a user's password by user ID. Admin access required.")
+def reset_password(
+    user_id: int = Body(..., embed=True, description="ID of the user to reset password for."),
+    new_password: str = Body(..., embed=True, description="New password for the user."),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """Reset a user's password by user ID. Admin access required."""
+    if not check_permission(user, "admin", "write", db):
+        raise HTTPException(status_code=403, detail="Admin access required")
     print(f"🔑 [ADMIN] Resetting password - User ID: {user_id}, Admin: {user.email}")
     
     target = db.query(User).filter(User.id == user_id).first()
@@ -292,14 +456,17 @@ def reset_password(user_id: int = Body(...), new_password: str = Body(...), db: 
     
     return {"status": "password_reset", "user_id": user_id}
 
-@router.get("/export/users")
+@router.get("/export/users", summary="Export users", description="Export users as CSV or JSON. Admin access required.")
 def export_users(
     db: Session = Depends(get_db),
-    user=Depends(admin_required),
-    format: str = Query("csv", regex="^(csv|json)$"),
-    email: str = Query(None),
-    plan: str = Query(None)
+    user: User = Depends(get_current_user),
+    format: str = Query("csv", regex="^(csv|json)$", description="Export format: csv or json."),
+    email: Optional[str] = Query(None, description="Filter users by email (partial match)."),
+    plan: Optional[str] = Query(None, description="Filter users by plan name.")
 ):
+    """Export users as CSV or JSON. Admin access required."""
+    if not check_permission(user, "admin", "read", db):
+        raise HTTPException(status_code=403, detail="Admin access required")
     query = db.query(User)
     if email:
         query = query.filter(User.email.ilike(f"%{email}%"))
@@ -339,14 +506,17 @@ def export_users(
             headers={"Content-Disposition": "attachment; filename=users_export.csv"}
         )
 
-@router.get("/export/jobs")
+@router.get("/export/jobs", summary="Export jobs", description="Export jobs as CSV or JSON. Admin access required.")
 def export_jobs(
     db: Session = Depends(get_db),
-    user=Depends(admin_required),
-    format: str = Query("csv", regex="^(csv|json)$"),
-    user_email: str = Query(None),
-    status: str = Query(None)
+    user: User = Depends(get_current_user),
+    format: str = Query("csv", regex="^(csv|json)$", description="Export format: csv or json."),
+    user_email: Optional[str] = Query(None, description="Filter jobs by user email (partial match)."),
+    status: Optional[str] = Query(None, description="Filter jobs by status.")
 ):
+    """Export jobs as CSV or JSON. Admin access required."""
+    if not check_permission(user, "admin", "read", db):
+        raise HTTPException(status_code=403, detail="Admin access required")
     query = db.query(Job)
     if user_email:
         user_obj = db.query(User).filter(User.email.ilike(f"%{user_email}%")).first()
@@ -396,12 +566,15 @@ def export_jobs(
             headers={"Content-Disposition": "attachment; filename=jobs_export.csv"}
         )
 
-@router.get("/analytics/user-growth")
+@router.get("/analytics/user-growth", response_model=UserGrowthResponse, summary="User growth analytics", description="Get user growth data for the last N days.")
 def user_growth_analytics(
     db: Session = Depends(get_db),
-    user=Depends(admin_required),
-    days: int = Query(30, ge=1, le=365)
+    user: User = Depends(get_current_user),
+    days: int = Query(30, ge=1, le=365, description="Number of days to include in the analytics.")
 ):
+    """Get user growth analytics for the last N days. Admin access required."""
+    if not check_permission(user, "admin", "read", db):
+        raise HTTPException(status_code=403, detail="Admin access required")
     """Get user growth data for the last N days"""
     end_date = date.today()
     start_date = end_date - timedelta(days=days)
@@ -426,12 +599,15 @@ def user_growth_analytics(
         "data": daily_counts
     }
 
-@router.get("/analytics/job-trends")
+@router.get("/analytics/job-trends", response_model=JobTrendsResponse, summary="Job trends analytics", description="Get job trends data for the last N days.")
 def job_trends_analytics(
     db: Session = Depends(get_db),
-    user=Depends(admin_required),
-    days: int = Query(30, ge=1, le=365)
+    user: User = Depends(get_current_user),
+    days: int = Query(30, ge=1, le=365, description="Number of days to include in the analytics.")
 ):
+    """Get job trends analytics for the last N days. Admin access required."""
+    if not check_permission(user, "admin", "read", db):
+        raise HTTPException(status_code=403, detail="Admin access required")
     """Get job trends data for the last N days"""
     end_date = date.today()
     start_date = end_date - timedelta(days=days)
@@ -471,23 +647,29 @@ def job_trends_analytics(
         "data": daily_counts
     }
 
-@router.get("/analytics/plan-distribution")
+@router.get("/analytics/plan-distribution", response_model=PlanDistributionResponse, summary="Plan distribution analytics", description="Get user plan distribution analytics.")
 def plan_distribution_analytics(
     db: Session = Depends(get_db),
-    user=Depends(admin_required)
+    user: User = Depends(get_current_user)
 ):
+    """Get user plan distribution analytics. Admin access required."""
+    if not check_permission(user, "admin", "read", db):
+        raise HTTPException(status_code=403, detail="Admin access required")
     """Get user plan distribution"""
     plans = db.query(User.plan, db.func.count(User.id)).group_by(User.plan).all()
     return {
         "plans": [{"plan": plan, "count": count} for plan, count in plans]
     }
 
-@router.get("/analytics/active-users")
+@router.get("/analytics/active-users", response_model=ActiveUsersResponse, summary="Active users analytics", description="Get active users data for the last N days.")
 def active_users_analytics(
     db: Session = Depends(get_db),
-    user=Depends(admin_required),
-    days: int = Query(7, ge=1, le=30)
+    user: User = Depends(get_current_user),
+    days: int = Query(7, ge=1, le=30, description="Number of days to include in the analytics.")
 ):
+    """Get active users analytics for the last N days. Admin access required."""
+    if not check_permission(user, "admin", "read", db):
+        raise HTTPException(status_code=403, detail="Admin access required")
     """Get active users data for the last N days"""
     end_date = date.today()
     start_date = end_date - timedelta(days=days)
@@ -511,11 +693,14 @@ def active_users_analytics(
         "data": daily_active
     }
 
-@router.get("/system/health")
+@router.get("/system/health", response_model=SystemHealthResponse, summary="System health", description="Get system health metrics.")
 def system_health(
     db: Session = Depends(get_db),
-    user=Depends(admin_required)
+    user: User = Depends(get_current_user)
 ):
+    """Get system health metrics. Admin access required."""
+    if not check_permission(user, "admin", "read", db):
+        raise HTTPException(status_code=403, detail="Admin access required")
     """Get system health metrics"""
     try:
         # TODO: Implement real system health metrics
@@ -532,12 +717,15 @@ def system_health(
             "status": "error"
         }
 
-@router.get("/system/performance")
+@router.get("/system/performance", response_model=SystemPerformanceResponse, summary="System performance", description="Get system performance metrics over time.")
 def system_performance(
     db: Session = Depends(get_db),
-    user=Depends(admin_required),
-    hours: int = Query(24, ge=1, le=168)
+    user: User = Depends(get_current_user),
+    hours: int = Query(24, ge=1, le=168, description="Number of hours to include in the performance analytics.")
 ):
+    """Get system performance metrics over time. Admin access required."""
+    if not check_permission(user, "admin", "read", db):
+        raise HTTPException(status_code=403, detail="Admin access required")
     """Get performance metrics over time"""
     end_time = datetime.now()
     start_time = end_time - timedelta(hours=hours)
@@ -548,12 +736,15 @@ def system_performance(
         "message": "Not implemented"
     }
 
-@router.get("/system/logs/recent")
+@router.get("/system/logs/recent", response_model=RecentSystemLogsResponse, summary="Recent system logs", description="Get recent system logs (sample of recent audit logs).")
 def recent_system_logs(
     db: Session = Depends(get_db),
-    user=Depends(admin_required),
-    limit: int = Query(100, ge=1, le=1000)
+    user: User = Depends(get_current_user),
+    limit: int = Query(100, ge=1, le=1000, description="Number of recent logs to return.")
 ):
+    """Get recent system logs (sample of recent audit logs). Admin access required."""
+    if not check_permission(user, "admin", "read", db):
+        raise HTTPException(status_code=403, detail="Admin access required")
     """Get recent system logs"""
     # In production, you'd query actual log files or a log database
     # For now, we'll return a sample of recent audit logs
@@ -576,8 +767,11 @@ def recent_system_logs(
         ]
     }
 
-@router.get("/crm/analytics")
-def crm_analytics(db: Session = Depends(get_db), user=Depends(admin_required)):
+@router.get("/crm/analytics", response_model=CRMAnalyticsResponse, summary="CRM analytics", description="Get CRM analytics data.")
+def crm_analytics(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Get CRM analytics data. Admin access required."""
+    if not check_permission(user, "admin", "read", db):
+        raise HTTPException(status_code=403, detail="Admin access required")
     try:
         # TODO: Implement real CRM analytics logic
         return {"crm_leads": None, "crm_conversion_rate": None, "message": "Not implemented"}

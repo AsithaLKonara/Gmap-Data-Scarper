@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi import APIRouter, Depends, HTTPException, Body, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel, HttpUrl, Field
@@ -32,10 +32,22 @@ class WebhookOut(BaseModel):
 class DeleteResponse(BaseModel):
     status: str = Field(..., description="Status message.", example="deleted")
 
+class WebhookUpdate(BaseModel):
+    url: Optional[HttpUrl] = None
+    event: Optional[str] = None
+    secret: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class WebhookDeliveryLog(BaseModel):
+    status: str
+    timestamp: datetime
+    response_code: Optional[int] = None
+    error: Optional[str] = None
+
 @router.get("/", response_model=List[WebhookOut], summary="List webhooks", description="List all webhooks for the authenticated user.")
 def list_webhooks(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Get a list of all webhooks registered by the authenticated user."""
-    return db.query(Webhook).filter(Webhook.user_id == user.id).all()
+    """List all webhooks for the authenticated user."""
+    return db.query(Webhook).filter_by(user_id=user.id).all()
 
 @router.post("/", response_model=WebhookOut, summary="Create webhook", description="Create a new webhook for the authenticated user.")
 def create_webhook(
@@ -69,33 +81,40 @@ def get_webhook(
     return webhook
 
 @router.put("/{webhook_id}", response_model=WebhookOut, summary="Update webhook", description="Update a webhook by ID for the authenticated user.")
-def update_webhook(
-    webhook_id: int = Field(..., description="ID of the webhook to update."),
-    data: WebhookCreate = Body(..., description="Webhook update payload."),
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Update an existing webhook by its ID for the authenticated user."""
-    webhook = db.query(Webhook).filter(Webhook.id == webhook_id, Webhook.user_id == user.id).first()
+def update_webhook(webhook_id: int, data: WebhookUpdate, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Update a webhook by ID for the authenticated user."""
+    webhook = db.query(Webhook).filter_by(id=webhook_id, user_id=user.id).first()
     if not webhook:
         raise HTTPException(status_code=404, detail="Webhook not found")
+    if data.url is not None:
     webhook.url = str(data.url)
+    if data.event is not None:
     webhook.event = data.event
+    if data.secret is not None:
     webhook.secret = data.secret
+    if data.is_active is not None:
+        webhook.is_active = data.is_active
     db.commit()
     db.refresh(webhook)
     return webhook
 
 @router.delete("/{webhook_id}", response_model=DeleteResponse, summary="Delete webhook", description="Delete a webhook by ID for the authenticated user.")
-def delete_webhook(
-    webhook_id: int = Field(..., description="ID of the webhook to delete."),
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Delete a webhook by its ID for the authenticated user."""
-    webhook = db.query(Webhook).filter(Webhook.id == webhook_id, Webhook.user_id == user.id).first()
+def delete_webhook(webhook_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Delete a webhook by ID for the authenticated user."""
+    webhook = db.query(Webhook).filter_by(id=webhook_id, user_id=user.id).first()
     if not webhook:
         raise HTTPException(status_code=404, detail="Webhook not found")
     db.delete(webhook)
     db.commit()
-    return {"status": "deleted"} 
+    return DeleteResponse(status="deleted")
+
+# Optional: Delivery log/history endpoint (basic, returns last status/time)
+@router.get("/{webhook_id}/delivery-log", response_model=List[WebhookDeliveryLog], summary="Get webhook delivery log", description="Get delivery log for a webhook (last status/time only, for now).")
+def get_webhook_delivery_log(webhook_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    webhook = db.query(Webhook).filter_by(id=webhook_id, user_id=user.id).first()
+    if not webhook:
+        raise HTTPException(status_code=404, detail="Webhook not found")
+    # For now, just return the last delivery status/time
+    if webhook.last_delivery_status and webhook.last_delivery_at:
+        return [WebhookDeliveryLog(status=webhook.last_delivery_status, timestamp=webhook.last_delivery_at)]
+    return [] 

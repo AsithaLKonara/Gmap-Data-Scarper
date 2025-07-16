@@ -5,7 +5,9 @@ from typing import List
 from models import Team, TeamMembership, User
 from database import get_db
 from auth import get_current_user
+from security import check_permission
 from datetime import datetime
+from audit import audit_log
 
 router = APIRouter(prefix="/api/teams", tags=["teams"])
 
@@ -29,13 +31,14 @@ class MemberOut(BaseModel):
     class Config:
         orm_mode = True
 
-def require_pro_or_business(user):
-    if user.plan not in ('pro', 'business'):
-        raise HTTPException(status_code=403, detail="Team features require Pro or Business plan")
+def is_team_admin_or_manager(db, team_id, user_id):
+    membership = db.query(TeamMembership).filter(TeamMembership.team_id == team_id, TeamMembership.user_id == user_id, TeamMembership.status == 'active').first()
+    return membership and membership.role in ('admin', 'manager')
 
 @router.post("/", response_model=TeamOut)
 def create_team(data: TeamIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    require_pro_or_business(user)
+    if not check_permission(user, "teams", "manage", db):
+        raise HTTPException(status_code=403, detail="Team features require Pro or Business plan")
     team = Team(name=data.name, owner_id=user.id)
     db.add(team)
     db.commit()
@@ -48,13 +51,15 @@ def create_team(data: TeamIn, db: Session = Depends(get_db), user: User = Depend
 
 @router.get("/", response_model=List[TeamOut])
 def list_teams(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    require_pro_or_business(user)
+    if not check_permission(user, "teams", "manage", db):
+        raise HTTPException(status_code=403, detail="Team features require Pro or Business plan")
     teams = db.query(Team).join(TeamMembership).filter(TeamMembership.user_id == user.id, TeamMembership.status == 'active').all()
     return teams
 
 @router.get("/{team_id}/members", response_model=List[MemberOut])
 def list_team_members(team_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    require_pro_or_business(user)
+    if not check_permission(user, "teams", "manage", db):
+        raise HTTPException(status_code=403, detail="Team features require Pro or Business plan")
     team = db.query(Team).filter(Team.id == team_id).first()
     if not team:
         raise HTTPException(status_code=404, detail="Team not found")
@@ -69,8 +74,12 @@ class InviteIn(BaseModel):
     role: str = 'member'
 
 @router.post("/{team_id}/invite")
+@audit_log(action="invite_team_member", target_type="team", target_id_param="team_id")
 def invite_user(team_id: int, data: InviteIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    require_pro_or_business(user)
+    if not check_permission(user, "teams", "manage", db):
+        raise HTTPException(status_code=403, detail="Team features require Pro or Business plan")
+    if not is_team_admin_or_manager(db, team_id, user.id):
+        raise HTTPException(status_code=403, detail="Only team admin or manager can invite")
     team = db.query(Team).filter(Team.id == team_id, Team.owner_id == user.id).first()
     if not team:
         raise HTTPException(status_code=403, detail="Only team owner can invite")
@@ -89,8 +98,12 @@ def invite_user(team_id: int, data: InviteIn, db: Session = Depends(get_db), use
     return {"status": "invited"}
 
 @router.post("/{team_id}/members/{member_id}/remove")
+@audit_log(action="remove_team_member", target_type="team", target_id_param="team_id")
 def remove_member(team_id: int, member_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    require_pro_or_business(user)
+    if not check_permission(user, "teams", "manage", db):
+        raise HTTPException(status_code=403, detail="Team features require Pro or Business plan")
+    if not is_team_admin_or_manager(db, team_id, user.id):
+        raise HTTPException(status_code=403, detail="Only team admin or manager can remove members")
     team = db.query(Team).filter(Team.id == team_id, Team.owner_id == user.id).first()
     if not team:
         raise HTTPException(status_code=403, detail="Only team owner can remove members")
@@ -105,8 +118,12 @@ class RoleIn(BaseModel):
     role: str
 
 @router.post("/{team_id}/members/{member_id}/role")
+@audit_log(action="change_team_member_role", target_type="team", target_id_param="team_id")
 def change_role(team_id: int, member_id: int, data: RoleIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    require_pro_or_business(user)
+    if not check_permission(user, "teams", "manage", db):
+        raise HTTPException(status_code=403, detail="Team features require Pro or Business plan")
+    if not is_team_admin_or_manager(db, team_id, user.id):
+        raise HTTPException(status_code=403, detail="Only team admin or manager can change roles")
     team = db.query(Team).filter(Team.id == team_id, Team.owner_id == user.id).first()
     if not team:
         raise HTTPException(status_code=403, detail="Only team owner can change roles")
@@ -118,8 +135,12 @@ def change_role(team_id: int, member_id: int, data: RoleIn, db: Session = Depend
     return {"status": "role updated"}
 
 @router.post("/{team_id}/transfer-ownership/{new_owner_id}")
+@audit_log(action="transfer_team_ownership", target_type="team", target_id_param="team_id")
 def transfer_ownership(team_id: int, new_owner_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    require_pro_or_business(user)
+    if not check_permission(user, "teams", "manage", db):
+        raise HTTPException(status_code=403, detail="Team features require Pro or Business plan")
+    if not is_team_admin_or_manager(db, team_id, user.id):
+        raise HTTPException(status_code=403, detail="Only team admin or manager can transfer ownership")
     team = db.query(Team).filter(Team.id == team_id, Team.owner_id == user.id).first()
     if not team:
         raise HTTPException(status_code=403, detail="Only team owner can transfer ownership")
@@ -131,8 +152,10 @@ def transfer_ownership(team_id: int, new_owner_id: int, db: Session = Depends(ge
     return {"status": "ownership transferred"}
 
 @router.post("/memberships/{membership_id}/accept")
+@audit_log(action="accept_team_invite", target_type="team")
 def accept_invite(membership_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    require_pro_or_business(user)
+    if not check_permission(user, "teams", "manage", db):
+        raise HTTPException(status_code=403, detail="Team features require Pro or Business plan")
     membership = db.query(TeamMembership).filter(TeamMembership.id == membership_id, TeamMembership.user_id == user.id, TeamMembership.status == 'invited').first()
     if not membership:
         raise HTTPException(status_code=404, detail="Invite not found")
@@ -141,8 +164,10 @@ def accept_invite(membership_id: int, db: Session = Depends(get_db), user: User 
     return {"status": "accepted"}
 
 @router.post("/memberships/{membership_id}/decline")
+@audit_log(action="decline_team_invite", target_type="team")
 def decline_invite(membership_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    require_pro_or_business(user)
+    if not check_permission(user, "teams", "manage", db):
+        raise HTTPException(status_code=403, detail="Team features require Pro or Business plan")
     membership = db.query(TeamMembership).filter(TeamMembership.id == membership_id, TeamMembership.user_id == user.id, TeamMembership.status == 'invited').first()
     if not membership:
         raise HTTPException(status_code=404, detail="Invite not found")

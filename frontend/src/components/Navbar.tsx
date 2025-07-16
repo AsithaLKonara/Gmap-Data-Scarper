@@ -26,7 +26,7 @@ const LanguageSwitcher = () => {
 
 const Navbar = () => {
   const { t } = useTranslation();
-  const { user, logout } = useAuth();
+  const { user, logout, hasRole, hasPermission } = useAuth();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -34,17 +34,21 @@ const Navbar = () => {
   const isActive = (path: string) => location.pathname === path;
 
   const navItems = [
-    { path: '/dashboard', label: t('dashboard') },
-    { path: '/custom-dashboard', label: t('custom_dashboard', 'Custom Dashboard') },
-    { path: '/lead-collection', label: t('leads', 'Leads') },
-    { path: '/crm', label: t('crm') },
-    { path: '/analytics', label: t('analytics') },
-    { path: '/teams', label: t('teams', 'Teams') },
+    { path: '/dashboard', label: t('dashboard'), show: true },
+    { path: '/custom-dashboard', label: t('custom_dashboard', 'Custom Dashboard'), show: true },
+    { path: '/lead-collection', label: t('leads', 'Leads'), show: hasPermission('leads:read') },
+    { path: '/crm', label: t('crm'), show: hasPermission('crm:read') },
+    { path: '/analytics', label: t('analytics'), show: hasPermission('analytics:read') },
+    { path: '/api', label: t('apiDocs', 'API Docs'), show: hasPermission('api:access') },
+    { path: '/webhooks', label: t('webhooks', 'Webhooks'), show: hasPermission('webhooks:read') },
+    { path: '/integrations', label: t('integrations', 'Integrations'), show: hasPermission('integrations:read') },
+    { path: '/widgets', label: t('widgets', 'Widgets'), show: hasPermission('widgets:read') },
+    { path: '/teams', label: t('teams', 'Teams'), show: hasPermission('teams:manage') },
   ];
 
   const adminItems = [
-    { path: '/admin', label: t('admin', 'Admin') },
-    { path: '/audit-log', label: t('audit_log', 'Audit Log') },
+    { path: '/admin', label: t('admin', 'Admin'), show: hasRole('admin') || hasPermission('admin:read') },
+    { path: '/audit-log', label: t('audit_log', 'Audit Log'), show: hasRole('admin') || hasPermission('admin:read') },
   ];
 
   useEffect(() => {
@@ -73,7 +77,7 @@ const Navbar = () => {
           {/* Desktop Navigation */}
           <div className="hidden md:block">
             <div className="ml-10 flex items-baseline space-x-4">
-              {navItems.map((item) => (
+              {navItems.filter(item => item.show).map((item) => (
                 <Link
                   key={item.path}
                   to={item.path}
@@ -87,7 +91,7 @@ const Navbar = () => {
                   {item.label}
                 </Link>
               ))}
-              {user?.role === 'admin' && adminItems.map((item) => (
+              {adminItems.filter(item => item.show).map((item) => (
                 <Link
                   key={item.path}
                   to={item.path}
@@ -177,7 +181,7 @@ const Navbar = () => {
       {isMenuOpen && (
         <div className="md:hidden bg-card border-t border-border">
           <div className="px-2 pt-2 pb-3 space-y-1">
-            {navItems.map((item) => (
+            {navItems.filter(item => item.show).map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
@@ -191,7 +195,7 @@ const Navbar = () => {
                 {item.label}
               </Link>
             ))}
-            {user?.role === 'admin' && adminItems.map((item) => (
+            {adminItems.filter(item => item.show).map((item) => (
               <Link
                 key={item.path}
                 to={item.path}

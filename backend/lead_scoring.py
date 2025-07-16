@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from models import User, Lead, LeadScore
 from database import get_db
@@ -11,9 +11,10 @@ import re
 
 router = APIRouter(prefix="/api/lead-scoring", tags=["lead-scoring"])
 
+# --- Pydantic Models for OpenAPI ---
 class LeadScoreRequest(BaseModel):
-    lead_id: int
-    recalculate: bool = False
+    lead_id: int = Field(..., description="ID of the lead to score.")
+    recalculate: bool = Field(False, description="Whether to force recalculation of the score.")
 
 class LeadScoreResponse(BaseModel):
     lead_id: int
@@ -28,6 +29,25 @@ class ScoringRule(BaseModel):
     weight: float
     description: str
     enabled: bool
+
+class BulkScoreRequest(BaseModel):
+    lead_ids: List[int] = Field(..., description="List of lead IDs to score.")
+
+class BulkScoreResponseItem(BaseModel):
+    lead_id: int
+    overall_score: float
+    risk_level: str
+    conversion_probability: float
+
+class BulkScoreResponse(BaseModel):
+    results: List[BulkScoreResponseItem]
+
+class ScoringStatsResponse(BaseModel):
+    total_scored: int
+    average_score: float
+    high_risk_count: int
+    low_risk_count: int
+    conversion_rate: float
 
 # Lead scoring factors and weights
 SCORING_FACTORS = {
@@ -171,13 +191,13 @@ def calculate_engagement_score(lead: Lead) -> float:
     
     return score / factors if factors > 0 else 0.0
 
-@router.post("/score", response_model=LeadScoreResponse)
+@router.post("/score", response_model=LeadScoreResponse, summary="Score a lead", description="Calculate or recalculate the score for a single lead.")
 def score_lead(
     score_request: LeadScoreRequest,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Calculate or recalculate lead score"""
+    """Calculate or recalculate the score for a single lead."""
     
     # Get the lead
     lead = db.query(Lead).filter(
@@ -300,13 +320,13 @@ def score_lead(
         conversion_probability=conversion_probability
     )
 
-@router.get("/leads/{lead_id}/score")
+@router.get("/leads/{lead_id}/score", response_model=LeadScoreResponse, summary="Get lead score", description="Get the score for a specific lead by ID.")
 def get_lead_score(
-    lead_id: int,
+    lead_id: int = Field(..., description="ID of the lead to retrieve score for."),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Get lead score if it exists"""
+    """Get the score for a specific lead by ID."""
     
     # Verify lead belongs to user
     lead = db.query(Lead).filter(
@@ -334,12 +354,12 @@ def get_lead_score(
         "updated_at": score.updated_at
     }
 
-@router.get("/stats")
+@router.get("/stats", response_model=ScoringStatsResponse, summary="Get scoring statistics", description="Get statistics about lead scoring for the current user.")
 def get_scoring_stats(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Get lead scoring statistics"""
+    """Get statistics about lead scoring for the current user."""
     
     # Get all scored leads for user
     scored_leads = db.query(LeadScore).join(Lead).filter(Lead.user_id == user.id).all()
@@ -387,17 +407,17 @@ def get_scoring_stats(
         "recommendations_summary": top_recommendations
     }
 
-@router.post("/bulk-score")
+@router.post("/bulk-score", response_model=BulkScoreResponse, summary="Bulk score leads", description="Bulk score multiple leads by their IDs.")
 def bulk_score_leads(
-    lead_ids: List[int],
+    bulk_request: BulkScoreRequest,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    """Score multiple leads at once"""
+    """Bulk score multiple leads by their IDs."""
     
     results = []
     
-    for lead_id in lead_ids:
+    for lead_id in bulk_request.lead_ids:
         try:
             score_request = LeadScoreRequest(lead_id=lead_id, recalculate=True)
             result = score_lead(score_request, db, user)

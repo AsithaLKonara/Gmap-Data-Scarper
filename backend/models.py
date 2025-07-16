@@ -27,6 +27,7 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     plan = Column(String(50), default='free')
+    role = Column(String(32), default='user', nullable=False)  # RBAC: user, manager, admin
     stripe_customer_id = Column(String(255), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     queries_today = Column(Integer, default=0)
@@ -54,6 +55,10 @@ class User(Base):
     team_memberships = relationship('TeamMembership', back_populates='user', cascade='all, delete-orphan')
     audit_logs = relationship('AuditLog', back_populates='user', cascade='all, delete-orphan')
     webhook_url = Column(String(500), nullable=True)
+    # 2FA fields
+    two_fa_enabled = Column(Boolean, default=False)
+    two_fa_secret = Column(String(64), nullable=True)
+    two_fa_backup_codes = Column(JSON, nullable=True)  # List of backup codes (hashed)
     # CRM/Email integration fields
     crm_provider = Column(String(50), nullable=True)
     crm_access_token = Column(String(255), nullable=True)
@@ -428,4 +433,69 @@ class WhatsAppWorkflowTrigger(Base):
 
     workflow = relationship('WhatsAppWorkflow')
     lead = relationship('Lead')
-    social_lead = relationship('SocialMediaLead') 
+    social_lead = relationship('SocialMediaLead')
+
+class Webhook(Base):
+    __tablename__ = 'webhooks'
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    tenant_id = Column(Integer, ForeignKey('tenants.id'), nullable=True, index=True)
+    url = Column(String(500), nullable=False)
+    event = Column(String(100), nullable=False)  # e.g., job.completed, lead.created
+    is_active = Column(Boolean, default=True)
+    secret = Column(String(64), nullable=True)  # for signing
+    last_delivery_status = Column(String(50), nullable=True)
+    last_delivery_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    user = relationship('User')
+    tenant = relationship('Tenant')
+
+class ReferralCode(Base):
+    __tablename__ = 'referral_codes'
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)  # Referrer
+    code = Column(String(32), unique=True, nullable=False, index=True)
+    used_by = Column(Integer, ForeignKey('users.id'), nullable=True)  # Referee
+    used_at = Column(DateTime(timezone=True), nullable=True)
+    rewards = Column(JSON, nullable=True)  # e.g., {"leads": 50, "credits": 100}
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    user = relationship('User', foreign_keys=[user_id])
+    referee = relationship('User', foreign_keys=[used_by]) 
+
+class Affiliate(Base):
+    __tablename__ = 'affiliates'
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    code = Column(String(32), unique=True, nullable=False, index=True)
+    total_earnings = Column(Float, default=0.0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    is_active = Column(Boolean, default=True)
+    user = relationship('User')
+
+class Commission(Base):
+    __tablename__ = 'commissions'
+    id = Column(Integer, primary_key=True, index=True)
+    affiliate_id = Column(Integer, ForeignKey('affiliates.id'), nullable=False, index=True)
+    referred_user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    amount = Column(Float, nullable=False)
+    status = Column(String(32), default='pending')  # pending, paid, rejected
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    paid_at = Column(DateTime(timezone=True), nullable=True)
+    notes = Column(String(255), nullable=True)
+    affiliate = relationship('Affiliate')
+    referred_user = relationship('User', foreign_keys=[referred_user_id]) 
+
+class Widget(Base):
+    __tablename__ = 'widgets'
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    tenant_id = Column(Integer, ForeignKey('tenants.id'), nullable=True, index=True)
+    type = Column(String(32), nullable=False)  # lead_capture, testimonial, metrics
+    config = Column(JSON, nullable=True)
+    embed_code = Column(String(1024), nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    user = relationship('User')
+    tenant = relationship('Tenant') 

@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Dict, Any, Optional
 from models import User, Job, Lead
 from database import get_db
 from auth import get_current_user
 from datetime import datetime
+from audit import audit_log
+from security import check_permission
 
 import csv
 import io
@@ -17,12 +19,38 @@ import enum
 router = APIRouter(prefix="/api/export", tags=["export"])
 
 class ExportFormat(str, enum.Enum):
+    """Supported export formats for analytics data."""
     CSV = "csv"
     JSON = "json"
     XLSX = "xlsx"
     PDF = "pdf"
 
-@router.get("/analytics", summary="Export analytics data", response_description="Export analytics in various formats")
+class JobStatistics(BaseModel):
+    total_jobs: int = Field(..., description="Total number of jobs", example=42)
+    completed_jobs: int = Field(..., description="Number of completed jobs", example=35)
+    failed_jobs: int = Field(..., description="Number of failed jobs", example=2)
+    success_rate: float = Field(..., description="Success rate as a percentage", example=83.3)
+
+class LeadStatistics(BaseModel):
+    total_leads: int = Field(..., description="Total number of leads", example=100)
+    new_leads: int = Field(..., description="Number of new leads", example=20)
+    converted_leads: int = Field(..., description="Number of converted leads", example=10)
+    conversion_rate: float = Field(..., description="Conversion rate as a percentage", example=10.0)
+
+class AnalyticsExportOut(BaseModel):
+    job_statistics: JobStatistics = Field(..., description="Job statistics for the user")
+    lead_statistics: LeadStatistics = Field(..., description="Lead statistics for the user")
+    export_date: str = Field(..., description="UTC ISO export date", example="2024-05-01T12:00:00Z")
+    user_id: int = Field(..., description="User ID", example=1)
+
+@router.get(
+    "/analytics",
+    summary="Export analytics data",
+    description="Export analytics data in CSV, JSON, XLSX, or PDF format. Returns a file download for CSV/XLSX/PDF, or a JSON object for JSON format.",
+    response_model=AnalyticsExportOut,
+    response_description="Analytics data as JSON (if format=json)"
+)
+@audit_log(action="export_analytics", target_type="user")
 def export_analytics(
     format: ExportFormat = Query("csv", description="Export format: csv, json, xlsx, pdf"),
     db: Session = Depends(get_db),
@@ -66,9 +94,8 @@ def export_analytics(
         response.headers["Content-Disposition"] = "attachment; filename=analytics.csv"
         return response
     elif format == ExportFormat.JSON:
-        response = Response(content=json.dumps(analytics_data, indent=2), media_type="application/json")
-        response.headers["Content-Disposition"] = "attachment; filename=analytics.json"
-        return response
+        # Validate with response model
+        return AnalyticsExportOut(**analytics_data)
     elif format == ExportFormat.XLSX:
         output = io.BytesIO()
         workbook = xlsxwriter.Workbook(output, {'in_memory': True})

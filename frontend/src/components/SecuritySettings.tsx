@@ -109,6 +109,10 @@ const SecuritySettings: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
+  const [roleModalMode, setRoleModalMode] = useState<'add' | 'edit'>('add');
+  const [editingRole, setEditingRole] = useState<UserRole | null>(null);
+  const [roleForm, setRoleForm] = useState({ name: '', description: '', permissions: '' });
+  const [roleLoading, setRoleLoading] = useState(false);
 
   const toast = useToast();
   const bgColor = useColorModeValue('white', 'gray.800');
@@ -127,6 +131,23 @@ const SecuritySettings: React.FC = () => {
       }
     }
     fetchSecurityData();
+  }, []);
+
+  // Fetch roles on mount
+  useEffect(() => {
+    async function fetchRoles() {
+      try {
+        setRoleLoading(true);
+        const roles = await api.getRoles();
+        setUserRoles(roles);
+      } catch (e: any) {
+        toast({ title: 'Error', description: e.message, status: 'error' });
+        setUserRoles([]);
+      } finally {
+        setRoleLoading(false);
+      }
+    }
+    fetchRoles();
   }, []);
 
   const handle2FAToggle = async () => {
@@ -210,6 +231,74 @@ const SecuritySettings: React.FC = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddRole = async () => {
+    if (!roleForm.name.trim()) return toast({ title: 'Name required', status: 'error' });
+    setRoleLoading(true);
+    try {
+      await api.createRole({
+        name: roleForm.name,
+        description: roleForm.description,
+        permissions: roleForm.permissions.split(',').map(p => p.trim()).filter(Boolean),
+      });
+      toast({ title: 'Role created', status: 'success' });
+      setShowRoleModal(false);
+      setRoleForm({ name: '', description: '', permissions: '' });
+      // Refresh roles
+      const roles = await api.getRoles();
+      setUserRoles(roles);
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, status: 'error' });
+    } finally {
+      setRoleLoading(false);
+    }
+  };
+
+  const handleEditRole = (role: UserRole) => {
+    setEditingRole(role);
+    setRoleForm({ name: role.name, description: role.description, permissions: role.permissions.join(', ') });
+    setRoleModalMode('edit');
+    setShowRoleModal(true);
+  };
+
+  const handleUpdateRole = async () => {
+    if (!editingRole) return;
+    setRoleLoading(true);
+    try {
+      await api.updateRole(Number(editingRole.id), {
+        name: roleForm.name,
+        description: roleForm.description,
+        permissions: roleForm.permissions.split(',').map(p => p.trim()).filter(Boolean),
+      });
+      toast({ title: 'Role updated', status: 'success' });
+      setShowRoleModal(false);
+      setEditingRole(null);
+      setRoleForm({ name: '', description: '', permissions: '' });
+      // Refresh roles
+      const roles = await api.getRoles();
+      setUserRoles(roles);
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, status: 'error' });
+    } finally {
+      setRoleLoading(false);
+    }
+  };
+
+  const handleDeleteRole = async (role: UserRole) => {
+    if (!window.confirm(`Delete role "${role.name}"?`)) return;
+    setRoleLoading(true);
+    try {
+      await api.deleteRole(Number(role.id));
+      toast({ title: 'Role deleted', status: 'info' });
+      // Refresh roles
+      const roles = await api.getRoles();
+      setUserRoles(roles);
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, status: 'error' });
+    } finally {
+      setRoleLoading(false);
     }
   };
 
@@ -396,7 +485,7 @@ const SecuritySettings: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-2 py-1">{role.description}</td>
-                    <td className="px-2 py-1">{role.userCount}</td>
+                    <td className="px-2 py-1">{role.userCount ?? '-'}</td>
                     <td className="px-2 py-1">
                       <div className="flex flex-wrap gap-1">
                         {role.permissions.slice(0, 3).map((perm) => (
@@ -409,10 +498,10 @@ const SecuritySettings: React.FC = () => {
                     </td>
                     <td className="px-2 py-1">
                       <div className="flex items-center space-x-1">
-                        <button aria-label="Edit" className="p-1 rounded hover:bg-gray-200" title="Edit Role">
+                        <button aria-label="Edit" className="p-1 rounded hover:bg-gray-200" title="Edit Role" onClick={() => handleEditRole(role)}>
                           <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536M9 13l6-6 3 3-6 6H9v-3z" /></svg>
                         </button>
-                        <button aria-label="Delete" className="p-1 rounded hover:bg-gray-200" title="Delete Role">
+                        <button aria-label="Delete" className="p-1 rounded hover:bg-gray-200" title="Delete Role" onClick={() => handleDeleteRole(role)}>
                           <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M3 6h18M9 6v12a2 2 0 002 2h2a2 2 0 002-2V6" /></svg>
                         </button>
                       </div>
@@ -506,6 +595,34 @@ const SecuritySettings: React.FC = () => {
           </div>
         </div>
       </div>
+      {showRoleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg w-full max-w-md mx-4 animate-fade-in">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+              <span className="text-lg font-bold">{roleModalMode === 'add' ? 'Add Role' : 'Edit Role'}</span>
+              <button onClick={() => { setShowRoleModal(false); setEditingRole(null); setRoleForm({ name: '', description: '', permissions: '' }); setRoleModalMode('add'); }} className="text-gray-400 hover:text-gray-600">&times;</button>
+            </div>
+            <div className="px-6 py-4 space-y-4">
+              <FormControl>
+                <FormLabel>Name</FormLabel>
+                <Input value={roleForm.name} onChange={e => setRoleForm(f => ({ ...f, name: e.target.value }))} />
+              </FormControl>
+              <FormControl>
+                <FormLabel>Description</FormLabel>
+                <Input value={roleForm.description} onChange={e => setRoleForm(f => ({ ...f, description: e.target.value }))} />
+              </FormControl>
+              <FormControl>
+                <FormLabel>Permissions (comma-separated, e.g. "jobs:read, jobs:write")</FormLabel>
+                <Input value={roleForm.permissions} onChange={e => setRoleForm(f => ({ ...f, permissions: e.target.value }))} />
+              </FormControl>
+              <div className="flex justify-end gap-2 mt-6">
+                <Button onClick={() => { setShowRoleModal(false); setEditingRole(null); setRoleForm({ name: '', description: '', permissions: '' }); setRoleModalMode('add'); }}>Cancel</Button>
+                <Button colorScheme="blue" isLoading={roleLoading} onClick={roleModalMode === 'add' ? handleAddRole : handleUpdateRole}>{roleModalMode === 'add' ? 'Add' : 'Update'}</Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

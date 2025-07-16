@@ -6,62 +6,81 @@ from datetime import datetime, timedelta
 from database import get_db
 from models import User, Lead, SystemLog
 from auth import get_current_user
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import secrets
 from config import lru_cache, CACHE_TIMEOUT_SECONDS
 import threading
 from tenant_utils import get_tenant_from_request, get_tenant_record_or_403
+from webhook_utils import send_webhook_event
+from audit import audit_log
+from security import check_permission
 
 router = APIRouter(prefix="/api/crm", tags=["crm"])
 
 class LeadCreate(BaseModel):
-    name: str
-    email: str
-    phone: Optional[str] = None
-    company: Optional[str] = None
-    website: Optional[str] = None
-    address: Optional[str] = None
-    source: str = "manual"
-    notes: Optional[str] = None
-    tags: Optional[List[str]] = None
+    name: str = Field(..., description="Lead's full name", example="Alice Smith")
+    email: str = Field(..., description="Lead's email address", example="alice@example.com")
+    phone: Optional[str] = Field(None, description="Lead's phone number", example="+1234567890")
+    company: Optional[str] = Field(None, description="Lead's company name", example="Acme Inc.")
+    website: Optional[str] = Field(None, description="Lead's website", example="https://acme.com")
+    address: Optional[str] = Field(None, description="Lead's address", example="123 Main St, City")
+    source: str = Field("manual", description="Source of the lead (manual, gmap_scrape, etc.)", example="manual")
+    notes: Optional[str] = Field(None, description="Additional notes about the lead")
+    tags: Optional[List[str]] = Field(None, description="Tags for the lead", example=["vip", "newsletter"])
 
 class LeadUpdate(BaseModel):
-    name: Optional[str] = None
-    email: Optional[str] = None
-    phone: Optional[str] = None
-    company: Optional[str] = None
-    website: Optional[str] = None
-    address: Optional[str] = None
-    status: Optional[str] = None
-    notes: Optional[str] = None
-    tags: Optional[List[str]] = None
+    name: Optional[str] = Field(None, description="Lead's full name")
+    email: Optional[str] = Field(None, description="Lead's email address")
+    phone: Optional[str] = Field(None, description="Lead's phone number")
+    company: Optional[str] = Field(None, description="Lead's company name")
+    website: Optional[str] = Field(None, description="Lead's website")
+    address: Optional[str] = Field(None, description="Lead's address")
+    status: Optional[str] = Field(None, description="Lead status (new, contacted, converted, etc.)")
+    notes: Optional[str] = Field(None, description="Additional notes about the lead")
+    tags: Optional[List[str]] = Field(None, description="Tags for the lead")
 
 class LeadResponse(BaseModel):
-    id: int
-    name: str
-    email: str
-    phone: Optional[str]
-    company: Optional[str]
-    website: Optional[str]
-    address: Optional[str]
-    source: str
-    status: str
-    notes: Optional[str]
-    tags: List[str]
-    created_at: datetime
-    updated_at: datetime
+    id: int = Field(..., description="Lead ID")
+    name: str = Field(..., description="Lead's full name")
+    email: str = Field(..., description="Lead's email address")
+    phone: Optional[str] = Field(None, description="Lead's phone number")
+    company: Optional[str] = Field(None, description="Lead's company name")
+    website: Optional[str] = Field(None, description="Lead's website")
+    address: Optional[str] = Field(None, description="Lead's address")
+    source: str = Field(..., description="Source of the lead")
+    status: str = Field(..., description="Lead status")
+    notes: Optional[str] = Field(None, description="Additional notes")
+    tags: List[str] = Field([], description="Tags for the lead")
+    created_at: datetime = Field(..., description="Creation timestamp")
+    updated_at: datetime = Field(..., description="Last update timestamp")
+
+class BulkDeleteLeadsRequest(BaseModel):
+    lead_ids: List[int] = Field(..., description="List of lead IDs to delete.", example=[1,2,3])
+class BulkAddLeadsRequest(BaseModel):
+    leads: List[LeadCreate] = Field(..., description="List of leads to add.")
+class BulkDeleteLeadsResponse(BaseModel):
+    deleted: int = Field(..., description="Number of leads deleted.")
+class BulkAddLeadsResponse(BaseModel):
+    added: int = Field(..., description="Number of leads added.")
+
+class DeleteLeadResponse(BaseModel):
+    message: str
 
 # Thread-safe cache for per-user stats
 _stats_cache = {}
 _stats_cache_lock = threading.Lock()
 
-@router.post("/leads", response_model=LeadResponse)
+@router.post("/leads", response_model=LeadResponse, summary="Create a new CRM lead", description="Create a new lead in the CRM for the authenticated user.")
 async def create_lead(
-    lead_data: LeadCreate,
+    lead_data: LeadCreate = Body(..., description="Lead data to create."),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Create a new lead"""
+    """Create a new lead in the CRM for the authenticated user.
+
+- **lead_data**: LeadCreate object.
+- **Returns**: LeadResponse.
+- **Errors**: 400/500 on failure."""
     lead = Lead(
         user_id=current_user.id,
         name=lead_data.name,
@@ -90,6 +109,26 @@ async def create_lead(
     db.add(log)
     db.commit()
     
+    # Trigger webhook for lead creation
+    send_webhook_event(
+        event="lead.created",
+        payload={
+            "lead_id": lead.id,
+            "name": lead.name,
+            "email": lead.email,
+            "phone": lead.phone,
+            "company": lead.company,
+            "website": lead.website,
+            "address": lead.address,
+            "source": lead.source,
+            "status": lead.status,
+            "user_id": lead.user_id,
+            "created_at": str(lead.created_at)
+        },
+        user_id=lead.user_id,
+        db=db
+    )
+    
     return LeadResponse(
         id=lead.id,
         name=lead.name,
@@ -106,17 +145,21 @@ async def create_lead(
         updated_at=lead.updated_at
     )
 
-@router.get("/leads", response_model=List[LeadResponse])
+@router.get("/leads", response_model=List[LeadResponse], summary="List CRM leads", description="Get all leads for the authenticated user, with filtering and pagination.")
 async def get_leads(
-    status: Optional[str] = Query(None),
-    source: Optional[str] = Query(None),
-    search: Optional[str] = Query(None),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    status: Optional[str] = Query(None, description="Filter by lead status (new, contacted, etc.)"),
+    source: Optional[str] = Query(None, description="Filter by lead source (manual, gmap_scrape, etc.)"),
+    search: Optional[str] = Query(None, description="Search by name, email, or company"),
+    page: int = Query(1, ge=1, description="Page number for pagination"),
+    page_size: int = Query(20, ge=1, le=100, description="Number of leads per page"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get user's leads with filtering and pagination"""
+    """Get all leads for the authenticated user, with filtering and pagination.
+
+- **status/source/search**: Optional filters.
+- **page/page_size**: Pagination.
+- **Returns**: List of LeadResponse."""
     query = db.query(Lead).filter(Lead.user_id == current_user.id)
     
     if status:
@@ -155,13 +198,17 @@ async def get_leads(
     
     return result
 
-@router.get("/leads/{lead_id}", response_model=LeadResponse)
+@router.get("/leads/{lead_id}", response_model=LeadResponse, summary="Get a CRM lead by ID", description="Get a specific lead by its ID for the authenticated user.")
 async def get_lead(
-    lead_id: int,
+    lead_id: int = Field(..., description="ID of the lead to retrieve."),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get a specific lead"""
+    """Get a specific lead by its ID for the authenticated user.
+
+- **lead_id**: Lead ID.
+- **Returns**: LeadResponse.
+- **Errors**: 404 if not found."""
     lead = db.query(Lead).filter(Lead.id == lead_id, Lead.user_id == current_user.id).first()
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
@@ -182,14 +229,19 @@ async def get_lead(
         updated_at=lead.updated_at
     )
 
-@router.put("/leads/{lead_id}", response_model=LeadResponse)
+@router.put("/leads/{lead_id}", response_model=LeadResponse, summary="Update a CRM lead", description="Update a lead in the CRM by its ID for the authenticated user.")
 async def update_lead(
-    lead_id: int,
-    lead_data: LeadUpdate,
+    lead_id: int = Field(..., description="ID of the lead to update."),
+    lead_data: LeadUpdate = Body(..., description="Fields to update for the lead."),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Update a lead"""
+    """Update a lead in the CRM by its ID for the authenticated user.
+
+- **lead_id**: Lead ID.
+- **lead_data**: Fields to update.
+- **Returns**: LeadResponse.
+- **Errors**: 404 if not found."""
     lead = db.query(Lead).filter(Lead.id == lead_id, Lead.user_id == current_user.id).first()
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
@@ -234,13 +286,16 @@ async def update_lead(
         updated_at=lead.updated_at
     )
 
-@router.delete("/leads/{lead_id}")
+@router.delete("/leads/{lead_id}", response_model=DeleteLeadResponse, summary="Delete a CRM lead", description="Delete a lead in the CRM by its ID for the authenticated user.")
+@audit_log(action="delete_lead", target_type="lead", target_id_param="lead_id")
 async def delete_lead(
-    lead_id: int,
+    lead_id: int = Field(..., description="ID of the lead to delete."),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Delete a lead"""
+    # RBAC: Only allow if user has leads:delete permission
+    if not check_permission(current_user, "leads", "delete", db):
+        raise HTTPException(status_code=403, detail="Insufficient permissions to delete leads")
     lead = db.query(Lead).filter(Lead.id == lead_id, Lead.user_id == current_user.id).first()
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
@@ -248,7 +303,7 @@ async def delete_lead(
     db.delete(lead)
     db.commit()
     
-    return {"message": "Lead deleted successfully"}
+    return DeleteLeadResponse(message="Lead deleted successfully")
 
 @router.get("/stats")
 async def get_crm_stats(
@@ -286,13 +341,16 @@ async def get_crm_stats(
         _stats_cache[cache_key] = {"timestamp": now, "data": data}
     return data
 
-@router.post("/leads/import")
+@router.post("/leads/import", summary="Import leads", description="Import multiple leads in bulk.", response_model=List[LeadResponse])
 async def import_leads(
-    leads_data: List[LeadCreate],
+    leads_data: List[LeadCreate] = Body(..., description="List of leads to import."),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Import multiple leads"""
+    """Import multiple leads in bulk.
+
+- **leads_data**: List of LeadCreate.
+- **Returns**: List of LeadResponse."""
     created_leads = []
     
     for lead_data in leads_data:
@@ -313,32 +371,68 @@ async def import_leads(
     
     db.commit()
     
-    return {
-        "message": f"Successfully imported {len(created_leads)} leads",
-        "imported_count": len(created_leads)
-    }
+    return [
+        LeadResponse(
+            id=lead.id,
+            name=lead.name,
+            email=lead.email,
+            phone=lead.phone,
+            company=lead.company,
+            website=lead.website,
+            address=lead.address,
+            source=lead.source,
+            status=lead.status,
+            notes=lead.notes,
+            tags=json.loads(lead.tags) if lead.tags else [],
+            created_at=lead.created_at,
+            updated_at=lead.updated_at
+        ) for lead in created_leads
+    ]
 
-@router.post("/leads/bulk-delete")
-def bulk_delete_leads(lead_ids: list = Body(...), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    leads = db.query(Lead).filter(Lead.id.in_(lead_ids), Lead.user_id == user.id).all()
+@router.post("/leads/bulk-delete", summary="Bulk delete leads", description="Delete multiple leads by their IDs.", response_model=BulkDeleteLeadsResponse)
+def bulk_delete_leads(req: BulkDeleteLeadsRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Delete multiple leads by their IDs.
+
+- **lead_ids**: List of lead IDs.
+- **Returns**: Number of leads deleted."""
+    leads = db.query(Lead).filter(Lead.id.in_(req.lead_ids), Lead.user_id == user.id).all()
     count = len(leads)
     for lead in leads:
         db.delete(lead)
     db.commit()
     return {"deleted": count}
 
-@router.post("/leads/bulk-add")
-def bulk_add_leads(leads: list = Body(...), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    added = 0
-    for lead_data in leads:
-        lead = Lead(user_id=user.id, **lead_data)
-        db.add(lead)
-        added += 1
-    db.commit()
-    return {"added": added}
+@router.post("/leads/bulk-add", summary="Bulk add leads", description="Add multiple leads in bulk.", response_model=BulkAddLeadsResponse)
+def bulk_add_leads(req: BulkAddLeadsRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Add multiple leads in bulk.
 
-@router.post("/leads/{lead_id}/enrich")
-def enrich_lead(lead_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+- **leads**: List of LeadCreate.
+- **Returns**: Number of leads added."""
+    count = 0
+    for lead_data in req.leads:
+        lead = Lead(
+            user_id=user.id,
+            name=lead_data.name,
+            email=lead_data.email,
+            phone=lead_data.phone,
+            company=lead_data.company,
+            website=lead_data.website,
+            address=lead_data.address,
+            source=lead_data.source,
+            notes=lead_data.notes,
+            tags=json.dumps(lead_data.tags) if lead_data.tags else None
+        )
+        db.add(lead)
+        count += 1
+    db.commit()
+    return {"added": count}
+
+@router.post("/leads/{lead_id}/enrich", summary="Enrich a lead", description="Enrich a lead with additional data from external sources.")
+def enrich_lead(lead_id: int = Field(..., description="ID of the lead to enrich."), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Enrich a lead with additional data from external sources.
+
+- **lead_id**: Lead ID.
+- **Returns**: Enriched lead data."""
     lead = db.query(Lead).filter(Lead.id == lead_id, Lead.user_id == user.id).first()
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
@@ -348,8 +442,12 @@ def enrich_lead(lead_id: int, db: Session = Depends(get_db), user: User = Depend
     db.refresh(lead)
     return lead
 
-@router.post("/connect")
-def connect_crm(provider: str = Body(...), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+@router.post("/connect", summary="Connect CRM provider", description="Connect to an external CRM provider.")
+def connect_crm(provider: str = Body(..., description="CRM provider name (e.g., hubspot, salesforce)"), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Connect to an external CRM provider.
+
+- **provider**: CRM provider name.
+- **Returns**: Status message."""
     # For now, just store provider; real implementation would redirect to OAuth
     if provider not in ["hubspot", "salesforce", "mailchimp"]:
         raise HTTPException(status_code=400, detail="Unsupported provider")
@@ -358,8 +456,11 @@ def connect_crm(provider: str = Body(...), db: Session = Depends(get_db), user: 
     # In real implementation, redirect to provider's OAuth URL
     return {"status": "oauth_required", "provider": provider, "oauth_url": f"/api/crm/oauth/{provider}"}
 
-@router.get("/status")
+@router.get("/status", summary="Get CRM connection status", description="Get the current CRM connection status for the user.")
 def crm_status(user: User = Depends(get_current_user)):
+    """Get the current CRM connection status for the user.
+
+- **Returns**: Status and provider info."""
     return {
         "crm_provider": user.crm_provider,
         "crm_connected": bool(user.crm_access_token),
@@ -367,8 +468,11 @@ def crm_status(user: User = Depends(get_current_user)):
         "email_connected": bool(user.email_access_token)
     }
 
-@router.post("/disconnect")
+@router.post("/disconnect", summary="Disconnect CRM provider", description="Disconnect from the external CRM provider.")
 def disconnect_crm(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Disconnect from the external CRM provider.
+
+- **Returns**: Status message."""
     user.crm_provider = None
     user.crm_access_token = None
     user.crm_refresh_token = None
@@ -387,8 +491,12 @@ def oauth_callback(provider: str, request: Request, db: Session = Depends(get_db
     # db.commit()
     return {"status": "oauth_callback_stub", "provider": provider}
 
-@router.post("/leads/{lead_id}/push")
-def push_lead_to_crm(lead_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+@router.post("/leads/{lead_id}/push", summary="Push lead to CRM", description="Push a lead to the connected external CRM provider.")
+def push_lead_to_crm(lead_id: int = Field(..., description="ID of the lead to push."), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Push a lead to the connected external CRM provider.
+
+- **lead_id**: Lead ID.
+- **Returns**: Status message."""
     lead = db.query(Lead).filter(Lead.id == lead_id, Lead.user_id == user.id).first()
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
@@ -397,8 +505,12 @@ def push_lead_to_crm(lead_id: int, db: Session = Depends(get_db), user: User = D
     db.commit()
     return {"status": "pushed", "lead_id": lead_id}
 
-@router.post("/leads/{lead_id}/share")
-def share_lead(lead_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@router.post("/leads/{lead_id}/share", summary="Share a lead", description="Generate a shareable link for a lead.")
+def share_lead(lead_id: int = Field(..., description="ID of the lead to share."), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Generate a shareable link for a lead.
+
+- **lead_id**: Lead ID.
+- **Returns**: Shareable URL."""
     lead = db.query(Lead).filter(Lead.id == lead_id, Lead.user_id == current_user.id).first()
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
@@ -409,8 +521,12 @@ def share_lead(lead_id: int, db: Session = Depends(get_db), current_user: User =
     db.commit()
     return {"share_token": token, "url": f"/api/crm/leads/shared/{token}"}
 
-@router.post("/leads/{lead_id}/unshare")
-def unshare_lead(lead_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@router.post("/leads/{lead_id}/unshare", summary="Unshare a lead", description="Disable the shareable link for a lead.")
+def unshare_lead(lead_id: int = Field(..., description="ID of the lead to unshare."), db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Disable the shareable link for a lead.
+
+- **lead_id**: Lead ID.
+- **Returns**: Status message."""
     lead = db.query(Lead).filter(Lead.id == lead_id, Lead.user_id == current_user.id).first()
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
@@ -418,8 +534,12 @@ def unshare_lead(lead_id: int, db: Session = Depends(get_db), current_user: User
     db.commit()
     return {"status": "unshared"}
 
-@router.get("/leads/shared/{share_token}")
-def get_shared_lead(share_token: str, db: Session = Depends(get_db)):
+@router.get("/leads/shared/{share_token}", summary="Get shared lead", description="Get a shared lead by its share token.")
+def get_shared_lead(share_token: str = Field(..., description="Share token for the lead."), db: Session = Depends(get_db)):
+    """Get a shared lead by its share token.
+
+- **share_token**: Token from the shareable link.
+- **Returns**: Lead details if valid."""
     lead = db.query(Lead).filter(Lead.share_token == share_token).first()
     if not lead:
         raise HTTPException(status_code=404, detail="Shared lead not found")
