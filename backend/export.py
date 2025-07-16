@@ -6,15 +6,17 @@ from models import User, Job, Lead
 from database import get_db
 from auth import get_current_user
 from datetime import datetime
+
 import csv
 import io
 import json
 import xlsxwriter
+import enum
 # PDF export can be added with reportlab or similar if needed
 
 router = APIRouter(prefix="/api/export", tags=["export"])
 
-class ExportFormat(str):
+class ExportFormat(str, enum.Enum):
     CSV = "csv"
     JSON = "json"
     XLSX = "xlsx"

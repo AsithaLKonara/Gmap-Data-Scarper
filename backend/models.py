@@ -380,4 +380,52 @@ class WhatsAppAutomation(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     user = relationship('User')
-    template = relationship('WhatsAppTemplate') 
+    template = relationship('WhatsAppTemplate')
+
+class WhatsAppWorkflow(Base):
+    __tablename__ = 'whatsapp_workflows'
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    trigger_type = Column(String(50), nullable=False)  # lead_created, lead_qualified, manual, scheduled
+    trigger_conditions = Column(Text, nullable=True)  # JSON conditions
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    user = relationship('User')
+    steps = relationship('WhatsAppWorkflowStep', back_populates='workflow', cascade='all, delete-orphan')
+
+class WhatsAppWorkflowStep(Base):
+    __tablename__ = 'whatsapp_workflow_steps'
+    id = Column(Integer, primary_key=True, index=True)
+    workflow_id = Column(Integer, ForeignKey('whatsapp_workflows.id'), nullable=False)
+    name = Column(String(255), nullable=False)
+    step_type = Column(String(50), nullable=False)  # message, delay, condition, action
+    content = Column(Text, nullable=True)  # Message content or action description
+    delay_minutes = Column(Integer, default=0)
+    conditions = Column(Text, nullable=True)  # JSON conditions for conditional steps
+    actions = Column(Text, nullable=True)  # JSON array of actions
+    order = Column(Integer, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    workflow = relationship('WhatsAppWorkflow', back_populates='steps')
+
+class WhatsAppWorkflowTrigger(Base):
+    __tablename__ = 'whatsapp_workflow_triggers'
+    id = Column(Integer, primary_key=True, index=True)
+    workflow_id = Column(Integer, ForeignKey('whatsapp_workflows.id'), nullable=False)
+    lead_id = Column(Integer, ForeignKey('leads.id'), nullable=True)
+    social_lead_id = Column(Integer, ForeignKey('social_media_leads.id'), nullable=True)
+    trigger_data = Column(Text, nullable=True)  # JSON additional trigger data
+    status = Column(String(50), default='pending')  # pending, executing, completed, failed
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    error_message = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    workflow = relationship('WhatsAppWorkflow')
+    lead = relationship('Lead')
+    social_lead = relationship('SocialMediaLead') 

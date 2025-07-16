@@ -55,7 +55,7 @@ services:
       MYSQL_USER: ${MYSQL_USER:-leadtap}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-leadtap}
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - gmap-data-scraper_mysql_data:/var/lib/mysql
     healthcheck:

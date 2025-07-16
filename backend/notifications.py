@@ -18,6 +18,7 @@ import aiohttp
 from tenant_utils import get_tenant_record_or_403
 from fastapi import Request
 from tenant_utils import get_tenant_from_request
+from realtime import broadcast_notification
 
 logger = logging.getLogger("notifications")
 
@@ -450,6 +451,15 @@ def create_notification(data: NotificationIn, db: Session = Depends(get_db), use
     db.add(notif)
     db.commit()
     db.refresh(notif)
+    # Broadcast in real time
+    import asyncio
+    asyncio.create_task(broadcast_notification(user.id, {
+        "id": notif.id,
+        "type": notif.type,
+        "message": notif.message,
+        "read": notif.read,
+        "created_at": notif.created_at.isoformat()
+    }))
     return notif
 
 @router.get("/webhook")
