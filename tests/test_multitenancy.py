@@ -2,7 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from backend.main import app
 from backend.database import SessionLocal
-from backend.models import Tenant, User, Job
+from backend.models import Tenant, Users, Job
 
 client = TestClient(app)
 
@@ -13,8 +13,8 @@ def setup_tenants_and_users(db):
     db.commit()
     db.refresh(t1)
     db.refresh(t2)
-    u1 = User(email='user1@t1.com', password='x', tenant_id=t1.id)
-    u2 = User(email='user2@t2.com', password='x', tenant_id=t2.id)
+    u1 = Users(email='user1@t1.com', password='x', tenant_id=t1.id)
+    u2 = Users(email='user2@t2.com', password='x', tenant_id=t2.id)
     db.add_all([u1, u2])
     db.commit()
     db.refresh(u1)

@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Body, Request
+from fastapi import APIRouter, Depends, HTTPException, Body, Request, Path
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
-from models import User, AuditLog, Role, Permission, UserRole
+from models import Users, AuditLogs, UserRole
 from database import get_db
 from auth import get_current_user
 import pyotp
@@ -103,7 +103,7 @@ def generate_backup_codes(count: int = 10) -> List[str]:
         codes.append(code)
     return codes
 
-def verify_backup_code(user: User, code: str, db: Session) -> bool:
+def verify_backup_code(user: Users, code: str, db: Session) -> bool:
     """Verify a backup code and mark it as used"""
     if not user.backup_codes:
         return False
@@ -129,7 +129,7 @@ def log_security_event(
     """Log security events for audit trail"""
     try:
         if db:
-            audit_log = AuditLog(
+            audit_log = AuditLogs(
                 user_id=user_id,
                 action=action,
                 resource=resource,
@@ -144,7 +144,7 @@ def log_security_event(
     except Exception as e:
         logger.error(f"Failed to log security event: {e}")
 
-def check_permission(user: User, resource: str, action: str, db: Session) -> bool:
+def check_permission(user: Users, resource: str, action: str, db: Session) -> bool:
     """Check if user has permission for specific resource and action"""
     # Admin users have all permissions
     if user.plan == "business" and user.is_admin:
@@ -154,7 +154,7 @@ def check_permission(user: User, resource: str, action: str, db: Session) -> boo
     user_roles = db.query(UserRole).filter(UserRole.user_id == user.id).all()
     
     for user_role in user_roles:
-        role = db.query(Role).filter(Role.id == user_role.role_id).first()
+        role = db.query(Roles).filter(Roles.id == user_role.role_id).first()
         if role:
             permissions = json.loads(role.permissions) if role.permissions else []
             if f"{resource}:{action}" in permissions or f"{resource}:*" in permissions:
@@ -178,7 +178,7 @@ def require_permission(resource: str, action: str):
             user = None
             db = None
             for arg in args:
-                if isinstance(arg, User):
+                if isinstance(arg, Users):
                     user = arg
                 elif hasattr(arg, 'query'):  # Session object
                     db = arg
@@ -204,7 +204,7 @@ def require_permission(resource: str, action: str):
 def setup_2fa(
     request: Request,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Setup 2FA with QR code and backup codes."""
     if user.two_fa_enabled:
@@ -249,7 +249,7 @@ def verify_and_enable_2fa(
     code: str = Body(..., embed=True, description="TOTP or backup code to verify."),
     request: Request = None,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Verify 2FA code and enable 2FA for the user."""
     if not user.two_fa_secret:
@@ -288,7 +288,7 @@ def verify_2fa_login(
     code: str = Body(..., embed=True, description="TOTP or backup code to verify."),
     request: Request = None,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Verify 2FA code during login."""
     if not user.two_fa_enabled:
@@ -331,7 +331,7 @@ def verify_2fa_login(
 def disable_2fa(
     request: Request = None,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Disable 2FA for the user."""
     if not user.two_fa_enabled:
@@ -357,7 +357,7 @@ def disable_2fa(
 def regenerate_backup_codes(
     request: Request = None,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Regenerate backup codes for 2FA."""
     if not user.two_fa_enabled:
@@ -380,12 +380,12 @@ def regenerate_backup_codes(
 
 # RBAC endpoints
 @router.get("/roles", response_model=List[RoleOut], summary="List roles", description="Get all available roles.")
-def get_roles(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def get_roles(db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     """Get all available roles."""
     if not check_permission(user, "roles", "read", db):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
     
-    roles = db.query(Role).all()
+    roles = db.query(Roles).all()
     return [
         {
             "id": role.id,
@@ -401,13 +401,13 @@ def get_roles(db: Session = Depends(get_db), user: User = Depends(get_current_us
 def create_role(
     role_data: RoleCreate,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Create a new role."""
     if not check_permission(user, "roles", "write", db):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
     
-    role = Role(
+    role = Roles(
         name=role_data.name,
         description=role_data.description,
         permissions=json.dumps(role_data.permissions)
@@ -429,15 +429,15 @@ def create_role(
 @router.put("/roles/{role_id}", response_model=RoleOut, summary="Update role", description="Update a role by ID.")
 @audit_log(action="update_role", target_type="role", target_id_param="role_id")
 def update_role(
-    role_id: int = Field(..., description="ID of the role."),
+    role_id: int = Path(..., description="ID of the role."),
     role_data: RoleCreate = Body(...),
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Update a role by ID."""
     if not check_permission(user, "roles", "write", db):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
-    role = db.query(Role).filter(Role.id == role_id).first()
+    role = db.query(Roles).filter(Roles.id == role_id).first()
     if not role:
         raise HTTPException(status_code=404, detail="Role not found")
     role.name = role_data.name
@@ -456,14 +456,14 @@ def update_role(
 @router.delete("/roles/{role_id}", summary="Delete role", description="Delete a role by ID.")
 @audit_log(action="delete_role", target_type="role", target_id_param="role_id")
 def delete_role(
-    role_id: int = Field(..., description="ID of the role."),
+    role_id: int = Path(..., description="ID of the role."),
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Delete a role by ID."""
     if not check_permission(user, "roles", "delete", db):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
-    role = db.query(Role).filter(Role.id == role_id).first()
+    role = db.query(Roles).filter(Roles.id == role_id).first()
     if not role:
         raise HTTPException(status_code=404, detail="Role not found")
     db.delete(role)
@@ -480,20 +480,20 @@ def delete_role(
 @router.post("/users/{user_id}/roles/{role_id}", summary="Assign role to user", description="Assign a role to a user by user ID and role ID.")
 @audit_log(action="assign_role", target_type="user", target_id_param="user_id")
 def assign_role(
-    user_id: int = Field(..., description="ID of the user."),
-    role_id: int = Field(..., description="ID of the role."),
+    user_id: int = Path(..., description="ID of the user."),
+    role_id: int = Path(..., description="ID of the role."),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: Users = Depends(get_current_user)
 ):
     """Assign a role to a user by user ID and role ID."""
     if not check_permission(current_user, "users", "write", db):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
     
-    target_user = db.query(User).filter(User.id == user_id).first()
+    target_user = db.query(Users).filter(Users.id == user_id).first()
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    role = db.query(Role).filter(Role.id == role_id).first()
+    role = db.query(Roles).filter(Roles.id == role_id).first()
     if not role:
         raise HTTPException(status_code=404, detail="Role not found")
     
@@ -523,10 +523,10 @@ def assign_role(
 @router.delete("/users/{user_id}/roles/{role_id}", summary="Remove role from user", description="Remove a role from a user by user ID and role ID.")
 @audit_log(action="remove_role", target_type="user", target_id_param="user_id")
 def remove_role_from_user(
-    user_id: int = Field(..., description="ID of the user."),
-    role_id: int = Field(..., description="ID of the role."),
+    user_id: int = Path(..., description="ID of the user."),
+    role_id: int = Path(..., description="ID of the role."),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: Users = Depends(get_current_user)
 ):
     """Remove a role from a user by user ID and role ID."""
     if not check_permission(current_user, "users", "write", db):
@@ -554,23 +554,23 @@ def get_security_audit_logs(
     resource: Optional[str] = None,
     user_id: Optional[int] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: Users = Depends(get_current_user)
 ):
     """Get a paginated list of security audit logs with optional filters."""
     if not check_permission(current_user, "audit", "read", db):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
     
-    query = db.query(AuditLog)
+    query = db.query(AuditLogs)
     
     if action:
-        query = query.filter(AuditLog.action == action)
+        query = query.filter(AuditLogs.action == action)
     if resource:
-        query = query.filter(AuditLog.resource == resource)
+        query = query.filter(AuditLogs.resource == resource)
     if user_id:
-        query = query.filter(AuditLog.user_id == user_id)
+        query = query.filter(AuditLogs.user_id == user_id)
     
     total = query.count()
-    logs = query.order_by(AuditLog.timestamp.desc()).offset((page - 1) * page_size).limit(page_size).all()
+    logs = query.order_by(AuditLogs.timestamp.desc()).offset((page - 1) * page_size).limit(page_size).all()
     
     return {
         "logs": [
@@ -594,7 +594,7 @@ def get_security_audit_logs(
 @router.get("/security-status", response_model=SecurityStatusResponse, summary="Get security status", description="Get the current user's security status, roles, permissions, and security score.")
 def get_security_status(
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Get the current user's security status, roles, permissions, and security score."""
     return {
@@ -608,7 +608,7 @@ def get_security_status(
         "security_score": calculate_security_score(user)
     }
 
-def calculate_security_score(user: User) -> int:
+def calculate_security_score(user: Users) -> int:
     """Calculate user's security score (0-100)"""
     score = 0
     
@@ -638,28 +638,4 @@ def calculate_security_score(user: User) -> int:
     
     return min(score, 100)
 
-# Security middleware for logging all requests
-@router.middleware("http")
-async def security_middleware(request: Request, call_next):
-    """Middleware to log security-relevant requests"""
-    response = await call_next(request)
-    
-    # Log security-relevant actions
-    if request.url.path.startswith("/api/security/"):
-        # Extract user info if available
-        user_id = None
-        try:
-            # This is a simplified version - in practice, you'd extract from JWT
-            pass
-        except:
-            pass
-        
-        log_security_event(
-            user_id=user_id,
-            action="security_access",
-            resource=request.url.path,
-            ip_address=request.client.host,
-            user_agent=request.headers.get("user-agent")
-        )
-    
-    return response 
+# Removed @router.middleware('http') and its function, as APIRouter does not support middleware. If needed, move to main.py as app middleware. 

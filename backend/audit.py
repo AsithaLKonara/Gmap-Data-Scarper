@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Body, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from typing import List, Optional
-from models import AuditLog, User
+from models import AuditLogs, Users
 from database import get_db
 from auth import get_current_user
 from functools import wraps
@@ -41,7 +41,7 @@ def audit_log(action: str, target_type: str = None, target_id_param: str = None,
             result = await func(*args, **kwargs) if callable(getattr(func, '__await__', None)) else func(*args, **kwargs)
             # Log the action
             if db and user:
-                log = AuditLog(
+                log = AuditLogs(
                     user_id=user.id,
                     action=action,
                     target_type=target_type,
@@ -57,7 +57,7 @@ def audit_log(action: str, target_type: str = None, target_id_param: str = None,
 # Example usage on a sensitive endpoint
 # @router.delete("/example/{item_id}")
 # @audit_log(action="delete_example", target_type="example", target_id_param="item_id")
-# def delete_example(item_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+# def delete_example(item_id: int, db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
 #     ...
 
 @router.post(
@@ -70,10 +70,10 @@ def audit_log(action: str, target_type: str = None, target_id_param: str = None,
 def log_action(
     data: AuditLogIn,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Log a user action for auditing purposes."""
-    log = AuditLog(user_id=user.id, action=data.action, target_type=data.target_type, target_id=data.target_id, details=data.details)
+    log = AuditLogs(user_id=user.id, action=data.action, target_type=data.target_type, target_id=data.target_id, details=data.details)
     db.add(log)
     db.commit()
     return {"status": "logged"}
@@ -87,7 +87,7 @@ def log_action(
 )
 def get_my_logs(
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Retrieve the audit log entries for the current user."""
-    return db.query(AuditLog).filter(AuditLog.user_id == user.id).order_by(AuditLog.timestamp.desc()).all() 
+    return db.query(AuditLogs).filter(AuditLogs.user_id == user.id).order_by(AuditLogs.timestamp.desc()).all() 

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
-from models import User, Lead, LeadScore
+from models import Users, Leads, LeadScores
 from database import get_db
 from auth import get_current_user
 import json
@@ -131,7 +131,7 @@ def validate_email(email: str) -> Dict[str, float]:
     else:
         return {"score": 0.8, "reason": "business_domain"}
 
-def calculate_company_score(lead: Lead) -> float:
+def calculate_company_score(lead: Leads) -> float:
     """Calculate company information score"""
     score = 0.0
     factors = 0
@@ -169,7 +169,7 @@ def calculate_source_score(source: str) -> float:
     
     return source_scores.get(source.lower(), 0.5)
 
-def calculate_engagement_score(lead: Lead) -> float:
+def calculate_engagement_score(lead: Leads) -> float:
     """Calculate engagement potential score"""
     score = 0.0
     factors = 0
@@ -195,22 +195,22 @@ def calculate_engagement_score(lead: Lead) -> float:
 def score_lead(
     score_request: LeadScoreRequest,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Calculate or recalculate the score for a single lead."""
     
     # Get the lead
-    lead = db.query(Lead).filter(
-        Lead.id == score_request.lead_id,
-        Lead.user_id == user.id
+    lead = db.query(Leads).filter(
+        Leads.id == score_request.lead_id,
+        Leads.user_id == user.id
     ).first()
     
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
     
     # Check if score already exists and recalculate is not requested
-    existing_score = db.query(LeadScore).filter(
-        LeadScore.lead_id == score_request.lead_id
+    existing_score = db.query(LeadScores).filter(
+        LeadScores.lead_id == score_request.lead_id
     ).first()
     
     if existing_score and not score_request.recalculate:
@@ -297,7 +297,7 @@ def score_lead(
         existing_score.conversion_probability = conversion_probability
         existing_score.updated_at = datetime.utcnow()
     else:
-        new_score = LeadScore(
+        new_score = LeadScores(
             lead_id=lead.id,
             overall_score=overall_score,
             factors=json.dumps(factors),
@@ -324,21 +324,21 @@ def score_lead(
 def get_lead_score(
     lead_id: int = Field(..., description="ID of the lead to retrieve score for."),
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Get the score for a specific lead by ID."""
     
     # Verify lead belongs to user
-    lead = db.query(Lead).filter(
-        Lead.id == lead_id,
-        Lead.user_id == user.id
+    lead = db.query(Leads).filter(
+        Leads.id == lead_id,
+        Leads.user_id == user.id
     ).first()
     
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
     
     # Get score
-    score = db.query(LeadScore).filter(LeadScore.lead_id == lead_id).first()
+    score = db.query(LeadScores).filter(LeadScores.lead_id == lead_id).first()
     
     if not score:
         raise HTTPException(status_code=404, detail="Lead score not found")
@@ -357,12 +357,12 @@ def get_lead_score(
 @router.get("/stats", response_model=ScoringStatsResponse, summary="Get scoring statistics", description="Get statistics about lead scoring for the current user.")
 def get_scoring_stats(
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Get statistics about lead scoring for the current user."""
     
     # Get all scored leads for user
-    scored_leads = db.query(LeadScore).join(Lead).filter(Lead.user_id == user.id).all()
+    scored_leads = db.query(LeadScores).join(Leads).filter(Leads.user_id == user.id).all()
     
     if not scored_leads:
         return {
@@ -411,7 +411,7 @@ def get_scoring_stats(
 def bulk_score_leads(
     bulk_request: BulkScoreRequest,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Bulk score multiple leads by their IDs."""
     

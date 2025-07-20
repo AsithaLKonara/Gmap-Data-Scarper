@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
-from models import User, OnboardingStep, DemoProject
+from models import Users, OnboardingSteps, DemoProjects
 from database import get_db
 from auth import get_current_user
 import json
@@ -46,10 +46,10 @@ class OnboardingStepStatusResponse(BaseModel):
 @router.get("/progress", response_model=OnboardingProgress, summary="Get onboarding progress", description="Get the current user's onboarding progress.")
 def get_onboarding_progress(
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Get user's onboarding progress."""
-    steps = db.query(OnboardingStep).filter(OnboardingStep.user_id == user.id).all()
+    steps = db.query(OnboardingSteps).filter(OnboardingSteps.user_id == user.id).all()
     
     if not steps:
         # Initialize onboarding steps for new user
@@ -64,7 +64,7 @@ def get_onboarding_progress(
         ]
         
         for step_data in default_steps:
-            step = OnboardingStep(
+            step = OnboardingSteps(
                 user_id=user.id,
                 step_id=step_data["step_id"],
                 name=step_data["name"],
@@ -75,7 +75,7 @@ def get_onboarding_progress(
             db.add(step)
         
         db.commit()
-        steps = db.query(OnboardingStep).filter(OnboardingStep.user_id == user.id).all()
+        steps = db.query(OnboardingSteps).filter(OnboardingSteps.user_id == user.id).all()
     
     completed_steps = [step.step_id for step in steps if step.completed]
     total_steps = len(steps)
@@ -105,12 +105,12 @@ def get_onboarding_progress(
 def update_onboarding_step(
     step_update: OnboardingStepUpdate,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Update onboarding step completion status."""
-    step = db.query(OnboardingStep).filter(
-        OnboardingStep.user_id == user.id,
-        OnboardingStep.step_id == step_update.step_id
+    step = db.query(OnboardingSteps).filter(
+        OnboardingSteps.user_id == user.id,
+        OnboardingSteps.step_id == step_update.step_id
     ).first()
     
     if not step:
@@ -129,10 +129,10 @@ def update_onboarding_step(
 def create_demo_project(
     project_data: DemoProjectCreate,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Create a demo project for onboarding."""
-    demo_project = DemoProject(
+    demo_project = DemoProjects(
         user_id=user.id,
         name=project_data.name,
         description=project_data.description,
@@ -146,9 +146,9 @@ def create_demo_project(
     db.refresh(demo_project)
     
     # Mark demo project step as completed
-    step = db.query(OnboardingStep).filter(
-        OnboardingStep.user_id == user.id,
-        OnboardingStep.step_id == "demo_project"
+    step = db.query(OnboardingSteps).filter(
+        OnboardingSteps.user_id == user.id,
+        OnboardingSteps.step_id == "demo_project"
     ).first()
     
     if step:
@@ -169,12 +169,12 @@ def create_demo_project(
 @router.get("/demo-projects", response_model=List[DemoProjectOut], summary="List demo projects", description="Get all demo projects for the current user.")
 def get_demo_projects(
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Get user's demo projects."""
-    projects = db.query(DemoProject).filter(
-        DemoProject.user_id == user.id,
-        DemoProject.is_demo == True
+    projects = db.query(DemoProjects).filter(
+        DemoProjects.user_id == user.id,
+        DemoProjects.is_demo == True
     ).all()
     
     return [
@@ -192,7 +192,7 @@ def get_demo_projects(
 @router.get("/suggestions", summary="Get onboarding suggestions", description="Get personalized onboarding suggestions based on user progress.")
 def get_onboarding_suggestions(
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Get personalized onboarding suggestions based on user progress."""
     progress = get_onboarding_progress(db, user)
@@ -242,11 +242,11 @@ def get_onboarding_suggestions(
 @router.post("/complete", summary="Complete onboarding", description="Mark onboarding as complete for the current user.")
 def complete_onboarding(
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Mark onboarding as complete for the current user."""
     # Mark all steps as completed
-    steps = db.query(OnboardingStep).filter(OnboardingStep.user_id == user.id).all()
+    steps = db.query(OnboardingSteps).filter(OnboardingSteps.user_id == user.id).all()
     
     for step in steps:
         step.completed = True

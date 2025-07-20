@@ -9,20 +9,7 @@ import {
   TableRow,
   TableCell,
   TableFooter,
-  TablePagination,
-  Input,
-  Select,
-  useDisclosure,
-  FormControl,
-  FormLabel,
-  Textarea,
-  Spinner,
-  useToast,
-  HStack,
-  VStack,
-  Flex,
-  Tooltip,
-  IconButton,
+  Input
 } from '../components/ui';
 import { AddIcon, EditIcon, DeleteIcon, ViewIcon } from '@chakra-ui/icons';
 import * as api from '../api';
@@ -30,6 +17,8 @@ import { LeadKanban, KanbanLead, LeadStage } from '../components/LeadKanban';
 import { AIAssistantSidebar } from '../components/AIAssistantSidebar';
 import { useQuery, useMutation, gql } from '@apollo/client';
 import { useTranslation } from 'react-i18next';
+import { useToast } from '../hooks/use-toast';
+import { useDisclosure } from '@chakra-ui/react';
 
 interface Lead {
   id: number;
@@ -118,7 +107,7 @@ const CRM: React.FC = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const { data: leadsData, loading: leadsLoading, refetch: refetchLeads } = useQuery(LEADS_QUERY);
-  const { data: analyticsData, loading: statsLoading, refetch: refetchStats } = useQuery(ANALYTICS_QUERY);
+  const { data: analyticsData, loading: analyticsLoading, refetch: refetchStats } = useQuery(ANALYTICS_QUERY);
   const [createLead] = useMutation(CREATE_LEAD);
   const [updateLeadMutation] = useMutation(UPDATE_LEAD);
   const [deleteLeadMutation] = useMutation(DELETE_LEAD);

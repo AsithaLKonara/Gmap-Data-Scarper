@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
-from models import User, Plan
+from models import Users, Plans
 from database import get_db
 from auth import get_current_user
 import json
@@ -63,7 +63,7 @@ PLAN_FEATURES = {
 def calculate_roi(
     calculation: ROICalculation,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Calculate ROI for lead generation"""
     
@@ -146,7 +146,7 @@ def get_plan_comparisons():
 @router.get("/user-stats")
 def get_user_roi_stats(
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Get user's current ROI statistics"""
     
@@ -184,7 +184,7 @@ def get_user_roi_stats(
 def get_upgrade_recommendation(
     current_usage: Dict[str, Any],
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Get personalized upgrade recommendation based on usage"""
     

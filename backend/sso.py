@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
-from models import Tenant, User
+from models import Tenant, Users
 from database import Session, get_db
 from auth import create_access_token
 from config import SECRET_KEY, ALGORITHM
@@ -104,12 +104,12 @@ def sso_login(request: Request, tenant: Optional[str] = None, db: Session = Depe
         log_audit_event(db, None, "sso_login_failed", "sso", {"reason": "not_supported", "tenant": tenant})
         raise HTTPException(status_code=501, detail="SSO login not supported on this platform")
     try:
-    saml_settings = build_saml_settings(t.sso_config)
-    saml = OneLogin_Saml2_Auth(request, old_settings=OneLogin_Saml2_Settings(settings=saml_settings, sp_validation_only=True))
-    redirect_url = saml.login()
-    logger.info(f"[SSO] Redirecting to SAML IdP for tenant: {tenant}")
+        saml_settings = build_saml_settings(t.sso_config)
+        saml = OneLogin_Saml2_Auth(request, old_settings=OneLogin_Saml2_Settings(settings=saml_settings, sp_validation_only=True))
+        redirect_url = saml.login()
+        logger.info(f"[SSO] Redirecting to SAML IdP for tenant: {tenant}")
         log_audit_event(db, None, "sso_login_redirect", "sso", {"tenant": tenant})
-    return RedirectResponse(redirect_url)
+        return RedirectResponse(redirect_url)
     except Exception as e:
         logger.exception(f"[SSO] SSO login error: {e}")
         log_audit_event(db, None, "sso_login_failed", "sso", {"reason": str(e), "tenant": tenant})
@@ -129,41 +129,41 @@ def sso_callback(data: SSOCallbackRequest, db: Session = Depends(get_db)):
         log_audit_event(db, None, "sso_callback_failed", "sso", {"reason": "not_supported", "tenant": data.tenant})
         raise HTTPException(status_code=501, detail="SSO callback not supported on this platform")
     try:
-    saml_settings = build_saml_settings(t.sso_config)
-    saml_request = {
-        'https': 'on',
-        'http_host': 'localhost',
-        'script_name': '/api/auth/sso/callback',
-        'server_port': '443',
-        'get_data': {},
-        'post_data': {'SAMLResponse': data.saml_response},
-    }
-    saml = OneLogin_Saml2_Auth(saml_request, old_settings=OneLogin_Saml2_Settings(settings=saml_settings, sp_validation_only=True))
-    saml.process_response()
-    errors = saml.get_errors()
-    if errors:
-        logger.error(f"[SSO] SAML errors: {errors}")
+        saml_settings = build_saml_settings(t.sso_config)
+        saml_request = {
+            'https': 'on',
+            'http_host': 'localhost',
+            'script_name': '/api/auth/sso/callback',
+            'server_port': '443',
+            'get_data': {},
+            'post_data': {'SAMLResponse': data.saml_response},
+        }
+        saml = OneLogin_Saml2_Auth(saml_request, old_settings=OneLogin_Saml2_Settings(settings=saml_settings, sp_validation_only=True))
+        saml.process_response()
+        errors = saml.get_errors()
+        if errors:
+            logger.error(f"[SSO] SAML errors: {errors}")
             log_audit_event(db, None, "sso_callback_failed", "sso", {"reason": str(errors), "tenant": data.tenant})
-        raise HTTPException(status_code=400, detail=f"SAML error: {errors}")
-    if not saml.is_authenticated():
+            raise HTTPException(status_code=400, detail=f"SAML error: {errors}")
+        if not saml.is_authenticated():
             log_audit_event(db, None, "sso_callback_failed", "sso", {"reason": "not_authenticated", "tenant": data.tenant})
-        raise HTTPException(status_code=401, detail="SAML authentication failed")
-    user_email = saml.get_nameid()
-    if not user_email:
+            raise HTTPException(status_code=401, detail="SAML authentication failed")
+        user_email = saml.get_nameid()
+        if not user_email:
             log_audit_event(db, None, "sso_callback_failed", "sso", {"reason": "no_email", "tenant": data.tenant})
-        raise HTTPException(status_code=400, detail="No email in SAML assertion")
+            raise HTTPException(status_code=400, detail="No email in SAML assertion")
         # Enhanced user provisioning: extract name, roles if present
         attributes = saml.get_attributes() if hasattr(saml, 'get_attributes') else {}
-    user = db.query(User).filter_by(email=user_email).first()
-    if not user:
-        user = User(email=user_email, role='user', plan=t.plan)
+        user = db.query(Users).filter_by(email=user_email).first()
+        if not user:
+            user = Users(email=user_email, role='user', plan=t.plan)
             if attributes:
                 user.name = attributes.get('name', [None])[0] or user_email
                 # Optionally handle roles/groups
                 if 'roles' in attributes:
                     user.roles = attributes['roles']
-        db.add(user)
-        db.commit()
+            db.add(user)
+            db.commit()
         else:
             # Optionally update user info from SAML attributes
             updated = False
@@ -176,10 +176,10 @@ def sso_callback(data: SSOCallbackRequest, db: Session = Depends(get_db)):
                     updated = True
             if updated:
                 db.commit()
-    token = create_access_token({"sub": str(user.id)})
-    logger.info(f"[SSO] SAML login success for user: {user_email}")
+        token = create_access_token({"sub": str(user.id)})
+        logger.info(f"[SSO] SAML login success for user: {user_email}")
         log_audit_event(db, user, "sso_login_success", "sso", {"tenant": data.tenant, "email": user_email})
-    return {"access_token": token, "token_type": "bearer"}
+        return {"access_token": token, "token_type": "bearer"}
     except Exception as e:
         logger.exception(f"[SSO] SSO callback error: {e}")
         log_audit_event(db, None, "sso_callback_failed", "sso", {"reason": str(e), "tenant": data.tenant})

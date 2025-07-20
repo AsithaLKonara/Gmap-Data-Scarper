@@ -241,11 +241,13 @@ const APIDocumentation: React.FC = () => {
           </div>
           <div className="mb-4">
             <span className="font-semibold block mb-2">JavaScript (fetch) Example</span>
-            <pre className="bg-gray-100 rounded p-2 text-xs overflow-x-auto">fetch('https://api.leadtap.com/api/jobs', {
+            <pre className="bg-gray-100 rounded p-2 text-xs overflow-x-auto">{`
+fetch('https://api.leadtap.com/api/jobs', {
   headers: { 'Authorization': 'Bearer YOUR_API_KEY' }
 })
   .then(res => res.json())
-  .then(data => console.log(data));</pre>
+  .then(data => console.log(data));
+`}</pre>
           </div>
           <div className="mb-4">
             <span className="font-semibold block mb-2">Postman Collection</span>

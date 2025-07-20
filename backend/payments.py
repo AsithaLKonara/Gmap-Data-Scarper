@@ -2,7 +2,7 @@ import os
 import stripe
 from fastapi import APIRouter, Request, HTTPException, Depends, Body, Query
 from fastapi.responses import JSONResponse
-from models import User, Affiliate, Commission
+from models import Users, Affiliates, Commissions
 from database import SessionLocal
 from auth import get_current_user
 from datetime import datetime
@@ -33,7 +33,7 @@ class PlanStatusResponse(BaseModel):
 @audit_log(action="create_checkout_session", target_type="user")
 def create_checkout_session(
     plan: str = Query(..., description="Plan to subscribe to (e.g., free, pro, business)", example="pro"),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Create a Stripe Checkout session for the selected plan."""
     if not STRIPE_SECRET_KEY:
@@ -74,7 +74,7 @@ async def stripe_webhook(request: Request):
         user_id = session['metadata'].get('user_id')
         plan = session['metadata'].get('plan')
         db = SessionLocal()
-        user = db.query(User).filter(User.id == int(user_id)).first()
+        user = db.query(Users).filter(Users.id == int(user_id)).first()
         if user:
             user.plan = plan
             user.stripe_customer_id = session.get('customer')
@@ -84,10 +84,10 @@ async def stripe_webhook(request: Request):
             # Assume user.affiliate_code or user.affiliate_id is set if referred
             affiliate_code = getattr(user, 'affiliate_code', None)
             if affiliate_code:
-                affiliate = db.query(Affiliate).filter_by(code=affiliate_code).first()
+                affiliate = db.query(Affiliates).filter_by(code=affiliate_code).first()
                 if affiliate:
                     commission_amount = 20.0  # USD, fixed for now
-                    commission = Commission(
+                    commission = Commissions(
                         affiliate_id=affiliate.id,
                         referred_user_id=user.id,
                         amount=commission_amount,
@@ -102,7 +102,7 @@ async def stripe_webhook(request: Request):
     return WebhookResponse(status="success")
 
 @router.get('/plan-status', response_model=PlanStatusResponse, summary="Get plan status", description="Get the current user's plan and Stripe subscription status.")
-def get_plan_status(user: User = Depends(get_current_user)):
+def get_plan_status(user: Users = Depends(get_current_user)):
     """Get the current user's plan and Stripe subscription status."""
     return PlanStatusResponse(
         plan=user.plan,

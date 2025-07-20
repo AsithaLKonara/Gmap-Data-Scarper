@@ -6,7 +6,7 @@ import json
 import asyncio
 import aiohttp
 from datetime import datetime, timedelta
-from models import User, WhatsAppCampaign, WhatsAppTemplate, WhatsAppMessage, WhatsAppContact, WhatsAppAutomation, Lead
+from models import Users, WhatsAppCampaigns, WhatsAppTemplates, WhatsAppMessages, WhatsAppContacts, WhatsAppAutomations, Leads
 from database import get_db
 from auth import get_current_user
 import logging
@@ -101,14 +101,14 @@ whatsapp_api = WhatsAppAPI()
 @router.post("/templates", response_model=Dict[str, Any])
 async def create_template(
     template_data: TemplateCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Create a new WhatsApp message template"""
     if current_user.plan not in ['pro', 'business']:
         raise HTTPException(status_code=403, detail="Pro or Business plan required")
     
-    template = WhatsAppTemplate(
+    template = WhatsAppTemplates(
         name=template_data.name,
         content=template_data.content,
         variables=json.dumps(template_data.variables) if template_data.variables else None,
@@ -133,13 +133,13 @@ async def create_template(
 
 @router.get("/templates", response_model=List[Dict[str, Any]])
 async def get_templates(
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get user's WhatsApp templates"""
-    templates = db.query(WhatsAppTemplate).filter(
-        WhatsAppTemplate.user_id == current_user.id,
-        WhatsAppTemplate.is_active == True
+    templates = db.query(WhatsAppTemplates).filter(
+        WhatsAppTemplates.user_id == current_user.id,
+        WhatsAppTemplates.is_active == True
     ).all()
     
     return [
@@ -159,14 +159,14 @@ async def get_templates(
 @router.post("/contacts", response_model=Dict[str, Any])
 async def create_contact(
     contact_data: Dict[str, Any],
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Create a new WhatsApp contact"""
     if current_user.plan not in ['pro', 'business']:
         raise HTTPException(status_code=403, detail="Pro or Business plan required")
     
-    contact = WhatsAppContact(
+    contact = WhatsAppContacts(
         user_id=current_user.id,
         phone_number=contact_data['phone_number'],
         name=contact_data.get('name'),
@@ -192,13 +192,13 @@ async def create_contact(
 
 @router.get("/contacts", response_model=List[Dict[str, Any]])
 async def get_contacts(
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get user's WhatsApp contacts"""
-    contacts = db.query(WhatsAppContact).filter(
-        WhatsAppContact.user_id == current_user.id,
-        WhatsAppContact.is_active == True
+    contacts = db.query(WhatsAppContacts).filter(
+        WhatsAppContacts.user_id == current_user.id,
+        WhatsAppContacts.is_active == True
     ).all()
     
     return [
@@ -221,14 +221,14 @@ async def get_contacts(
 async def create_campaign(
     campaign_data: CampaignCreate,
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Create a new WhatsApp campaign"""
     if current_user.plan not in ['pro', 'business']:
         raise HTTPException(status_code=403, detail="Pro or Business plan required")
     
-    campaign = WhatsAppCampaign(
+    campaign = WhatsAppCampaigns(
         name=campaign_data.name,
         description=campaign_data.description,
         template_id=campaign_data.template_id,
@@ -261,12 +261,12 @@ async def create_campaign(
 
 @router.get("/campaigns", response_model=List[Dict[str, Any]])
 async def get_campaigns(
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get user's WhatsApp campaigns"""
-    campaigns = db.query(WhatsAppCampaign).filter(
-        WhatsAppCampaign.user_id == current_user.id
+    campaigns = db.query(WhatsAppCampaigns).filter(
+        WhatsAppCampaigns.user_id == current_user.id
     ).all()
     
     return [
@@ -287,7 +287,7 @@ async def get_campaigns(
 @router.post("/send", response_model=Dict[str, Any])
 async def send_message(
     message_data: MessageSend,
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Send a single WhatsApp message"""
@@ -295,7 +295,7 @@ async def send_message(
         raise HTTPException(status_code=403, detail="Pro or Business plan required")
     
     # Create message record
-    message = WhatsAppMessage(
+    message = WhatsAppMessages(
         user_id=current_user.id,
         recipient_phone=message_data.recipient_phone,
         recipient_name=message_data.recipient_name,
@@ -341,7 +341,7 @@ async def send_message(
 async def bulk_send_messages(
     messages: List[MessageSend],
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Send multiple WhatsApp messages"""
@@ -355,7 +355,7 @@ async def bulk_send_messages(
     # Create message records
     message_records = []
     for msg_data in messages:
-        message = WhatsAppMessage(
+        message = WhatsAppMessages(
             user_id=current_user.id,
             recipient_phone=msg_data.recipient_phone,
             recipient_name=msg_data.recipient_name,
@@ -385,14 +385,14 @@ async def bulk_send_messages(
 @router.post("/automations", response_model=Dict[str, Any])
 async def create_automation(
     automation_data: AutomationCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Create a new WhatsApp automation"""
     if current_user.plan != 'business':
         raise HTTPException(status_code=403, detail="Business plan required")
     
-    automation = WhatsAppAutomation(
+    automation = WhatsAppAutomations(
         name=automation_data.name,
         description=automation_data.description,
         trigger_type=automation_data.trigger_type,
@@ -416,12 +416,12 @@ async def create_automation(
 
 @router.get("/automations", response_model=List[Dict[str, Any]])
 async def get_automations(
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get user's WhatsApp automations"""
-    automations = db.query(WhatsAppAutomation).filter(
-        WhatsAppAutomation.user_id == current_user.id
+    automations = db.query(WhatsAppAutomations).filter(
+        WhatsAppAutomations.user_id == current_user.id
     ).all()
     
     return [
@@ -442,17 +442,17 @@ async def send_campaign_messages(campaign_id: int, contact_ids: List[int], user_
     from database import SessionLocal
     db = SessionLocal()
     try:
-        campaign = db.query(WhatsAppCampaign).filter(WhatsAppCampaign.id == campaign_id).first()
+        campaign = db.query(WhatsAppCampaigns).filter(WhatsAppCampaigns.id == campaign_id).first()
         if not campaign:
             return
         
-        template = db.query(WhatsAppTemplate).filter(WhatsAppTemplate.id == campaign.template_id).first()
+        template = db.query(WhatsAppTemplates).filter(WhatsAppTemplates.id == campaign.template_id).first()
         if not template:
             return
         
-        contacts = db.query(WhatsAppContact).filter(
-            WhatsAppContact.id.in_(contact_ids),
-            WhatsAppContact.user_id == user_id
+        contacts = db.query(WhatsAppContacts).filter(
+            WhatsAppContacts.id.in_(contact_ids),
+            WhatsAppContacts.user_id == user_id
         ).all()
         
         for contact in contacts:
@@ -467,7 +467,7 @@ async def send_campaign_messages(campaign_id: int, contact_ids: List[int], user_
                         message_content = message_content.replace('{{company}}', contact.company or '')
             
             # Create message record
-            message = WhatsAppMessage(
+            message = WhatsAppMessages(
                 campaign_id=campaign_id,
                 template_id=template.id,
                 user_id=user_id,
@@ -514,9 +514,9 @@ async def send_bulk_messages_task(message_ids: List[int], user_id: int):
     from database import SessionLocal
     db = SessionLocal()
     try:
-        messages = db.query(WhatsAppMessage).filter(
-            WhatsAppMessage.id.in_(message_ids),
-            WhatsAppMessage.user_id == user_id
+        messages = db.query(WhatsAppMessages).filter(
+            WhatsAppMessages.id.in_(message_ids),
+            WhatsAppMessages.user_id == user_id
         ).all()
         
         for message in messages:
@@ -546,19 +546,19 @@ async def send_bulk_messages_task(message_ids: List[int], user_id: int):
         db.close()
 
 # Trigger automation when lead is added
-async def trigger_lead_automation(lead: Lead, user_id: int):
+async def trigger_lead_automation(lead: Leads, user_id: int):
     """Trigger WhatsApp automation when a new lead is added"""
     from database import SessionLocal
     db = SessionLocal()
     try:
-        automations = db.query(WhatsAppAutomation).filter(
-            WhatsAppAutomation.user_id == user_id,
-            WhatsAppAutomation.trigger_type == 'lead_added',
-            WhatsAppAutomation.is_active == True
+        automations = db.query(WhatsAppAutomations).filter(
+            WhatsAppAutomations.user_id == user_id,
+            WhatsAppAutomations.trigger_type == 'lead_added',
+            WhatsAppAutomations.is_active == True
         ).all()
         
         for automation in automations:
-            template = db.query(WhatsAppTemplate).filter(WhatsAppTemplate.id == automation.template_id).first()
+            template = db.query(WhatsAppTemplates).filter(WhatsAppTemplates.id == automation.template_id).first()
             if not template:
                 continue
             
@@ -573,7 +573,7 @@ async def trigger_lead_automation(lead: Lead, user_id: int):
             message_content = message_content.replace('{{email}}', lead.email)
             
             # Create message
-            message = WhatsAppMessage(
+            message = WhatsAppMessages(
                 automation_id=automation.id,
                 template_id=template.id,
                 user_id=user_id,
@@ -616,16 +616,16 @@ async def get_messages(
     campaign_id: Optional[int] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get WhatsApp message history"""
-    query = db.query(WhatsAppMessage).filter(WhatsAppMessage.user_id == current_user.id)
+    query = db.query(WhatsAppMessages).filter(WhatsAppMessages.user_id == current_user.id)
     
     if status:
-        query = query.filter(WhatsAppMessage.status == status)
+        query = query.filter(WhatsAppMessages.status == status)
     if campaign_id:
-        query = query.filter(WhatsAppMessage.campaign_id == campaign_id)
+        query = query.filter(WhatsAppMessages.campaign_id == campaign_id)
     
     total = query.count()
     messages = query.offset((page - 1) * page_size).limit(page_size).all()
@@ -650,27 +650,27 @@ async def get_messages(
 # Analytics
 @router.get("/analytics", response_model=Dict[str, Any])
 async def get_whatsapp_analytics(
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get WhatsApp messaging analytics"""
-    total_messages = db.query(WhatsAppMessage).filter(WhatsAppMessage.user_id == current_user.id).count()
-    sent_messages = db.query(WhatsAppMessage).filter(
-        WhatsAppMessage.user_id == current_user.id,
-        WhatsAppMessage.status == 'sent'
+    total_messages = db.query(WhatsAppMessages).filter(WhatsAppMessages.user_id == current_user.id).count()
+    sent_messages = db.query(WhatsAppMessages).filter(
+        WhatsAppMessages.user_id == current_user.id,
+        WhatsAppMessages.status == 'sent'
     ).count()
-    failed_messages = db.query(WhatsAppMessage).filter(
-        WhatsAppMessage.user_id == current_user.id,
-        WhatsAppMessage.status == 'failed'
-    ).count()
-    
-    total_contacts = db.query(WhatsAppContact).filter(
-        WhatsAppContact.user_id == current_user.id,
-        WhatsAppContact.is_active == True
+    failed_messages = db.query(WhatsAppMessages).filter(
+        WhatsAppMessages.user_id == current_user.id,
+        WhatsAppMessages.status == 'failed'
     ).count()
     
-    total_campaigns = db.query(WhatsAppCampaign).filter(
-        WhatsAppCampaign.user_id == current_user.id
+    total_contacts = db.query(WhatsAppContacts).filter(
+        WhatsAppContacts.user_id == current_user.id,
+        WhatsAppContacts.is_active == True
+    ).count()
+    
+    total_campaigns = db.query(WhatsAppCampaigns).filter(
+        WhatsAppCampaigns.user_id == current_user.id
     ).count()
     
     return {

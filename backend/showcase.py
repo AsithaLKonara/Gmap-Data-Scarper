@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from typing import List, Optional
-from models import User, Testimonial
+from models import Users, Testimonials
 from database import get_db
 from auth import get_current_user
 from datetime import datetime
@@ -34,10 +34,10 @@ class TestimonialOut(BaseModel):
 def submit_testimonial(
     testimonial: TestimonialIn,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Submit a new testimonial (user-authenticated)."""
-    t = Testimonial(
+    t = Testimonials(
         user_id=user.id,
         name=testimonial.name,
         company=testimonial.company,
@@ -70,10 +70,10 @@ def list_testimonials(
     db: Session = Depends(get_db)
 ):
     """List public testimonials (optionally only featured)."""
-    query = db.query(Testimonial)
+    query = db.query(Testimonials)
     if featured is not None:
-        query = query.filter(Testimonial.featured == featured)
-    testimonials = query.order_by(Testimonial.created_at.desc()).all()
+        query = query.filter(Testimonials.featured == featured)
+    testimonials = query.order_by(Testimonials.created_at.desc()).all()
     return [
         TestimonialOut(
             id=t.id,

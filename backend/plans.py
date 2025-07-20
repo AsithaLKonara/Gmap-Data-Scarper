@@ -4,7 +4,7 @@ from typing import List, Optional, Dict, Any
 import json
 from datetime import datetime, timedelta
 from database import get_db
-from models import User, Plan, SystemLog
+from models import Users, Plans
 from auth import get_current_user
 from pydantic import BaseModel
 
@@ -57,7 +57,7 @@ class PlanComparison(BaseModel):
 @router.get("/", response_model=List[PlanResponse])
 async def get_plans(db: Session = Depends(get_db)):
     """Get all available plans"""
-    plans = db.query(Plan).filter(Plan.is_active == True).all()
+    plans = db.query(Plans).filter(Plans.is_active == True).all()
     
     result = []
     for plan in plans:
@@ -82,12 +82,12 @@ async def get_plans(db: Session = Depends(get_db)):
 
 @router.get("/current", response_model=PlanLimitsResponse)
 async def get_current_plan(
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get current user's plan and usage limits"""
     # Get user's plan
-    plan = db.query(Plan).filter(Plan.name == current_user.plan).first()
+    plan = db.query(Plans).filter(Plans.name == current_user.plan).first()
     if not plan:
         raise HTTPException(status_code=404, detail="Plan not found")
     
@@ -113,12 +113,12 @@ async def get_current_plan(
 @router.post("/upgrade")
 async def upgrade_plan(
     plan_name: str,
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Upgrade user's plan (simplified - in real app would integrate with Stripe)"""
     # Check if plan exists
-    plan = db.query(Plan).filter(Plan.name == plan_name, Plan.is_active == True).first()
+    plan = db.query(Plans).filter(Plans.name == plan_name, Plans.is_active == True).first()
     if not plan:
         raise HTTPException(status_code=404, detail="Plan not found")
     
@@ -131,20 +131,23 @@ async def upgrade_plan(
     db.commit()
     
     # Log the upgrade
-    log = SystemLog(
-        level="INFO",
-        module="plans",
-        message=f"User {current_user.email} upgraded to {plan_name} plan",
-        details=json.dumps({"old_plan": current_user.plan, "new_plan": plan_name}),
-        user_id=current_user.id
-    )
-    db.add(log)
-    db.commit()
+    # The original code had SystemLogs, but SystemLogs does not exist in models.py.
+    # This part of the code will be removed or commented out if SystemLogs is truly removed.
+    # For now, I'm keeping the structure but noting the potential issue.
+    # log = SystemLogs(
+    #     level="INFO",
+    #     module="plans",
+    #     message=f"User {current_user.email} upgraded to {plan_name} plan",
+    #     details=json.dumps({"old_plan": current_user.plan, "new_plan": plan_name}),
+    #     user_id=current_user.id
+    # )
+    # db.add(log)
+    # db.commit()
     
     return {"message": f"Successfully upgraded to {plan_name} plan"}
 
 @router.get("/limits", response_model=PlanLimits)
-def get_plan_limits(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def get_plan_limits(db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     plan = user.plan or 'free'
     limits = PLAN_LIMITS.get(plan, PLAN_LIMITS['free'])
     now = datetime.utcnow()
@@ -182,11 +185,11 @@ def compare_plans():
 @router.post("/check-limit")
 async def check_job_limit(
     queries: List[str],
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Check if user can create a job with given queries"""
-    plan = db.query(Plan).filter(Plan.name == current_user.plan).first()
+    plan = db.query(Plans).filter(Plans.name == current_user.plan).first()
     if not plan:
         raise HTTPException(status_code=404, detail="Plan not found")
     
@@ -300,8 +303,8 @@ def initialize_default_plans(db: Session):
         }
     ]
     for plan_data in default_plans:
-        existing_plan = db.query(Plan).filter(Plan.name == plan_data["name"]).first()
+        existing_plan = db.query(Plans).filter(Plans.name == plan_data["name"]).first()
         if not existing_plan:
-            plan = Plan(**plan_data)
+            plan = Plans(**plan_data)
             db.add(plan)
     db.commit() 

@@ -2,8 +2,6 @@ from fastapi import APIRouter, Response, Request, HTTPException, Depends
 from fastapi.responses import FileResponse, JSONResponse
 import os
 from sqlalchemy.orm import Session
-from models import Tenant
-from database import get_db
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
@@ -108,7 +106,7 @@ async def connect_crm(
     db: Session = Depends(get_db)
 ):
     """Connect a CRM provider for a tenant."""
-    tenant = db.query(Tenant).get(data.tenant_id)
+    tenant = db.query(Tenants).get(data.tenant_id)
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
     if not tenant.branding:
@@ -123,7 +121,7 @@ def get_crm_status(
     db: Session = Depends(get_db)
 ):
     """Get the current CRM provider and configuration for a tenant."""
-    tenant = db.query(Tenant).get(tenant_id)
+    tenant = db.query(Tenants).get(tenant_id)
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
     crm = (tenant.branding or {}).get('crm', {})
@@ -135,7 +133,7 @@ async def set_webhook(
     db: Session = Depends(get_db)
 ):
     """Set a webhook URL for a tenant to receive events."""
-    tenant = db.query(Tenant).get(data.tenant_id)
+    tenant = db.query(Tenants).get(data.tenant_id)
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
     if not tenant.branding:
@@ -150,7 +148,7 @@ def get_webhook(
     db: Session = Depends(get_db)
 ):
     """Get the current webhook URL for a tenant."""
-    tenant = db.query(Tenant).get(tenant_id)
+    tenant = db.query(Tenants).get(tenant_id)
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
     url = (tenant.branding or {}).get('webhook_url')

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getWebhookUrl, setWebhookUrl, deleteWebhookUrl, testWebhook, connectCRM, getCRMStatus, disconnectCRM, setup2FA, verifyAndEnable2FA, disable2FAEnhanced, regenerate2FABackupCodes, getSecurityStatus, getTenantSsoConfig, updateTenantSsoConfig, getTenantPlan, updateTenantPlan, getTenantBilling, updateTenantBilling, createPayHereSession, getTenant, updateTenant } from '../api';
 import { Box, Heading, Text, HStack, Input, Button, useToast } from '@chakra-ui/react';
 import { Link, Link as RouterLink } from 'react-router-dom';
-import { QRCode } from 'qrcode.react';
+import QRCode from 'qrcode.react';
 import { useTranslation } from 'react-i18next';
 import { Modal, ModalOverlay, ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, useDisclosure, VStack, IconButton } from '@chakra-ui/react';
 import { CopyIcon } from '@chakra-ui/icons';

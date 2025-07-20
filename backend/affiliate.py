@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from pydantic import BaseModel, Field
-from models import Affiliate, Commission, User
+from models import Affiliates, Commissions
 from database import get_db
 from auth import get_current_user
 from datetime import datetime
@@ -34,33 +34,33 @@ class PayoutResponse(BaseModel):
     message: str = Field(..., description="Status message.", example="Payout request submitted for review.")
 
 @router.post("/generate", response_model=AffiliateOut, summary="Generate affiliate code", description="Generate a unique affiliate code for the current user.")
-def generate_affiliate_code(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def generate_affiliate_code(db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     """Generate a unique affiliate code for the current user."""
-    existing = db.query(Affiliate).filter_by(user_id=user.id).first()
+    existing = db.query(Affiliates).filter_by(user_id=user.id).first()
     if existing:
         return existing
     code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
-    affiliate = Affiliate(user_id=user.id, code=code)
+    affiliate = Affiliates(user_id=user.id, code=code)
     db.add(affiliate)
     db.commit()
     db.refresh(affiliate)
     return affiliate
 
 @router.get("/stats", response_model=AffiliateOut, summary="Get affiliate stats", description="Get the current user's affiliate stats.")
-def get_affiliate_stats(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def get_affiliate_stats(db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     """Get the current user's affiliate stats."""
-    affiliate = db.query(Affiliate).filter_by(user_id=user.id).first()
+    affiliate = db.query(Affiliates).filter_by(user_id=user.id).first()
     if not affiliate:
         raise HTTPException(status_code=404, detail="No affiliate account found")
     return affiliate
 
 @router.get("/commissions", response_model=List[CommissionOut], summary="List commissions", description="List all commissions for the current affiliate.")
-def list_commissions(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def list_commissions(db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     """List all commissions for the current affiliate."""
-    affiliate = db.query(Affiliate).filter_by(user_id=user.id).first()
+    affiliate = db.query(Affiliates).filter_by(user_id=user.id).first()
     if not affiliate:
         raise HTTPException(status_code=404, detail="No affiliate account found")
-    commissions = db.query(Commission).filter_by(affiliate_id=affiliate.id).all()
+    commissions = db.query(Commissions).filter_by(affiliate_id=affiliate.id).all()
     return commissions
 
 @router.post(
@@ -71,10 +71,10 @@ def list_commissions(db: Session = Depends(get_db), user: User = Depends(get_cur
 def request_payout(
     req: PayoutRequest = Body(..., description="Payout request payload."),
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Request a payout for available commissions (admin review required)."""
-    affiliate = db.query(Affiliate).filter_by(user_id=user.id).first()
+    affiliate = db.query(Affiliates).filter_by(user_id=user.id).first()
     if not affiliate:
         raise HTTPException(status_code=404, detail="No affiliate account found")
     # TODO: Implement payout request logic (e.g., mark commissions as requested, notify admin)

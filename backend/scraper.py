@@ -2,12 +2,12 @@ import json
 import asyncio
 from sqlalchemy.orm import Session
 from database import SessionLocal
-from models import Job
+from models import Jobs
 from webhook_utils import send_webhook_event
 
 def run_scraper(job_id: int):
     db: Session = SessionLocal()
-    job = db.query(Job).filter(Job.id == job_id).first()
+    job = db.query(Jobs).filter(Jobs.id == job_id).first()
     if not job:
         db.close()
         return

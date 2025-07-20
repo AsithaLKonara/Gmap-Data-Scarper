@@ -4,7 +4,7 @@ from passlib.context import CryptContext
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
 from pydantic import BaseModel, EmailStr
-from models import User
+from models import Users
 from database import get_db
 from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 import logging
@@ -17,6 +17,7 @@ import base64
 import io
 import qrcode
 import json
+from models import AuditLogs
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -71,8 +72,7 @@ RATE_LIMIT = 5  # max attempts
 RATE_PERIOD = 60  # seconds
 
 def log_audit_event(db, user, action, resource, details=None):
-    from models import AuditLog
-    log = AuditLog(
+    log = AuditLogs(
         user_id=user.id if user else None,
         action=action,
         target_type=resource,
@@ -88,14 +88,14 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
         print(f"📝 [REGISTER] Attempting to register new user: {user.email}")
         
         # Check if user already exists
-        existing_user = db.query(User).filter(User.email == user.email).first()
+        existing_user = db.query(Users).filter(Users.email == user.email).first()
         if existing_user:
             print(f"❌ [REGISTER] Registration failed - Email already exists: {user.email}")
             raise HTTPException(status_code=400, detail="Email already registered")
         
         print(f"✅ [REGISTER] Email available, creating new user: {user.email}")
         hashed = get_password_hash(user.password)
-        db_user = User(email=user.email, hashed_password=hashed, role='user')
+        db_user = Users(email=user.email, hashed_password=hashed, role='user')
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
@@ -122,7 +122,7 @@ def login(user: UserLogin, db: Session = Depends(get_db), request: Request = Non
     print(f"🔑 [LOGIN] Login attempt for user: {user.email} from {client_ip}")
     
     # Find user in database
-    db_user = db.query(User).filter(User.email == user.email).first()
+    db_user = db.query(Users).filter(Users.email == user.email).first()
     if not db_user:
         print(f"❌ [LOGIN] Login failed - User not found: {user.email}")
         log_audit_event(db, None, "login_failed", "auth", {"email": user.email, "reason": "user_not_found"})
@@ -160,7 +160,7 @@ class TwoFALoginRequest(BaseModel):
 @router.post("/login/2fa", response_model=Token, summary="2FA login step", description="Authenticate a user with 2FA code and return a JWT access token.")
 def login_2fa(data: TwoFALoginRequest, db: Session = Depends(get_db), request: Request = None):
     """Authenticate a user with 2FA code and return a JWT access token using enhanced backup code logic."""
-    db_user = db.query(User).filter(User.id == data.user_id).first()
+    db_user = db.query(Users).filter(Users.id == data.user_id).first()
     if not db_user or not db_user.two_fa_enabled:
         log_audit_event(db, db_user, "login_2fa_failed", "auth", {"user_id": data.user_id, "reason": "not_enabled_or_not_found"})
         raise HTTPException(status_code=401, detail="2FA not enabled or user not found")
@@ -209,7 +209,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise credentials_exception
     
     # Find user in database
-    user = db.query(User).filter(User.id == int(user_id)).first()
+    user = db.query(Users).filter(Users.id == int(user_id)).first()
     if user is None:
         print(f"❌ [AUTH] Token validation failed - User not found in database: {user_id}")
         raise credentials_exception
@@ -218,18 +218,18 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     return user
 
 @router.get("/user/me", response_model=UserOut, summary="Get current user", description="Get the authenticated user's profile information.")
-def get_me(user: User = Depends(get_current_user)):
+def get_me(user: Users = Depends(get_current_user)):
     """Get the authenticated user's profile information."""
     print(f"👤 [USER] Getting current user profile - ID: {user.id}, Email: {user.email}")
     return user
 
 # Helper: Only Pro/Business users can use API key features
-def require_api_key_plan(user: User):
+def require_api_key_plan(user: Users):
     if user.plan not in ("pro", "business"):
         raise HTTPException(status_code=403, detail="API access is only available for Pro and Business plans.")
 
 @router.get("/api-key", summary="Get API key info", description="Get information about the user's API key (Pro/Business only).")
-def get_api_key_info(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_api_key_info(user: Users = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get information about the user's API key (Pro/Business only)."""
     require_api_key_plan(user)
     return {
@@ -239,7 +239,7 @@ def get_api_key_info(user: User = Depends(get_current_user), db: Session = Depen
     }
 
 @router.post("/api-key", summary="Create API key", description="Generate a new API key for the user (Pro/Business only).")
-def create_api_key(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def create_api_key(user: Users = Depends(get_current_user), db: Session = Depends(get_db)):
     """Generate a new API key for the user (Pro/Business only)."""
     require_api_key_plan(user)
     # Generate a new API key
@@ -251,7 +251,7 @@ def create_api_key(user: User = Depends(get_current_user), db: Session = Depends
     return {"api_key": api_key, "created_at": user.api_key_created_at}
 
 @router.delete("/api-key", summary="Revoke API key", description="Revoke the user's API key (Pro/Business only).")
-def revoke_api_key(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def revoke_api_key(user: Users = Depends(get_current_user), db: Session = Depends(get_db)):
     """Revoke the user's API key (Pro/Business only)."""
     require_api_key_plan(user)
     user.api_key_hash = None
@@ -261,7 +261,7 @@ def revoke_api_key(user: User = Depends(get_current_user), db: Session = Depends
     return {"message": "API key revoked."}
 
 # Utility for future: verify API key
-def verify_api_key(api_key: str, user: User):
+def verify_api_key(api_key: str, user: Users):
     if not user.api_key_hash:
         return False
     return api_key_context.verify(api_key, user.api_key_hash)

@@ -1,5 +1,5 @@
 from backend.database import SessionLocal
-from backend.models import Tenant, User, Job, Lead, CRMRecord, AnalyticsEvent, Notification, SavedQuery, SupportTicket, ApiKey
+from backend.models import Tenant, Job, Lead, CRMRecord, AnalyticsEvent, Notification, SavedQuery, SupportTicket, ApiKey
 
 def main():
     db = SessionLocal()
@@ -15,7 +15,7 @@ def main():
     else:
         print('Default Tenant already exists')
     # 2. Assign orphaned records
-    models = [User, Job, Lead, CRMRecord, AnalyticsEvent, Notification, SavedQuery, SupportTicket, ApiKey]
+    models = [Job, Lead, CRMRecord, AnalyticsEvent, Notification, SavedQuery, SupportTicket, ApiKey]
     for model in models:
         orphaned = db.query(model).filter((model.tenant_id == None) | (model.tenant_id == 0)).all()
         for record in orphaned:

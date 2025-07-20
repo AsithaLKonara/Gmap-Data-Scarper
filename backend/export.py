@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from typing import Dict, Any, Optional
-from models import User, Job, Lead
+from models import Users, Jobs, Leads
 from database import get_db
 from auth import get_current_user
 from datetime import datetime
@@ -54,16 +54,16 @@ class AnalyticsExportOut(BaseModel):
 def export_analytics(
     format: ExportFormat = Query("csv", description="Export format: csv, json, xlsx, pdf"),
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Export analytics data in CSV, JSON, XLSX, or PDF format."""
     # Generate analytics data
-    total_jobs = db.query(Job).filter(Job.user_id == user.id).count()
-    completed_jobs = db.query(Job).filter(Job.user_id == user.id, Job.status == 'completed').count()
-    failed_jobs = db.query(Job).filter(Job.user_id == user.id, Job.status == 'failed').count()
-    total_leads = db.query(Lead).filter(Lead.user_id == user.id).count()
-    new_leads = db.query(Lead).filter(Lead.user_id == user.id, Lead.status == 'new').count()
-    converted_leads = db.query(Lead).filter(Lead.user_id == user.id, Lead.status == 'converted').count()
+    total_jobs = db.query(Jobs).filter(Jobs.user_id == user.id).count()
+    completed_jobs = db.query(Jobs).filter(Jobs.user_id == user.id, Jobs.status == 'completed').count()
+    failed_jobs = db.query(Jobs).filter(Jobs.user_id == user.id, Jobs.status == 'failed').count()
+    total_leads = db.query(Leads).filter(Leads.user_id == user.id).count()
+    new_leads = db.query(Leads).filter(Leads.user_id == user.id, Leads.status == 'new').count()
+    converted_leads = db.query(Leads).filter(Leads.user_id == user.id, Leads.status == 'converted').count()
     analytics_data = {
         'job_statistics': {
             'total_jobs': total_jobs,

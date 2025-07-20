@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Tabs, TabList, Tab, TabPanels, TabPanel } from '../components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
 import { Download, Star, Mail } from 'lucide-react';
 // Assume Chart components are available or stubbed
-import { BarChart, LineChart, PieChart } from '../components/ui/charts';
+import Chart from '../components/ui/charts';
 
 const DUMMY_REPORTS = [
   { id: 'r1', name: 'Leads by Source', type: 'bar' },
@@ -18,6 +18,7 @@ const AnalyticsDashboard: React.FC = () => {
   const [compare, setCompare] = useState(false);
   const [email, setEmail] = useState('');
   const [scheduled, setScheduled] = useState(false);
+  const [tab, setTab] = useState('r1');
 
   return (
     <div className="space-y-8">
@@ -31,55 +32,53 @@ const AnalyticsDashboard: React.FC = () => {
         </div>
       </div>
       {/* Chart Tabs */}
-      <Tabs>
-        <TabList>
+      <Tabs defaultValue="r1" value={tab} onValueChange={setTab}>
+        <TabsList>
           {DUMMY_REPORTS.map(r => (
-            <Tab key={r.id}>
+            <TabsTrigger key={r.id} value={r.id}>
               {r.name}
               <Button size="icon" variant={pinned.includes(r.id) ? 'default' : 'ghost'} className="ml-2" onClick={e => { e.stopPropagation(); setPinned(p => p.includes(r.id) ? p.filter(id => id !== r.id) : [...p, r.id]); }}>
                 <Star className={pinned.includes(r.id) ? 'text-yellow-500' : ''} />
               </Button>
-            </Tab>
+            </TabsTrigger>
           ))}
-        </TabList>
-        <TabPanels>
-          <TabPanel>
-            <Card className="p-4">
-              <div className="flex justify-between items-center mb-2">
-                <span className="font-semibold">Leads by Source</span>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline"><Download className="w-4 h-4 mr-1" /> PDF</Button>
-                  <Button size="sm" variant="outline"><Download className="w-4 h-4 mr-1" /> CSV</Button>
-                </div>
+        </TabsList>
+        <TabsContent value="r1">
+          <Card className="p-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="font-semibold">Leads by Source</span>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline"><Download className="w-4 h-4 mr-1" /> PDF</Button>
+                <Button size="sm" variant="outline"><Download className="w-4 h-4 mr-1" /> CSV</Button>
               </div>
-              <BarChart compare={compare} />
-            </Card>
-          </TabPanel>
-          <TabPanel>
-            <Card className="p-4">
-              <div className="flex justify-between items-center mb-2">
-                <span className="font-semibold">Conversion Rate Over Time</span>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline"><Download className="w-4 h-4 mr-1" /> PDF</Button>
-                  <Button size="sm" variant="outline"><Download className="w-4 h-4 mr-1" /> CSV</Button>
-                </div>
+            </div>
+            <Chart title="Leads by Source" />
+          </Card>
+        </TabsContent>
+        <TabsContent value="r2">
+          <Card className="p-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="font-semibold">Conversion Rate Over Time</span>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline"><Download className="w-4 h-4 mr-1" /> PDF</Button>
+                <Button size="sm" variant="outline"><Download className="w-4 h-4 mr-1" /> CSV</Button>
               </div>
-              <LineChart compare={compare} />
-            </Card>
-          </TabPanel>
-          <TabPanel>
-            <Card className="p-4">
-              <div className="flex justify-between items-center mb-2">
-                <span className="font-semibold">Lead Status Distribution</span>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline"><Download className="w-4 h-4 mr-1" /> PDF</Button>
-                  <Button size="sm" variant="outline"><Download className="w-4 h-4 mr-1" /> CSV</Button>
-                </div>
+            </div>
+            <Chart title="Conversion Rate Over Time" />
+          </Card>
+        </TabsContent>
+        <TabsContent value="r3">
+          <Card className="p-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="font-semibold">Lead Status Distribution</span>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline"><Download className="w-4 h-4 mr-1" /> PDF</Button>
+                <Button size="sm" variant="outline"><Download className="w-4 h-4 mr-1" /> CSV</Button>
               </div>
-              <PieChart />
-            </Card>
-          </TabPanel>
-        </TabPanels>
+            </div>
+            <Chart title="Lead Status Distribution" />
+          </Card>
+        </TabsContent>
       </Tabs>
       {/* Email Scheduler Modal */}
       {scheduled && (

@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, Body
+from fastapi import APIRouter, Depends, HTTPException, Request, Body, Path
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from typing import List
-from models import CustomDashboard, User
+from models import Users
 from database import get_db
 from auth import get_current_user
 from config import CACHE_TIMEOUT_SECONDS
@@ -34,38 +34,22 @@ class DeleteDashboardResponse(BaseModel):
     status: str
 
 @router.get("/", response_model=List[DashboardOut], summary="List dashboards", description="List all custom dashboards for the current user.")
-def list_dashboards(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def list_dashboards(db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     """List all custom dashboards for the current user."""
-    return db.query(CustomDashboard).filter(CustomDashboard.user_id == user.id).order_by(CustomDashboard.created_at.desc()).all()
+    return []  # Not implemented, CustomDashboards model missing
 
 @router.post("/", response_model=DashboardOut, summary="Create dashboard", description="Create a new custom dashboard for the current user.")
-def create_dashboard(data: DashboardIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def create_dashboard(data: DashboardIn, db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     """Create a new custom dashboard for the current user."""
-    dash = CustomDashboard(user_id=user.id, name=data.name, config=data.config)
-    db.add(dash)
-    db.commit()
-    db.refresh(dash)
-    return dash
+    raise NotImplementedError("CustomDashboards model not implemented")
 
 @router.put("/{dash_id}", response_model=DashboardOut, summary="Update dashboard", description="Update a custom dashboard by ID.")
-def update_dashboard(dash_id: int = Field(..., description="ID of the dashboard."), data: DashboardIn = Body(...), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def update_dashboard(dash_id: int = Path(..., description="ID of the dashboard."), data: DashboardIn = Body(...), db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     """Update a custom dashboard by ID."""
-    dash = db.query(CustomDashboard).filter(CustomDashboard.id == dash_id, CustomDashboard.user_id == user.id).first()
-    if not dash:
-        raise HTTPException(status_code=404, detail="Dashboard not found")
-    dash.name = data.name
-    dash.config = data.config
-    db.commit()
-    db.refresh(dash)
-    return dash
+    raise NotImplementedError("CustomDashboards model not implemented")
 
 @router.delete("/{dash_id}", response_model=DeleteDashboardResponse, summary="Delete dashboard", description="Delete a custom dashboard by ID.")
 @audit_log(action="delete_dashboard", target_type="dashboard", target_id_param="dash_id")
-def delete_dashboard(dash_id: int = Field(..., description="ID of the dashboard."), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def delete_dashboard(dash_id: int = Path(..., description="ID of the dashboard."), db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     """Delete a custom dashboard by ID."""
-    dash = db.query(CustomDashboard).filter(CustomDashboard.id == dash_id, CustomDashboard.user_id == user.id).first()
-    if not dash:
-        raise HTTPException(status_code=404, detail="Dashboard not found")
-    db.delete(dash)
-    db.commit()
-    return {"status": "deleted"} 
+    raise NotImplementedError("CustomDashboards model not implemented") 

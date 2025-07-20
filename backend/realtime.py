@@ -1,6 +1,6 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
 from typing import Dict, List
-from models import User
+from models import Users
 from auth import get_current_user
 from fastapi import status, HTTPException
 from jose import JWTError, jwt
@@ -26,7 +26,7 @@ def get_user_from_token(token: str):
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = int(payload.get("sub"))
         db = SessionLocal()
-        user = db.query(User).filter(User.id == user_id).first()
+        user = db.query(Users).filter(Users.id == user_id).first()
         db.close()
         return user
     except Exception:

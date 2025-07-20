@@ -1,7 +1,7 @@
 import graphene
 from fastapi import APIRouter, Request, HTTPException, status
 from starlette.graphql import GraphQLApp
-from models import User, Lead, Notification
+from models import Users, Leads, Notifications
 from database import SessionLocal
 from auth import get_current_user
 from jose import JWTError
@@ -59,7 +59,7 @@ class Query(graphene.ObjectType):
         if not user:
             raise Exception("Authentication required")
         db = SessionLocal()
-        users = db.query(User).filter(User.id == user.id).all()
+        users = db.query(Users).filter(Users.id == user.id).all()
         db.close()
         return users
 
@@ -68,7 +68,7 @@ class Query(graphene.ObjectType):
         if not user:
             raise Exception("Authentication required")
         db = SessionLocal()
-        leads = db.query(Lead).filter(Lead.user_id == user.id).all()
+        leads = db.query(Leads).filter(Leads.user_id == user.id).all()
         db.close()
         return leads
 
@@ -77,7 +77,7 @@ class Query(graphene.ObjectType):
         if not user:
             raise Exception("Authentication required")
         db = SessionLocal()
-        notifications = db.query(Notification).filter(Notification.user_id == user.id).all()
+        notifications = db.query(Notifications).filter(Notifications.user_id == user.id).all()
         db.close()
         return notifications
 
@@ -86,9 +86,9 @@ class Query(graphene.ObjectType):
         if not user:
             raise Exception("Authentication required")
         db = SessionLocal()
-        total_leads = db.query(Lead).filter(Lead.user_id == user.id).count()
+        total_leads = db.query(Leads).filter(Leads.user_id == user.id).count()
         # Leads by status
-        status_counts = db.query(Lead.status, sqlalchemy.func.count(Lead.id)).filter(Lead.user_id == user.id).group_by(Lead.status).all()
+        status_counts = db.query(Leads.status, sqlalchemy.func.count(Leads.id)).filter(Leads.user_id == user.id).group_by(Leads.status).all()
         leads_by_status = {status: count for status, count in status_counts}
         # Conversion rate: converted / total
         converted = leads_by_status.get('converted', 0)
@@ -118,7 +118,7 @@ class CreateLead(graphene.Mutation):
         if not user:
             raise Exception("Authentication required")
         db = SessionLocal()
-        lead = Lead(
+        lead = Leads(
             name=name,
             email=email,
             phone=phone,
@@ -154,7 +154,7 @@ class UpdateLead(graphene.Mutation):
         if not user:
             raise Exception("Authentication required")
         db = SessionLocal()
-        lead = db.query(Lead).filter(Lead.id == lead_id, Lead.user_id == user.id).first()
+        lead = db.query(Leads).filter(Leads.id == lead_id, Leads.user_id == user.id).first()
         if not lead:
             db.close()
             raise Exception("Lead not found")
@@ -190,7 +190,7 @@ class DeleteLead(graphene.Mutation):
         if not user:
             raise Exception("Authentication required")
         db = SessionLocal()
-        lead = db.query(Lead).filter(Lead.id == lead_id, Lead.user_id == user.id).first()
+        lead = db.query(Leads).filter(Leads.id == lead_id, Leads.user_id == user.id).first()
         if not lead:
             db.close()
             raise Exception("Lead not found")
@@ -222,7 +222,7 @@ class ImportLeads(graphene.Mutation):
         db = SessionLocal()
         count = 0
         for lead_data in leads:
-            lead = Lead(
+            lead = Leads(
                 name=lead_data.name,
                 email=lead_data.email,
                 phone=lead_data.phone,
@@ -250,7 +250,7 @@ class MarkNotificationRead(graphene.Mutation):
         if not user:
             raise Exception("Authentication required")
         db = SessionLocal()
-        notification = db.query(Notification).filter(Notification.id == notification_id, Notification.user_id == user.id).first()
+        notification = db.query(Notifications).filter(Notifications.id == notification_id, Notifications.user_id == user.id).first()
         if notification:
             notification.read = True
             db.commit()
@@ -287,7 +287,7 @@ def get_graphql_context(request: Request):
                 payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
                 user_id = payload.get("sub")
                 if user_id:
-                    user = db.query(User).filter(User.id == int(user_id)).first()
+                    user = db.query(Users).filter(Users.id == int(user_id)).first()
             except JWTError:
                 pass
     finally:

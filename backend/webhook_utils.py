@@ -1,5 +1,5 @@
 import requests
-from models import Webhook
+from models import Webhooks
 from sqlalchemy.orm import Session
 from datetime import datetime
 
@@ -7,7 +7,7 @@ def send_webhook_event(event: str, payload: dict, user_id: int, db: Session):
     """
     Send webhooks for a given event and user. POSTs the payload to all active webhooks for the event.
     """
-    webhooks = db.query(Webhook).filter_by(user_id=user_id, event=event, is_active=True).all()
+    webhooks = db.query(Webhooks).filter_by(user_id=user_id, event=event, is_active=True).all()
     for webhook in webhooks:
         try:
             headers = {"Content-Type": "application/json"}

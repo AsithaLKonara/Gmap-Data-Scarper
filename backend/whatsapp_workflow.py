@@ -5,7 +5,7 @@ from typing import List, Optional, Dict, Any
 import json
 import asyncio
 from datetime import datetime, timedelta
-from models import User, WhatsAppWorkflow, WhatsAppWorkflowStep, WhatsAppWorkflowTrigger, SocialMediaLead, Lead
+from models import Users, WhatsAppWorkflows, WhatsAppWorkflowSteps, WhatsAppWorkflowTriggers, SocialMediaLeads, Leads
 from database import get_db
 from auth import get_current_user
 import logging
@@ -52,13 +52,13 @@ class WhatsAppWorkflowEngine:
     
     async def execute_workflow(self, workflow_id: int, lead_data: Dict, db: Session):
         """Execute a WhatsApp workflow"""
-        workflow = db.query(WhatsAppWorkflow).filter(WhatsAppWorkflow.id == workflow_id).first()
+        workflow = db.query(WhatsAppWorkflows).filter(WhatsAppWorkflows.id == workflow_id).first()
         if not workflow or not workflow.is_active:
             return
         
-        steps = db.query(WhatsAppWorkflowStep).filter(
-            WhatsAppWorkflowStep.workflow_id == workflow_id
-        ).order_by(WhatsAppWorkflowStep.order).all()
+        steps = db.query(WhatsAppWorkflowSteps).filter(
+            WhatsAppWorkflowSteps.workflow_id == workflow_id
+        ).order_by(WhatsAppWorkflowSteps.order).all()
         
         execution_data = {
             "workflow_id": workflow_id,
@@ -76,7 +76,7 @@ class WhatsAppWorkflowEngine:
                 logger.error(f"Error executing workflow step {step.id}: {e}")
                 break
     
-    async def execute_step(self, step: WhatsAppWorkflowStep, execution_data: Dict, db: Session):
+    async def execute_step(self, step: WhatsAppWorkflowSteps, execution_data: Dict, db: Session):
         """Execute a single workflow step"""
         if step.step_type == "message":
             await self.send_message_step(step, execution_data, db)
@@ -87,7 +87,7 @@ class WhatsAppWorkflowEngine:
         elif step.step_type == "action":
             await self.action_step(step, execution_data, db)
     
-    async def send_message_step(self, step: WhatsAppWorkflowStep, execution_data: Dict, db: Session):
+    async def send_message_step(self, step: WhatsAppWorkflowSteps, execution_data: Dict, db: Session):
         """Send a WhatsApp message step"""
         from whatsapp_automation import whatsapp_api
         
@@ -111,8 +111,8 @@ class WhatsAppWorkflowEngine:
             )
             
             # Log the message
-            from models import WhatsAppMessage
-            message = WhatsAppMessage(
+            from models import WhatsAppMessages
+            message = WhatsAppMessages(
                 user_id=execution_data["lead_data"]["user_id"],
                 recipient_phone=phone_number,
                 message_content=message_content,
@@ -127,13 +127,13 @@ class WhatsAppWorkflowEngine:
         except Exception as e:
             logger.error(f"Error sending WhatsApp message: {e}")
     
-    async def delay_step(self, step: WhatsAppWorkflowStep, execution_data: Dict):
+    async def delay_step(self, step: WhatsAppWorkflowSteps, execution_data: Dict):
         """Execute a delay step"""
         delay_minutes = step.delay_minutes or 0
         if delay_minutes > 0:
             await asyncio.sleep(delay_minutes * 60)
     
-    async def condition_step(self, step: WhatsAppWorkflowStep, execution_data: Dict, db: Session):
+    async def condition_step(self, step: WhatsAppWorkflowSteps, execution_data: Dict, db: Session):
         """Execute a conditional step"""
         conditions = step.conditions or {}
         lead_data = execution_data["lead_data"]
@@ -152,7 +152,7 @@ class WhatsAppWorkflowEngine:
             for action in negative_actions:
                 await self.execute_action(action, execution_data, db)
     
-    async def action_step(self, step: WhatsAppWorkflowStep, execution_data: Dict, db: Session):
+    async def action_step(self, step: WhatsAppWorkflowSteps, execution_data: Dict, db: Session):
         """Execute an action step"""
         actions = step.actions or []
         for action in actions:
@@ -220,16 +220,16 @@ class WhatsAppWorkflowEngine:
     
     async def add_lead_to_crm(self, lead_data: Dict, db: Session):
         """Add lead to CRM"""
-        from models import Lead
+        from models import Leads
         
         # Check if lead already exists
-        existing_lead = db.query(Lead).filter(
-            Lead.email == lead_data.get("email"),
-            Lead.user_id == lead_data["user_id"]
+        existing_lead = db.query(Leads).filter(
+            Leads.email == lead_data.get("email"),
+            Leads.user_id == lead_data["user_id"]
         ).first()
         
         if not existing_lead:
-            lead = Lead(
+            lead = Leads(
                 user_id=lead_data["user_id"],
                 name=lead_data.get("display_name", ""),
                 email=lead_data.get("email"),
@@ -265,8 +265,8 @@ class WhatsAppWorkflowEngine:
     async def update_lead_status(self, lead_data: Dict, status: str, db: Session):
         """Update lead status"""
         if lead_data.get("social_lead_id"):
-            social_lead = db.query(SocialMediaLead).filter(
-                SocialMediaLead.id == lead_data["social_lead_id"]
+            social_lead = db.query(SocialMediaLeads).filter(
+                SocialMediaLeads.id == lead_data["social_lead_id"]
             ).first()
             if social_lead:
                 social_lead.status = status
@@ -290,7 +290,7 @@ workflow_engine = WhatsAppWorkflowEngine()
 )
 async def create_workflow(
     workflow_data: WorkflowCreate = Body(..., description="Workflow creation payload."),
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Create a new WhatsApp workflow."""
@@ -298,7 +298,7 @@ async def create_workflow(
         raise HTTPException(status_code=403, detail="Pro or Business plan required")
     
     # Create workflow
-    workflow = WhatsAppWorkflow(
+    workflow = WhatsAppWorkflows(
         name=workflow_data.name,
         description=workflow_data.description,
         trigger_type=workflow_data.trigger_type,
@@ -313,7 +313,7 @@ async def create_workflow(
     
     # Create workflow steps
     for step_data in workflow_data.steps:
-        step = WhatsAppWorkflowStep(
+        step = WhatsAppWorkflowSteps(
             workflow_id=workflow.id,
             name=step_data.name,
             step_type=step_data.step_type,
@@ -343,19 +343,19 @@ async def create_workflow(
     description="Get all WhatsApp workflows for the authenticated user."
 )
 async def get_workflows(
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get user's WhatsApp workflows."""
-    workflows = db.query(WhatsAppWorkflow).filter(
-        WhatsAppWorkflow.user_id == current_user.id
+    workflows = db.query(WhatsAppWorkflows).filter(
+        WhatsAppWorkflows.user_id == current_user.id
     ).all()
     
     result = []
     for workflow in workflows:
-        steps = db.query(WhatsAppWorkflowStep).filter(
-            WhatsAppWorkflowStep.workflow_id == workflow.id
-        ).order_by(WhatsAppWorkflowStep.order).all()
+        steps = db.query(WhatsAppWorkflowSteps).filter(
+            WhatsAppWorkflowSteps.workflow_id == workflow.id
+        ).order_by(WhatsAppWorkflowSteps.order).all()
         
         result.append({
             "id": workflow.id,
@@ -392,13 +392,13 @@ async def get_workflows(
 async def trigger_workflow(
     trigger_data: WorkflowTrigger = Body(..., description="Workflow trigger payload."),
     background_tasks: BackgroundTasks = Depends(),
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Trigger a WhatsApp workflow for a lead (background execution)."""
-    workflow = db.query(WhatsAppWorkflow).filter(
-        WhatsAppWorkflow.id == trigger_data.workflow_id,
-        WhatsAppWorkflow.user_id == current_user.id
+    workflow = db.query(WhatsAppWorkflows).filter(
+        WhatsAppWorkflows.id == trigger_data.workflow_id,
+        WhatsAppWorkflows.user_id == current_user.id
     ).first()
     
     if not workflow:
@@ -410,7 +410,7 @@ async def trigger_workflow(
     # Get lead data
     lead_data = {}
     if trigger_data.lead_id:
-        lead = db.query(Lead).filter(Lead.id == trigger_data.lead_id).first()
+        lead = db.query(Leads).filter(Leads.id == trigger_data.lead_id).first()
         if lead:
             lead_data = {
                 "id": lead.id,
@@ -424,8 +424,8 @@ async def trigger_workflow(
             }
     
     if trigger_data.social_lead_id:
-        social_lead = db.query(SocialMediaLead).filter(
-            SocialMediaLead.id == trigger_data.social_lead_id
+        social_lead = db.query(SocialMediaLeads).filter(
+            SocialMediaLeads.id == trigger_data.social_lead_id
         ).first()
         if social_lead:
             lead_data = {
@@ -473,13 +473,13 @@ async def trigger_workflow(
 async def execute_workflow(
     execution_data: WorkflowExecution = Body(..., description="Workflow execution payload."),
     background_tasks: BackgroundTasks = Depends(),
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Manually execute a WhatsApp workflow for a lead (background execution)."""
-    workflow = db.query(WhatsAppWorkflow).filter(
-        WhatsAppWorkflow.id == execution_data.workflow_id,
-        WhatsAppWorkflow.user_id == current_user.id
+    workflow = db.query(WhatsAppWorkflows).filter(
+        WhatsAppWorkflows.id == execution_data.workflow_id,
+        WhatsAppWorkflows.user_id == current_user.id
     ).first()
     
     if not workflow:
@@ -488,7 +488,7 @@ async def execute_workflow(
     # Get lead data
     lead_data = {}
     if execution_data.lead_id:
-        lead = db.query(Lead).filter(Lead.id == execution_data.lead_id).first()
+        lead = db.query(Leads).filter(Leads.id == execution_data.lead_id).first()
         if lead:
             lead_data = {
                 "id": lead.id,
@@ -502,8 +502,8 @@ async def execute_workflow(
             }
     
     if execution_data.social_lead_id:
-        social_lead = db.query(SocialMediaLead).filter(
-            SocialMediaLead.id == execution_data.social_lead_id
+        social_lead = db.query(SocialMediaLeads).filter(
+            SocialMediaLeads.id == execution_data.social_lead_id
         ).first()
         if social_lead:
             lead_data = {
@@ -549,7 +549,7 @@ async def execute_workflow(
     description="Get predefined WhatsApp workflow templates."
 )
 async def get_workflow_templates(
-    current_user: User = Depends(get_current_user)
+    current_user: Users = Depends(get_current_user)
 ):
     """Get predefined workflow templates."""
     templates = [
@@ -642,31 +642,31 @@ async def get_workflow_templates(
     description="Get analytics and statistics for WhatsApp workflows and messages."
 )
 async def get_workflow_analytics(
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get WhatsApp workflow analytics and statistics."""
     # Get workflow statistics
-    total_workflows = db.query(WhatsAppWorkflow).filter(
-        WhatsAppWorkflow.user_id == current_user.id
+    total_workflows = db.query(WhatsAppWorkflows).filter(
+        WhatsAppWorkflows.user_id == current_user.id
     ).count()
     
-    active_workflows = db.query(WhatsAppWorkflow).filter(
-        WhatsAppWorkflow.user_id == current_user.id,
-        WhatsAppWorkflow.is_active == True
+    active_workflows = db.query(WhatsAppWorkflows).filter(
+        WhatsAppWorkflows.user_id == current_user.id,
+        WhatsAppWorkflows.is_active == True
     ).count()
     
     # Get message statistics
-    from models import WhatsAppMessage
-    total_messages = db.query(WhatsAppMessage).filter(
-        WhatsAppMessage.user_id == current_user.id,
-        WhatsAppMessage.workflow_id.isnot(None)
+    from models import WhatsAppMessages
+    total_messages = db.query(WhatsAppMessages).filter(
+        WhatsAppMessages.user_id == current_user.id,
+        WhatsAppMessages.workflow_id.isnot(None)
     ).count()
     
-    successful_messages = db.query(WhatsAppMessage).filter(
-        WhatsAppMessage.user_id == current_user.id,
-        WhatsAppMessage.workflow_id.isnot(None),
-        WhatsAppMessage.status == "sent"
+    successful_messages = db.query(WhatsAppMessages).filter(
+        WhatsAppMessages.user_id == current_user.id,
+        WhatsAppMessages.workflow_id.isnot(None),
+        WhatsAppMessages.status == "sent"
     ).count()
     
     return {

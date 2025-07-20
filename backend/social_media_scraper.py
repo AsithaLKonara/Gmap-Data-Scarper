@@ -6,7 +6,7 @@ import json
 import asyncio
 import aiohttp
 from datetime import datetime, timedelta
-from models import User, SocialMediaLead, LeadCollection, LeadSource
+from models import Users, SocialMediaLeads, LeadCollections, LeadSources
 from database import get_db
 from auth import get_current_user
 import logging
@@ -632,7 +632,7 @@ scraper = SocialMediaScraper()
 async def scrape_social_media(
     request: SocialScrapingRequest = Body(..., description="Scraping job parameters."),
     background_tasks: BackgroundTasks = Depends(),
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Scrape social media platforms for leads (background job)."""
@@ -640,7 +640,7 @@ async def scrape_social_media(
         raise HTTPException(status_code=403, detail="Pro or Business plan required")
     
     # Create collection
-    collection = LeadCollection(
+    collection = LeadCollections(
         name=f"{request.platform.title()} Collection - {datetime.now().strftime('%Y-%m-%d %H:%M')}",
         description=f"Keywords: {', '.join(request.keywords)}",
         source_id=1,  # Social media source ID
@@ -717,7 +717,7 @@ async def scrape_social_media_task(
                 lead_data["engagement_score"] = scraper.calculate_engagement_score(lead_data)
             
             # Create lead record
-            lead = SocialMediaLead(
+            lead = SocialMediaLeads(
                 platform=lead_data["platform"],
                 platform_id=lead_data["platform_id"],
                 username=lead_data.get("username"),
@@ -743,7 +743,7 @@ async def scrape_social_media_task(
             db.add(lead)
         
         # Update collection status
-        collection = db.query(LeadCollection).filter(LeadCollection.id == collection_id).first()
+        collection = db.query(LeadCollections).filter(LeadCollections.id == collection_id).first()
         if collection:
             collection.last_run = datetime.utcnow()
             collection.status = "completed"
@@ -754,7 +754,7 @@ async def scrape_social_media_task(
         logger.exception(f"Error in social media scraping task: {e}")
         
         # Update collection status to failed
-        collection = db.query(LeadCollection).filter(LeadCollection.id == collection_id).first()
+        collection = db.query(LeadCollections).filter(LeadCollections.id == collection_id).first()
         if collection:
             collection.status = "failed"
             db.commit()
@@ -772,17 +772,17 @@ async def get_social_leads(
     status: Optional[str] = Query(None, description="Filter by lead status (new, contacted, etc.)"),
     page: int = Query(1, ge=1, description="Page number for pagination."),
     page_size: int = Query(20, ge=1, le=100, description="Number of leads per page."),
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get social media leads (paginated, filterable)."""
-    query = db.query(SocialMediaLead).filter(SocialMediaLead.user_id == current_user.id)
+    query = db.query(SocialMediaLeads).filter(SocialMediaLeads.user_id == current_user.id)
     
     if platform:
-        query = query.filter(SocialMediaLead.platform == platform)
+        query = query.filter(SocialMediaLeads.platform == platform)
     
     if status:
-        query = query.filter(SocialMediaLead.status == status)
+        query = query.filter(SocialMediaLeads.status == status)
     
     # Pagination
     offset = (page - 1) * page_size
@@ -824,35 +824,35 @@ async def get_social_leads(
     description="Get analytics and statistics for social media scraping jobs and leads."
 )
 async def get_social_analytics(
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get social media scraping analytics and statistics."""
     # Get lead counts by platform
     platform_counts = db.query(
-        SocialMediaLead.platform,
-        db.func.count(SocialMediaLead.id).label('count')
+        SocialMediaLeads.platform,
+        db.func.count(SocialMediaLeads.id).label('count')
     ).filter(
-        SocialMediaLead.user_id == current_user.id
-    ).group_by(SocialMediaLead.platform).all()
+        SocialMediaLeads.user_id == current_user.id
+    ).group_by(SocialMediaLeads.platform).all()
     
     # Get engagement statistics
     engagement_stats = db.query(
-        db.func.avg(SocialMediaLead.engagement_score).label('avg_engagement'),
-        db.func.max(SocialMediaLead.engagement_score).label('max_engagement'),
-        db.func.min(SocialMediaLead.engagement_score).label('min_engagement')
+        db.func.avg(SocialMediaLeads.engagement_score).label('avg_engagement'),
+        db.func.max(SocialMediaLeads.engagement_score).label('max_engagement'),
+        db.func.min(SocialMediaLeads.engagement_score).label('min_engagement')
     ).filter(
-        SocialMediaLead.user_id == current_user.id,
-        SocialMediaLead.engagement_score.isnot(None)
+        SocialMediaLeads.user_id == current_user.id,
+        SocialMediaLeads.engagement_score.isnot(None)
     ).first()
     
     # Get status distribution
     status_counts = db.query(
-        SocialMediaLead.status,
-        db.func.count(SocialMediaLead.id).label('count')
+        SocialMediaLeads.status,
+        db.func.count(SocialMediaLeads.id).label('count')
     ).filter(
-        SocialMediaLead.user_id == current_user.id
-    ).group_by(SocialMediaLead.status).all()
+        SocialMediaLeads.user_id == current_user.id
+    ).group_by(SocialMediaLeads.status).all()
     
     return {
         "platform_counts": {platform: count for platform, count in platform_counts},

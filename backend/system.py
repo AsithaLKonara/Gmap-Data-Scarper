@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
-from models import User, SystemLog, Job, User as UserModel
+from models import Users, Jobs, Users as UserModel
 from database import get_db
 from auth import get_current_user
 from security import check_permission
@@ -53,7 +53,7 @@ class PerformanceMetrics(BaseModel):
     message: Optional[str] = None
 
 @router.get("/health", response_model=SystemHealthResponse, summary="Get system health", description="Get system health metrics and status.")
-def get_system_health(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def get_system_health(db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     try:
         if not check_permission(user, "system", "read", db):
             raise HTTPException(status_code=403, detail="Access denied. Admin privileges required.")
@@ -93,7 +93,7 @@ def get_system_health(db: Session = Depends(get_db), user: User = Depends(get_cu
         raise HTTPException(status_code=500, detail="Failed to get system health. Please try again later.")
 
 @router.get("/performance", response_model=PerformanceMetrics, summary="Get system performance", description="Get system performance metrics.")
-def get_performance_metrics(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def get_performance_metrics(db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     try:
         if not check_permission(user, "system", "read", db):
             raise HTTPException(status_code=403, detail="Access denied. Admin privileges required.")
@@ -121,7 +121,7 @@ def get_system_logs(
     hours: int = 24,
     limit: int = 100,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     try:
         if not check_permission(user, "system", "read", db):
@@ -131,14 +131,14 @@ def get_system_logs(
         since = datetime.utcnow() - timedelta(hours=hours)
         
         # Build query
-        query = db.query(SystemLog).filter(SystemLog.created_at >= since)
+        query = db.query(SystemLogs).filter(SystemLogs.created_at >= since)
         
         if level:
-            query = query.filter(SystemLog.level == level)
+            query = query.filter(SystemLogs.level == level)
         if module:
-            query = query.filter(SystemLog.module == module)
+            query = query.filter(SystemLogs.module == module)
         
-        logs = query.order_by(SystemLog.created_at.desc()).limit(limit).all()
+        logs = query.order_by(SystemLogs.created_at.desc()).limit(limit).all()
         return logs
     except HTTPException:
         raise
@@ -147,7 +147,7 @@ def get_system_logs(
         raise HTTPException(status_code=500, detail="Failed to get system logs. Please try again later.")
 
 @router.get("/info", summary="Get system info", description="Get system and environment information.")
-def get_system_info(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def get_system_info(db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     try:
         if not check_permission(user, "system", "read", db):
             raise HTTPException(status_code=403, detail="Access denied. Admin privileges required.")
@@ -174,7 +174,7 @@ def log_system_event(level: str, module: str, message: str, details: Optional[Di
     """Helper function to log system events"""
     try:
         db = next(get_db())
-        log_entry = SystemLog(
+        log_entry = SystemLogs(
             level=level,
             module=module,
             message=message,

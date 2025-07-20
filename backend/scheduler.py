@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Body
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
-from models import User, Job, ScheduledJob
+from models import Users, Jobs
 from database import get_db
 from auth import get_current_user
 import logging
@@ -201,7 +201,7 @@ scheduler = JobScheduler()
 def create_scheduled_job(
     job: ScheduledJobCreate,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     try:
         # Validate schedule configuration
@@ -252,7 +252,7 @@ def create_scheduled_job(
         raise HTTPException(status_code=500, detail="Failed to create scheduled job")
 
 @router.get("/jobs", response_model=List[ScheduledJobResponse])
-def get_scheduled_jobs(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def get_scheduled_jobs(db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     try:
         # Filter jobs by user
         user_jobs = [
@@ -265,7 +265,7 @@ def get_scheduled_jobs(db: Session = Depends(get_db), user: User = Depends(get_c
         raise HTTPException(status_code=500, detail="Failed to get scheduled jobs")
 
 @router.get("/jobs/{job_id}", response_model=ScheduledJobResponse)
-def get_scheduled_job(job_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def get_scheduled_job(job_id: int, db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     try:
         job_data = scheduled_jobs.get(job_id)
         if not job_data or job_data['user_id'] != user.id:
@@ -282,7 +282,7 @@ def update_scheduled_job(
     job_id: int,
     job_update: ScheduledJobCreate,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     try:
         job_data = scheduled_jobs.get(job_id)
@@ -314,7 +314,7 @@ def update_scheduled_job(
 
 @router.delete("/jobs/{job_id}", response_model=DeleteScheduledJobResponse, summary="Delete scheduled job", description="Delete a scheduled job by job ID.")
 @audit_log(action="delete_scheduled_job", target_type="scheduled_job", target_id_param="job_id")
-def delete_scheduled_job(job_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def delete_scheduled_job(job_id: int, db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     try:
         job_data = scheduled_jobs.get(job_id)
         if not job_data or job_data['user_id'] != user.id:
@@ -331,7 +331,7 @@ def delete_scheduled_job(job_id: int, db: Session = Depends(get_db), user: User 
         raise HTTPException(status_code=500, detail="Failed to delete scheduled job")
 
 @router.post("/jobs/{job_id}/run")
-def run_scheduled_job_now(job_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def run_scheduled_job_now(job_id: int, db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     try:
         job_data = scheduled_jobs.get(job_id)
         if not job_data or job_data['user_id'] != user.id:
@@ -349,7 +349,7 @@ def run_scheduled_job_now(job_id: int, db: Session = Depends(get_db), user: User
         raise HTTPException(status_code=500, detail="Failed to run scheduled job")
 
 @router.post("/jobs/{job_id}/toggle")
-def toggle_scheduled_job(job_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def toggle_scheduled_job(job_id: int, db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     try:
         job_data = scheduled_jobs.get(job_id)
         if not job_data or job_data['user_id'] != user.id:
@@ -370,20 +370,20 @@ def toggle_scheduled_job(job_id: int, db: Session = Depends(get_db), user: User 
         raise HTTPException(status_code=500, detail="Failed to toggle scheduled job")
 
 @router.get("/", response_model=List[ScheduledJobOut])
-def list_scheduled_jobs(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    return db.query(ScheduledJob).filter(ScheduledJob.user_id == user.id).order_by(ScheduledJob.created_at.desc()).all()
+def list_scheduled_jobs(db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
+    return db.query(Jobs).filter(Jobs.user_id == user.id).order_by(Jobs.created_at.desc()).all()
 
 @router.post("/", response_model=ScheduledJobOut)
-def create_scheduled_job(data: ScheduledJobIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    sj = ScheduledJob(user_id=user.id, name=data.name, queries=data.queries, schedule=data.schedule, active=data.active)
+def create_scheduled_job(data: ScheduledJobIn, db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
+    sj = Jobs(user_id=user.id, name=data.name, queries=data.queries, schedule=data.schedule, active=data.active)
     db.add(sj)
     db.commit()
     db.refresh(sj)
     return sj
 
 @router.put("/{job_id}", response_model=ScheduledJobOut)
-def update_scheduled_job(job_id: int, data: ScheduledJobIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    sj = db.query(ScheduledJob).filter(ScheduledJob.id == job_id, ScheduledJob.user_id == user.id).first()
+def update_scheduled_job(job_id: int, data: ScheduledJobIn, db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
+    sj = db.query(Jobs).filter(Jobs.id == job_id, Jobs.user_id == user.id).first()
     if not sj:
         raise HTTPException(status_code=404, detail="Scheduled job not found")
     sj.name = data.name
@@ -396,8 +396,8 @@ def update_scheduled_job(job_id: int, data: ScheduledJobIn, db: Session = Depend
 
 @router.delete("/{job_id}", response_model=DeleteScheduledJobResponse, summary="Delete scheduled job", description="Delete a scheduled job by job ID.")
 @audit_log(action="delete_scheduled_job", target_type="scheduled_job", target_id_param="job_id")
-def delete_scheduled_job(job_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    sj = db.query(ScheduledJob).filter(ScheduledJob.id == job_id, ScheduledJob.user_id == user.id).first()
+def delete_scheduled_job(job_id: int, db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
+    sj = db.query(Jobs).filter(Jobs.id == job_id, Jobs.user_id == user.id).first()
     if not sj:
         raise HTTPException(status_code=404, detail="Scheduled job not found")
     db.delete(sj)
@@ -405,8 +405,8 @@ def delete_scheduled_job(job_id: int, db: Session = Depends(get_db), user: User 
     return DeleteScheduledJobResponse(status="deleted")
 
 @router.post("/{job_id}/activate")
-def activate_scheduled_job(job_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    sj = db.query(ScheduledJob).filter(ScheduledJob.id == job_id, ScheduledJob.user_id == user.id).first()
+def activate_scheduled_job(job_id: int, db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
+    sj = db.query(Jobs).filter(Jobs.id == job_id, Jobs.user_id == user.id).first()
     if not sj:
         raise HTTPException(status_code=404, detail="Scheduled job not found")
     sj.active = True
@@ -414,8 +414,8 @@ def activate_scheduled_job(job_id: int, db: Session = Depends(get_db), user: Use
     return {"status": "activated"}
 
 @router.post("/{job_id}/deactivate")
-def deactivate_scheduled_job(job_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    sj = db.query(ScheduledJob).filter(ScheduledJob.id == job_id, ScheduledJob.user_id == user.id).first()
+def deactivate_scheduled_job(job_id: int, db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
+    sj = db.query(Jobs).filter(Jobs.id == job_id, Jobs.user_id == user.id).first()
     if not sj:
         raise HTTPException(status_code=404, detail="Scheduled job not found")
     sj.active = False

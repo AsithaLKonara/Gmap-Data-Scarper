@@ -6,7 +6,7 @@ import json
 import asyncio
 import aiohttp
 from datetime import datetime, timedelta
-from models import User, LeadSource, LeadCollection, SocialMediaLead, SystemLog
+from models import Users, LeadSources, LeadCollections, SocialMediaLeads
 from database import get_db
 from auth import get_current_user
 import logging
@@ -75,14 +75,14 @@ class SocialMediaLeadResponse(BaseModel):
 @router.post("/sources", response_model=Dict[str, Any], summary="Create lead source", description="Create a new lead source (Pro/Business only).")
 async def create_lead_source(
     source_data: LeadSourceCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Create a new lead source. Pro/Business plan required."""
     if current_user.plan not in ['pro', 'business']:
         raise HTTPException(status_code=403, detail="Pro or Business plan required")
     
-    source = LeadSource(
+    source = LeadSources(
         name=source_data.name,
         type=source_data.type,
         config=json.dumps(source_data.config) if source_data.config else None
@@ -102,10 +102,10 @@ async def create_lead_source(
 @router.get("/sources", response_model=List[LeadSourceStatus], summary="List available lead sources", description="Get all available lead sources and their connection status.")
 def list_lead_sources(
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Get all available lead sources and their connection status."""
-    sources = db.query(LeadSource).filter(LeadSource.user_id == user.id).all()
+    sources = db.query(LeadSources).filter(LeadSources.user_id == user.id).all()
     result = []
     for source in sources:
         result.append(LeadSourceStatus(
@@ -122,7 +122,7 @@ def list_lead_sources(
 @router.post("/collections", response_model=Dict[str, Any], summary="Create lead collection", description="Create a new lead collection (Pro/Business only).")
 async def create_lead_collection(
     collection_data: LeadCollectionCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Create a new lead collection. Pro/Business plan required."""
@@ -130,11 +130,11 @@ async def create_lead_collection(
         raise HTTPException(status_code=403, detail="Pro or Business plan required")
     
     # Verify source exists
-    source = db.query(LeadSource).filter(LeadSource.id == collection_data.source_id).first()
+    source = db.query(LeadSources).filter(LeadSources.id == collection_data.source_id).first()
     if not source:
         raise HTTPException(status_code=404, detail="Lead source not found")
     
-    collection = LeadCollection(
+    collection = LeadCollections(
         name=collection_data.name,
         description=collection_data.description,
         source_id=collection_data.source_id,
@@ -157,11 +157,11 @@ async def create_lead_collection(
 
 @router.get("/collections", response_model=List[LeadCollectionStatus], summary="List lead collections", description="Get all lead collections for the authenticated user.")
 async def get_lead_collections(
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get all lead collections for the authenticated user."""
-    collections = db.query(LeadCollection).filter(LeadCollection.user_id == current_user.id).all()
+    collections = db.query(LeadCollections).filter(LeadCollections.user_id == current_user.id).all()
     return [
         {
             "id": collection.id,
@@ -188,7 +188,7 @@ async def collect_facebook_leads(
     keywords: List[str] = Body(..., description="Keywords to search for."),
     location: Optional[str] = Body(None, description="Location filter."),
     max_results: int = Body(100, description="Maximum number of results."),
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Collect leads from Facebook. Pro/Business plan required."""
@@ -196,7 +196,7 @@ async def collect_facebook_leads(
         raise HTTPException(status_code=403, detail="Pro or Business plan required")
     
     # Create collection
-    collection = LeadCollection(
+    collection = LeadCollections(
         name=f"Facebook Collection - {datetime.now().strftime('%Y-%m-%d %H:%M')}",
         description=f"Keywords: {', '.join(keywords)}",
         source_id=1,  # Facebook source ID
@@ -239,14 +239,14 @@ async def collect_instagram_leads(
     hashtags: List[str] = Body(..., description="Hashtags to search for."),
     location: Optional[str] = Body(None, description="Location filter."),
     max_results: int = Body(100, description="Maximum number of results."),
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Collect leads from Instagram. Pro/Business plan required."""
     if current_user.plan not in ['pro', 'business']:
         raise HTTPException(status_code=403, detail="Pro or Business plan required")
     
-    collection = LeadCollection(
+    collection = LeadCollections(
         name=f"Instagram Collection - {datetime.now().strftime('%Y-%m-%d %H:%M')}",
         description=f"Hashtags: {', '.join(hashtags)}",
         source_id=2,  # Instagram source ID
@@ -286,14 +286,14 @@ async def collect_whatsapp_leads(
     background_tasks: BackgroundTasks,
     phone_numbers: List[str] = Body(..., description="Phone numbers to search for."),
     keywords: List[str] = Body(..., description="Keywords to search for."),
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Collect leads from WhatsApp. Pro/Business plan required."""
     if current_user.plan != 'business':
         raise HTTPException(status_code=403, detail="Business plan required")
     
-    collection = LeadCollection(
+    collection = LeadCollections(
         name=f"WhatsApp Collection - {datetime.now().strftime('%Y-%m-%d %H:%M')}",
         description=f"Keywords: {', '.join(keywords)}",
         source_id=3,  # WhatsApp source ID
@@ -356,7 +356,7 @@ async def collect_facebook_leads_task(
     db = SessionLocal()
     try:
         for lead_data in mock_leads:
-            lead = SocialMediaLead(
+            lead = SocialMediaLeads(
                 platform=lead_data["platform"],
                 platform_id=lead_data["platform_id"],
                 username=lead_data["username"],
@@ -375,7 +375,7 @@ async def collect_facebook_leads_task(
             db.add(lead)
         
         # Update collection status
-        collection = db.query(LeadCollection).filter(LeadCollection.id == collection_id).first()
+        collection = db.query(LeadCollections).filter(LeadCollections.id == collection_id).first()
         if collection:
             collection.last_run = datetime.utcnow()
             collection.status = "completed"
@@ -415,7 +415,7 @@ async def collect_instagram_leads_task(
     db = SessionLocal()
     try:
         for lead_data in mock_leads:
-            lead = SocialMediaLead(
+            lead = SocialMediaLeads(
                 platform=lead_data["platform"],
                 platform_id=lead_data["platform_id"],
                 username=lead_data["username"],
@@ -433,7 +433,7 @@ async def collect_instagram_leads_task(
             )
             db.add(lead)
         
-        collection = db.query(LeadCollection).filter(LeadCollection.id == collection_id).first()
+        collection = db.query(LeadCollections).filter(LeadCollections.id == collection_id).first()
         if collection:
             collection.last_run = datetime.utcnow()
             collection.status = "completed"
@@ -467,7 +467,7 @@ async def collect_whatsapp_leads_task(
     db = SessionLocal()
     try:
         for lead_data in mock_leads:
-            lead = SocialMediaLead(
+            lead = SocialMediaLeads(
                 platform=lead_data["platform"],
                 platform_id=lead_data["platform_id"],
                 display_name=lead_data["display_name"],
@@ -480,7 +480,7 @@ async def collect_whatsapp_leads_task(
             )
             db.add(lead)
         
-        collection = db.query(LeadCollection).filter(LeadCollection.id == collection_id).first()
+        collection = db.query(LeadCollections).filter(LeadCollections.id == collection_id).first()
         if collection:
             collection.last_run = datetime.utcnow()
             collection.status = "completed"
@@ -497,18 +497,18 @@ async def get_social_media_leads(
     collection_id: Optional[int] = Query(None, description="Collection ID filter."),
     page: int = Query(1, ge=1, description="Page number for pagination."),
     page_size: int = Query(20, ge=1, le=100, description="Number of leads per page."),
-    current_user: User = Depends(get_current_user),
+    current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get social media leads with optional filters for platform, status, and collection."""
-    query = db.query(SocialMediaLead).filter(SocialMediaLead.user_id == current_user.id)
+    query = db.query(SocialMediaLeads).filter(SocialMediaLeads.user_id == current_user.id)
     
     if platform:
-        query = query.filter(SocialMediaLead.platform == platform)
+        query = query.filter(SocialMediaLeads.platform == platform)
     if status:
-        query = query.filter(SocialMediaLead.status == status)
+        query = query.filter(SocialMediaLeads.status == status)
     if collection_id:
-        query = query.filter(SocialMediaLead.collection_id == collection_id)
+        query = query.filter(SocialMediaLeads.collection_id == collection_id)
     
     total = query.count()
     leads = query.offset((page - 1) * page_size).limit(page_size).all()
@@ -589,9 +589,9 @@ def initialize_lead_sources(db: Session):
     ]
     
     for source_data in default_sources:
-        existing = db.query(LeadSource).filter(LeadSource.name == source_data["name"]).first()
+        existing = db.query(LeadSources).filter(LeadSources.name == source_data["name"]).first()
         if not existing:
-            source = LeadSource(
+            source = LeadSources(
                 name=source_data["name"],
                 type=source_data["type"],
                 config=json.dumps(source_data["config"])

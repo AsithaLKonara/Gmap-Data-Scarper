@@ -1,5 +1,5 @@
 from database import engine, SessionLocal
-from models import User, Base
+from models import Users, Base
 from auth import get_password_hash
 
 def create_default_users():
@@ -17,13 +17,13 @@ def create_default_users():
     try:
         # Check if users already exist
         print("🔍 [SETUP] Checking for existing users...")
-        existing_user = db.query(User).filter(User.email == "user@leadtap.com").first()
-        existing_admin = db.query(User).filter(User.email == "admin@leadtap.com").first()
+        existing_user = db.query(Users).filter(Users.email == "user@leadtap.com").first()
+        existing_admin = db.query(Users).filter(Users.email == "admin@leadtap.com").first()
         
         # Create user account
         if not existing_user:
             print("👤 [SETUP] Creating regular user account...")
-            user = User(
+            user = Users(
                 email="user@leadtap.com",
                 hashed_password=get_password_hash("1234"),
                 plan="free",
@@ -37,7 +37,7 @@ def create_default_users():
         # Create admin account
         if not existing_admin:
             print("👑 [SETUP] Creating admin account...")
-            admin = User(
+            admin = Users(
                 email="admin@leadtap.com",
                 hashed_password=get_password_hash("1234"),
                 plan="business",
@@ -55,7 +55,7 @@ def create_default_users():
         
         # Verify users in database
         print("🔍 [SETUP] Verifying users in database...")
-        all_users = db.query(User).all()
+        all_users = db.query(Users).all()
         print(f"📊 [SETUP] Total users in database: {len(all_users)}")
         for user in all_users:
             print(f"👤 [SETUP] User - ID: {user.id}, Email: {user.email}, Plan: {user.plan}")

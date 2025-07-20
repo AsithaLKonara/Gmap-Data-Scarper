@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, Request, Body
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, Request, Body, Path
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
-from models import User, Notification
+from models import Users, Notifications
 from database import get_db
 from auth import get_current_user
 import logging
@@ -190,7 +190,7 @@ class NotificationService:
         try:
             # Get user information
             db = next(get_db())
-            user = db.query(User).filter(User.id == notification.user_id).first()
+            user = db.query(Users).filter(Users.id == notification.user_id).first()
             if not user:
                 raise ValueError("User not found")
             
@@ -228,7 +228,7 @@ class NotificationService:
             notification_response.error_message = str(e)
             return notification_response
     
-    async def _send_email(self, user: User, template: NotificationTemplate, data: Dict[str, Any]):
+    async def _send_email(self, user: Users, template: NotificationTemplate, data: Dict[str, Any]):
         """Send email notification"""
         try:
             # Prepare email content
@@ -255,7 +255,7 @@ class NotificationService:
             logger.exception("Error sending email")
             raise
     
-    async def _send_webhook(self, user: User, template: NotificationTemplate, data: Dict[str, Any]):
+    async def _send_webhook(self, user: Users, template: NotificationTemplate, data: Dict[str, Any]):
         """Send webhook notification"""
         try:
             webhook_url = self.webhook_config.get(str(user.id))
@@ -284,7 +284,7 @@ class NotificationService:
             logger.exception("Error sending webhook")
             raise
     
-    async def _send_sms(self, user: User, template: NotificationTemplate, data: Dict[str, Any]):
+    async def _send_sms(self, user: Users, template: NotificationTemplate, data: Dict[str, Any]):
         """Send SMS notification (placeholder)"""
         try:
             # SMS implementation would go here
@@ -366,7 +366,7 @@ class WebhookTestResponse(BaseModel):
 async def send_notification(
     notification: NotificationRequest,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Send a notification to a user through specified channels."""
     try:
@@ -384,7 +384,7 @@ async def send_notification(
         raise HTTPException(status_code=500, detail="Failed to send notification")
 
 @router.get("/templates", response_model=List[NotificationTemplate], summary="List notification templates", description="Get all available notification templates.")
-def get_notification_templates(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def get_notification_templates(db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     """Get all available notification templates."""
     try:
         return list(notification_templates.values())
@@ -396,7 +396,7 @@ def get_notification_templates(db: Session = Depends(get_db), user: User = Depen
 def get_notification_history(
     limit: int = 50,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Get notification history for the current user."""
     try:
@@ -474,21 +474,21 @@ async def send_daily_report_notification(user_id: int, report_data: Dict[str, An
     await notification_service.send_notification(notification)
 
 @router.get("/", response_model=List[NotificationOut], summary="List notifications", description="List all notifications for the current user.")
-def list_notifications(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def list_notifications(db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     """List all notifications for the current user."""
-    return db.query(Notification).filter(Notification.user_id == user.id).order_by(Notification.created_at.desc()).all()
+    return db.query(Notifications).filter(Notifications.user_id == user.id).order_by(Notifications.created_at.desc()).all()
 
 @router.get("/notifications/{notif_id}", response_model=NotificationOut, summary="Get notification", description="Get a specific notification by ID.")
-def get_notification(notif_id: int = Field(..., description="ID of the notification."), request: Request = None, db: Session = Depends(get_db)):
+def get_notification(notif_id: int = Path(..., description="ID of the notification."), request: Request = None, db: Session = Depends(get_db)):
     """Get a specific notification by ID."""
     tenant = get_tenant_from_request(request, db)
-    notif = get_tenant_record_or_403(Notification, notif_id, tenant.id, db)
+    notif = get_tenant_record_or_403(Notifications, notif_id, tenant.id, db)
     return notif
 
 @router.post("/{notif_id}/read", response_model=MarkReadResponse, summary="Mark notification as read", description="Mark a notification as read by ID.")
-def mark_notification_read(notif_id: int = Field(..., description="ID of the notification."), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def mark_notification_read(notif_id: int = Path(..., description="ID of the notification."), db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     """Mark a notification as read by ID."""
-    notif = db.query(Notification).filter(Notification.id == notif_id, Notification.user_id == user.id).first()
+    notif = db.query(Notifications).filter(Notifications.id == notif_id, Notifications.user_id == user.id).first()
     if not notif:
         raise HTTPException(status_code=404, detail="Notification not found")
     notif.read = True
@@ -496,9 +496,9 @@ def mark_notification_read(notif_id: int = Field(..., description="ID of the not
     return {"message": "Notification marked as read", "notif_id": notif_id}
 
 @router.post("/", response_model=NotificationOut, summary="Create notification", description="Create a new notification for the current user.")
-def create_notification(data: NotificationIn, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def create_notification(data: NotificationIn, db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     """Create a new notification for the current user."""
-    notif = Notification(user_id=user.id, type=data.type, message=data.message)
+    notif = Notifications(user_id=user.id, type=data.type, message=data.message)
     db.add(notif)
     db.commit()
     db.refresh(notif)
@@ -514,12 +514,12 @@ def create_notification(data: NotificationIn, db: Session = Depends(get_db), use
     return notif
 
 @router.get("/webhook", response_model=WebhookUrlResponse, summary="Get webhook URL", description="Get the webhook URL for the current user.")
-def get_webhook_url(user: User = Depends(get_current_user)):
+def get_webhook_url(user: Users = Depends(get_current_user)):
     """Get the webhook URL for the current user."""
     return {"url": user.webhook_url}
 
 @router.post("/webhook", response_model=WebhookUrlResponse, summary="Set webhook URL", description="Set the webhook URL for the current user.")
-def set_webhook_url(data: dict = Body(...), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def set_webhook_url(data: dict = Body(...), db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     """Set the webhook URL for the current user."""
     url = data.get("webhook_url")
     if not url or not url.startswith("http"):
@@ -529,14 +529,14 @@ def set_webhook_url(data: dict = Body(...), db: Session = Depends(get_db), user:
     return {"url": url}
 
 @router.delete("/webhook", response_model=WebhookUrlResponse, summary="Delete webhook URL", description="Delete the webhook URL for the current user.")
-def delete_webhook_url(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def delete_webhook_url(db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     """Delete the webhook URL for the current user."""
     user.webhook_url = None
     db.commit()
     return {"url": None}
 
 @router.post("/webhook/test", response_model=WebhookTestResponse, summary="Test webhook", description="Send a test notification to the user's webhook URL.")
-def test_webhook(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def test_webhook(db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     """Send a test notification to the user's webhook URL."""
     if not user.webhook_url:
         raise HTTPException(status_code=400, detail="No webhook URL set")

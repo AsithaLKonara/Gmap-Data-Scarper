@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
-from models import User, Goal, AnalyticsEvent, Job, Lead
+from models import Users, Jobs, Leads
 from database import get_db
 from auth import get_current_user
 import json
@@ -71,7 +71,7 @@ class DeleteGoalResponse(BaseModel):
 def create_goal(
     goal_data: GoalCreate,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Create a new analytics goal for the current user."""
     # Calculate current progress based on goal type
@@ -113,7 +113,7 @@ def create_goal(
 )
 def get_goals(
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Get all analytics goals for the current user."""
     goals = db.query(Goal).filter(Goal.user_id == user.id).all()
@@ -147,7 +147,7 @@ def update_goal(
     goal_id: int,
     goal_data: GoalCreate,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Update an existing analytics goal for the current user."""
     goal = db.query(Goal).filter(
@@ -175,7 +175,7 @@ def update_goal(
 def delete_goal(
     goal_id: int,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Delete an analytics goal for the current user."""
     goal = db.query(Goal).filter(
@@ -197,29 +197,29 @@ def delete_goal(
 )
 def get_conversion_funnel(
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Get conversion funnel analysis for the current user."""
     # Calculate funnel stages
-    total_jobs = db.query(Job).filter(Job.user_id == user.id).count()
-    completed_jobs = db.query(Job).filter(
-        Job.user_id == user.id,
-        Job.status == 'completed'
+    total_jobs = db.query(Jobs).filter(Jobs.user_id == user.id).count()
+    completed_jobs = db.query(Jobs).filter(
+        Jobs.user_id == user.id,
+        Jobs.status == 'completed'
     ).count()
-    total_leads = db.query(Lead).filter(Lead.user_id == user.id).count()
-    crm_leads = db.query(Lead).filter(
-        Lead.user_id == user.id,
-        Lead.status.in_(['new', 'contacted', 'qualified', 'converted'])
+    total_leads = db.query(Leads).filter(Leads.user_id == user.id).count()
+    crm_leads = db.query(Leads).filter(
+        Leads.user_id == user.id,
+        Leads.status.in_(['new', 'contacted', 'qualified', 'converted'])
     ).count()
     # Estimate exports (jobs with results)
-    exported_jobs = db.query(Job).filter(
-        Job.user_id == user.id,
-        Job.status == 'completed'
+    exported_jobs = db.query(Jobs).filter(
+        Jobs.user_id == user.id,
+        Jobs.status == 'completed'
     ).count()  # Simplified - assume completed jobs are exported
     # Estimate conversions (leads with status 'converted')
-    converted_leads = db.query(Lead).filter(
-        Lead.user_id == user.id,
-        Lead.status == 'converted'
+    converted_leads = db.query(Leads).filter(
+        Leads.user_id == user.id,
+        Leads.status == 'converted'
     ).count()
     funnel_stages = [
         FunnelStage(
@@ -264,23 +264,23 @@ def get_conversion_funnel(
 @router.get("/insights", response_model=List[AnalyticsInsight])
 def get_analytics_insights(
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Get personalized analytics insights"""
     
     insights = []
     
     # Get user statistics
-    total_jobs = db.query(Job).filter(Job.user_id == user.id).count()
-    completed_jobs = db.query(Job).filter(
-        Job.user_id == user.id,
-        Job.status == 'completed'
+    total_jobs = db.query(Jobs).filter(Jobs.user_id == user.id).count()
+    completed_jobs = db.query(Jobs).filter(
+        Jobs.user_id == user.id,
+        Jobs.status == 'completed'
     ).count()
     
-    total_leads = db.query(Lead).filter(Lead.user_id == user.id).count()
-    converted_leads = db.query(Lead).filter(
-        Lead.user_id == user.id,
-        Lead.status == 'converted'
+    total_leads = db.query(Leads).filter(Leads.user_id == user.id).count()
+    converted_leads = db.query(Leads).filter(
+        Leads.user_id == user.id,
+        Leads.status == 'converted'
     ).count()
     
     # Calculate metrics
@@ -333,9 +333,9 @@ def get_analytics_insights(
         ))
     
     # Activity insights
-    recent_jobs = db.query(Job).filter(
-        Job.user_id == user.id,
-        Job.created_at >= datetime.utcnow() - timedelta(days=7)
+    recent_jobs = db.query(Jobs).filter(
+        Jobs.user_id == user.id,
+        Jobs.created_at >= datetime.utcnow() - timedelta(days=7)
     ).count()
     
     if recent_jobs == 0:
@@ -353,7 +353,7 @@ def get_analytics_insights(
 def get_analytics_trends(
     days: int = 30,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user)
+    user: Users = Depends(get_current_user)
 ):
     """Get analytics trends over time"""
     
@@ -362,21 +362,21 @@ def get_analytics_trends(
     
     # Get daily job counts
     daily_jobs = db.query(
-        db.func.date(Job.created_at).label('date'),
-        db.func.count(Job.id).label('count')
+        db.func.date(Jobs.created_at).label('date'),
+        db.func.count(Jobs.id).label('count')
     ).filter(
-        Job.user_id == user.id,
-        Job.created_at >= start_date
-    ).group_by(db.func.date(Job.created_at)).all()
+        Jobs.user_id == user.id,
+        Jobs.created_at >= start_date
+    ).group_by(db.func.date(Jobs.created_at)).all()
     
     # Get daily lead counts
     daily_leads = db.query(
-        db.func.date(Lead.created_at).label('date'),
-        db.func.count(Lead.id).label('count')
+        db.func.date(Leads.created_at).label('date'),
+        db.func.count(Leads.id).label('count')
     ).filter(
-        Lead.user_id == user.id,
-        Lead.created_at >= start_date
-    ).group_by(db.func.date(Lead.created_at)).all()
+        Leads.user_id == user.id,
+        Leads.created_at >= start_date
+    ).group_by(db.func.date(Leads.created_at)).all()
     
     # Format data for charts
     job_trends = [{"date": str(job.date), "count": job.count} for job in daily_jobs]
@@ -401,30 +401,30 @@ def calculate_current_value(user_id: int, goal_type: GoalType, period: GoalPerio
         start_date = now - timedelta(days=30)
     
     if goal_type == GoalType.LEADS:
-        return db.query(Lead).filter(
-            Lead.user_id == user_id,
-            Lead.created_at >= start_date
+        return db.query(Leads).filter(
+            Leads.user_id == user_id,
+            Leads.created_at >= start_date
         ).count()
     
     elif goal_type == GoalType.JOBS:
-        return db.query(Job).filter(
-            Job.user_id == user_id,
-            Job.created_at >= start_date
+        return db.query(Jobs).filter(
+            Jobs.user_id == user_id,
+            Jobs.created_at >= start_date
         ).count()
     
     elif goal_type == GoalType.EXPORTS:
         # Simplified - count completed jobs as exports
-        return db.query(Job).filter(
-            Job.user_id == user_id,
-            Job.status == 'completed',
-            Job.created_at >= start_date
+        return db.query(Jobs).filter(
+            Jobs.user_id == user_id,
+            Jobs.status == 'completed',
+            Jobs.created_at >= start_date
         ).count()
     
     elif goal_type == GoalType.REVENUE:
         # Simplified revenue calculation based on leads
-        leads = db.query(Lead).filter(
-            Lead.user_id == user_id,
-            Lead.created_at >= start_date
+        leads = db.query(Leads).filter(
+            Leads.user_id == user_id,
+            Leads.created_at >= start_date
         ).count()
         # Assume $50 average value per lead
         return leads * 50.0
