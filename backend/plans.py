@@ -67,14 +67,14 @@ async def get_plans(db: Session = Depends(get_db)):
         result.append(PlanResponse(
             id=plan.id,
             name=plan.name,
-            display_name=plan.display_name,
-            description=plan.description,
-            price_monthly=plan.price_monthly,
-            price_yearly=plan.price_yearly,
+            display_name=plan.name.title(),
+            description=f"{plan.name.title()} plan with {plan.max_queries_per_day} queries per day",
+            price_monthly=plan.price,
+            price_yearly=plan.price * 12,
             max_queries_per_day=plan.max_queries_per_day,
             max_results_per_query=plan.max_results_per_query,
             features=features,
-            limits=limits,
+            limits={"max_leads": plan.max_leads},
             is_active=plan.is_active
         ))
     
@@ -227,34 +227,26 @@ def initialize_default_plans(db: Session):
     default_plans = [
         {
             "name": "free",
-            "display_name": "Free",
-            "description": "Basic Google Maps scraping, CSV export, Email support, Basic search filters",
-            "price_monthly": 0,
-            "price_yearly": 0,
+            "type": "free",
+            "price": 0.0,
             "max_queries_per_day": 10,
             "max_results_per_query": 10,
+            "max_leads": 100,
             "features": json.dumps([
                 "Basic Google Maps scraping",
                 "CSV export format",
                 "Email support",
                 "Basic search filters"
             ]),
-            "limits": json.dumps({
-                "max_queries_per_day": 10,
-                "max_results_per_query": 10,
-                "export_formats": ["csv"],
-                "crm_leads": 20
-            }),
             "is_active": True
         },
         {
             "name": "pro",
-            "display_name": "Pro",
-            "description": "Advanced scraping, CSV/JSON/Excel export, Priority email support, Advanced filters, API access, Data validation",
-            "price_monthly": 9,
-            "price_yearly": 90,
+            "type": "pro",
+            "price": 9.0,
             "max_queries_per_day": 100,
             "max_results_per_query": 100,
+            "max_leads": 1000,
             "features": json.dumps([
                 "Advanced scraping capabilities",
                 "CSV, JSON, Excel export",
@@ -263,23 +255,15 @@ def initialize_default_plans(db: Session):
                 "API access",
                 "Data validation"
             ]),
-            "limits": json.dumps({
-                "max_queries_per_day": 100,
-                "max_results_per_query": 100,
-                "export_formats": ["csv", "json", "xlsx"],
-                "crm_leads": 1000,
-                "api_access": True
-            }),
             "is_active": True
         },
         {
             "name": "business",
-            "display_name": "Business",
-            "description": "Enterprise scraping, All export formats, 24/7 phone support, Custom integrations, White-label, Dedicated manager",
-            "price_monthly": 49,
-            "price_yearly": 490,
+            "type": "business",
+            "price": 49.0,
             "max_queries_per_day": 1000000,  # Effectively unlimited
             "max_results_per_query": 10000,
+            "max_leads": 100000,
             "features": json.dumps([
                 "Enterprise-level scraping",
                 "All export formats",
@@ -288,17 +272,6 @@ def initialize_default_plans(db: Session):
                 "White-label options",
                 "Dedicated account manager"
             ]),
-            "limits": json.dumps({
-                "max_queries_per_day": 1000000,
-                "max_results_per_query": 10000,
-                "export_formats": ["csv", "json", "xlsx", "pdf"],
-                "crm_leads": 100000,
-                "api_access": True,
-                "phone_support": True,
-                "custom_integrations": True,
-                "white_label": True,
-                "dedicated_manager": True
-            }),
             "is_active": True
         }
     ]
