@@ -3,7 +3,8 @@ FROM python:3.10-slim
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+ENV PIP_DEFAULT_TIMEOUT=180
+RUN pip install --default-timeout=180 --no-cache-dir -r requirements.txt
 
 COPY . .
 

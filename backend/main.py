@@ -18,7 +18,6 @@ from system import router as system_router
 from scheduler import router as scheduler_router
 from export import router as export_router
 from notifications import router as notifications_router
-from config import FRONTEND_URL
 from support import router as support_router
 from saved_queries import router as saved_queries_router
 from analytics import router as analytics_router
@@ -33,14 +32,14 @@ from referral import router as referral_router
 from widgets import router as widgets_router
 from showcase import router as showcase_router
 from sso import router as sso_router
-from branding import router as branding_router
 from social_media_scraper import router as social_scraper_router
 from whatsapp_workflow import router as whatsapp_workflow_router
-from graphql import router as graphql_router
+from graphql_api import router as graphql_router
 from realtime import router as realtime_router
 from payments import router as payments_router
 from webhooks import router as webhooks_router
 from affiliate import router as affiliate_router
+from config import FRONTEND_URL
 
 # Sentry integration
 SENTRY_DSN = os.getenv("SENTRY_DSN")
@@ -104,7 +103,6 @@ app.include_router(referral_router)
 app.include_router(widgets_router)
 app.include_router(showcase_router)
 app.include_router(sso_router)
-app.include_router(branding_router)
 app.include_router(social_scraper_router)
 app.include_router(whatsapp_workflow_router)
 app.include_router(graphql_router)
