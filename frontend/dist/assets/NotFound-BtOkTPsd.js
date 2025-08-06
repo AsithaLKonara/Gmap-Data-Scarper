@@ -1,2 +1,0 @@
-import{j as o,L as e}from"./index-cuttc60L.js";import{B as t,a as s}from"./button-D-CbrSAB.js";import{H as n,T as i}from"./text-D7Hreo_J.js";import"./use-style-config-BvA8OEwb.js";const x=()=>o.jsxs(t,{minH:"60vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",children:[o.jsx(n,{as:"h1",size:"2xl",mb:4,children:"404"}),o.jsx(i,{fontSize:"xl",color:"gray.600",mb:6,children:"Page Not Found"}),o.jsx(s,{as:e,to:"/",colorScheme:"teal",children:"Go Home"})]});export{x as default};
-//# sourceMappingURL=NotFound-BtOkTPsd.js.map
