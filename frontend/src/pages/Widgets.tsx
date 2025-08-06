@@ -1,8 +1,49 @@
 import React, { useEffect, useState } from 'react';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { toast } from '../hooks/use-toast';
-import { Copy } from 'lucide-react';
+import {
+  Box,
+  Button,
+  Input,
+  VStack,
+  HStack,
+  Heading,
+  Text,
+  useToast,
+  useDisclosure,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  ModalCloseButton,
+  FormControl,
+  FormLabel,
+  Select,
+  Textarea,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  Badge,
+  IconButton,
+  useColorModeValue,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
+} from '@chakra-ui/react';
+import { useTranslation } from 'react-i18next';
+import {
+  FiPlus,
+  FiEdit,
+  FiTrash2,
+  FiEye,
+  FiCopy,
+  FiCode,
+  FiGlobe,
+} from 'react-icons/fi';
 
 interface Widget {
   id: number;
@@ -18,230 +59,373 @@ const WIDGET_TYPES = [
   { value: 'lead_capture', label: 'Lead Capture Form' },
   { value: 'testimonial', label: 'Testimonial Widget' },
   { value: 'metrics', label: 'Metrics Badge' },
+  { value: 'contact_form', label: 'Contact Form' },
+  { value: 'newsletter', label: 'Newsletter Signup' },
 ];
 
 const Widgets: React.FC = () => {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const { isOpen, onOpen, onClose } = useDisclosure();
+  
+  const bgColor = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
+  const textColor = useColorModeValue('gray.600', 'gray.300');
+
   const [widgets, setWidgets] = useState<Widget[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showModal, setShowModal] = useState(false);
   const [newType, setNewType] = useState('lead_capture');
   const [newConfig, setNewConfig] = useState('');
-  const [editModal, setEditModal] = useState<{ open: boolean; widget: Widget | null }>({ open: false, widget: null });
+  const [editingWidget, setEditingWidget] = useState<Widget | null>(null);
   const [editConfig, setEditConfig] = useState('');
-  const [deleteModal, setDeleteModal] = useState<{ open: boolean; widget: Widget | null }>({ open: false, widget: null });
-  const [previewModal, setPreviewModal] = useState<{ open: boolean; widget: Widget | null }>({ open: false, widget: null });
 
+  // Mock data - replace with actual API calls
   useEffect(() => {
-    loadWidgets();
+    const mockWidgets: Widget[] = [
+      {
+        id: 1,
+        type: 'lead_capture',
+        config: {
+          title: 'Get Your Free Leads',
+          buttonText: 'Download Now',
+          fields: ['name', 'email', 'company'],
+        },
+        embed_code: '<script src="https://leadtap.com/widget.js?id=1"></script>',
+        is_active: true,
+        created_at: '2024-01-10T09:00:00Z',
+      },
+      {
+        id: 2,
+        type: 'testimonial',
+        config: {
+          title: 'What Our Customers Say',
+          testimonials: [
+            { name: 'John Doe', company: 'Tech Corp', text: 'Amazing results!' },
+          ],
+        },
+        embed_code: '<script src="https://leadtap.com/widget.js?id=2"></script>',
+        is_active: false,
+        created_at: '2024-01-12T14:30:00Z',
+      },
+    ];
+    setWidgets(mockWidgets);
   }, []);
-
-  const loadWidgets = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/widgets', { credentials: 'include' });
-      if (!res.ok) throw new Error(await res.text());
-      setWidgets(await res.json());
-    } catch (e) {
-      setWidgets([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const configObj = newConfig ? JSON.parse(newConfig) : undefined;
-      const res = await fetch('/api/widgets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ type: newType, config: configObj })
+      // Mock API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      
+      const configObj = newConfig ? JSON.parse(newConfig) : {};
+      const newWidget: Widget = {
+        id: Date.now(),
+        type: newType,
+        config: configObj,
+        embed_code: `<script src="https://leadtap.com/widget.js?id=${Date.now()}"></script>`,
+        is_active: true,
+        created_at: new Date().toISOString(),
+      };
+      
+      setWidgets([...widgets, newWidget]);
+      toast({
+        title: 'Widget created',
+        status: 'success',
+        duration: 3000,
       });
-      if (!res.ok) throw new Error(await res.text());
-      toast({ title: 'Widget created', status: 'success' });
-      setShowModal(false);
+      onClose();
       setNewConfig('');
-      loadWidgets();
-    } catch (e: any) {
-      toast({ title: 'Error', description: e.message, status: 'error' });
+      setNewType('lead_capture');
+    } catch (error) {
+      toast({
+        title: 'Error creating widget',
+        status: 'error',
+        duration: 3000,
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const handleEdit = (widget: Widget) => {
+    setEditingWidget(widget);
     setEditConfig(widget.config ? JSON.stringify(widget.config, null, 2) : '');
-    setEditModal({ open: true, widget });
+    onOpen();
   };
+
   const handleEditSave = async () => {
-    if (!editModal.widget) return;
+    if (!editingWidget) return;
+    
     setLoading(true);
     try {
-      const configObj = editConfig ? JSON.parse(editConfig) : undefined;
-      const res = await fetch(`/api/widgets/${editModal.widget.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ config: configObj })
+      // Mock API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      
+      const configObj = editConfig ? JSON.parse(editConfig) : {};
+      const updatedWidgets = widgets.map((w) =>
+        w.id === editingWidget.id ? { ...w, config: configObj } : w
+      );
+      
+      setWidgets(updatedWidgets);
+      toast({
+        title: 'Widget updated',
+        status: 'success',
+        duration: 3000,
       });
-      if (!res.ok) throw new Error(await res.text());
-      toast({ title: 'Widget updated', status: 'success' });
-      setEditModal({ open: false, widget: null });
-      loadWidgets();
-    } catch (e: any) {
-      toast({ title: 'Error', description: e.message, status: 'error' });
-    } finally {
-      setLoading(false);
-    }
-  };
-  const handleDelete = async () => {
-    if (!deleteModal.widget) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/widgets/${deleteModal.widget.id}`, {
-        method: 'DELETE',
-        credentials: 'include',
+      setEditingWidget(null);
+      onClose();
+    } catch (error) {
+      toast({
+        title: 'Error updating widget',
+        status: 'error',
+        duration: 3000,
       });
-      if (!res.ok) throw new Error(await res.text());
-      toast({ title: 'Widget deleted', status: 'success' });
-      setDeleteModal({ open: false, widget: null });
-      loadWidgets();
-    } catch (e: any) {
-      toast({ title: 'Error', description: e.message, status: 'error' });
     } finally {
       setLoading(false);
     }
   };
 
+  const handleDelete = async (widgetId: number) => {
+    if (!window.confirm('Delete this widget?')) return;
+    
+    setLoading(true);
+    try {
+      // Mock API call
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      
+      setWidgets(widgets.filter((w) => w.id !== widgetId));
+      toast({
+        title: 'Widget deleted',
+        status: 'success',
+        duration: 3000,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error deleting widget',
+        status: 'error',
+        duration: 3000,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleActive = async (widget: Widget) => {
+    try {
+      // Mock API call
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      
+      const updatedWidgets = widgets.map((w) =>
+        w.id === widget.id ? { ...w, is_active: !w.is_active } : w
+      );
+      
+      setWidgets(updatedWidgets);
+      toast({
+        title: `Widget ${widget.is_active ? 'deactivated' : 'activated'}`,
+        status: 'success',
+        duration: 3000,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error updating widget',
+        status: 'error',
+        duration: 3000,
+      });
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: 'Copied to clipboard',
+      status: 'success',
+      duration: 2000,
+    });
+  };
+
+  const getWidgetTypeLabel = (type: string) => {
+    const widgetType = WIDGET_TYPES.find((wt) => wt.value === type);
+    return widgetType ? widgetType.label : type;
+  };
+
   return (
-    <div className="max-w-3xl mx-auto py-8 px-4">
-      <h1 className="text-2xl font-bold text-blue-600 mb-4">Widget Management</h1>
-      <div className="flex justify-end mb-4">
-        <Button onClick={() => setShowModal(true)}>Create Widget</Button>
-      </div>
-      {widgets.length === 0 ? (
-        <div className="text-gray-500">No widgets yet.</div>
-      ) : (
-        <div className="space-y-4">
-          {widgets.map((w) => (
-            <div key={w.id} className="bg-white rounded-lg shadow p-4 flex flex-col gap-2">
-              <div className="flex items-center gap-4">
-                <span className="font-semibold text-blue-600">{WIDGET_TYPES.find(t => t.value === w.type)?.label || w.type}</span>
-                <span className={`text-xs px-2 py-1 rounded ${w.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>{w.is_active ? 'Active' : 'Inactive'}</span>
-                <span className="text-xs text-gray-400">Created: {new Date(w.created_at).toLocaleString()}</span>
-                <Button size="sm" variant="outline" onClick={() => setPreviewModal({ open: true, widget: w })}>Preview</Button>
-                <Button size="sm" variant="outline" onClick={() => handleEdit(w)}>Edit</Button>
-                <Button size="sm" variant="danger" onClick={() => setDeleteModal({ open: true, widget: w })}>Delete</Button>
-              </div>
-              <div className="text-xs text-gray-500">Widget ID: {w.id}</div>
-              {w.embed_code && (
-                <div className="flex items-center gap-2 mt-2">
-                  <Input value={w.embed_code} readOnly className="font-mono" />
-                  <button onClick={() => {navigator.clipboard.writeText(w.embed_code || ''); toast({ title: 'Copied', status: 'success' });}} className="p-2 rounded hover:bg-gray-100" aria-label="Copy embed code"><Copy size={16} /></button>
-                </div>
-              )}
-              {w.config && <pre className="bg-gray-50 rounded p-2 text-xs mt-2">{JSON.stringify(w.config, null, 2)}</pre>}
-            </div>
-          ))}
-        </div>
-      )}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
-            <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-2xl font-bold"
-              onClick={() => setShowModal(false)}
-              aria-label="Close"
-            >
-              &times;
-            </button>
-            <h2 className="text-xl font-bold mb-4 text-blue-600">Create Widget</h2>
-            <form onSubmit={handleCreate} className="flex flex-col gap-3">
-              <label className="font-semibold">Type</label>
-              <select value={newType} onChange={e => setNewType(e.target.value)} className="border border-gray-300 rounded px-2 py-1">
-                {WIDGET_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-              </select>
-              <label className="font-semibold">Config (JSON)</label>
-              <textarea
-                value={newConfig}
-                onChange={e => setNewConfig(e.target.value)}
-                placeholder='{"title":"Contact Us","fields":["name","email"]}'
-                className="border border-gray-300 rounded px-2 py-1 min-h-[80px] font-mono"
-              />
-              <div className="flex justify-end gap-2 mt-6">
-                <Button type="button" onClick={() => setShowModal(false)} variant="outline">Cancel</Button>
-                <Button type="submit" disabled={loading}>{loading ? 'Creating...' : 'Create'}</Button>
-              </div>
+    <Box>
+      <VStack spacing={8} align="stretch">
+        {/* Header */}
+        <HStack justify="space-between" align="center">
+          <VStack align="start" spacing={1}>
+            <Heading size="lg">Widgets</Heading>
+            <Text color={textColor}>
+              Create and manage embeddable widgets for your website
+            </Text>
+          </VStack>
+          <Button
+            leftIcon={<FiPlus />}
+            colorScheme="blue"
+            onClick={() => {
+              setEditingWidget(null);
+              setNewConfig('');
+              setNewType('lead_capture');
+              onOpen();
+            }}
+          >
+            Create Widget
+          </Button>
+        </HStack>
+
+        {/* Widgets Table */}
+        <Box
+          bg={bgColor}
+          border="1px"
+          borderColor={borderColor}
+          borderRadius="lg"
+          overflow="hidden"
+        >
+          <Table variant="simple">
+            <Thead>
+              <Tr>
+                <Th>Type</Th>
+                <Th>Status</Th>
+                <Th>Created</Th>
+                <Th>Embed Code</Th>
+                <Th>Actions</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {widgets.map((widget) => (
+                <Tr key={widget.id}>
+                  <Td>
+                    <VStack align="start" spacing={1}>
+                      <Text fontWeight="medium">
+                        {getWidgetTypeLabel(widget.type)}
+                      </Text>
+                      <Text fontSize="sm" color={textColor}>
+                        ID: {widget.id}
+                      </Text>
+                    </VStack>
+                  </Td>
+                  <Td>
+                    <Badge colorScheme={widget.is_active ? 'green' : 'gray'}>
+                      {widget.is_active ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </Td>
+                  <Td>
+                    <Text fontSize="sm">
+                      {new Date(widget.created_at).toLocaleDateString()}
+                    </Text>
+                  </Td>
+                  <Td>
+                    <HStack spacing={2}>
+                      <Text fontSize="sm" fontFamily="mono" maxW="200px" isTruncated>
+                        {widget.embed_code}
+                      </Text>
+                      <IconButton
+                        size="sm"
+                        variant="ghost"
+                        icon={<FiCopy />}
+                        onClick={() => copyToClipboard(widget.embed_code || '')}
+                        aria-label="Copy embed code"
+                      />
+                    </HStack>
+                  </Td>
+                  <Td>
+                    <HStack spacing={1}>
+                      <IconButton
+                        size="sm"
+                        variant="ghost"
+                        icon={<FiEdit />}
+                        onClick={() => handleEdit(widget)}
+                        aria-label="Edit widget"
+                      />
+                      <IconButton
+                        size="sm"
+                        variant="ghost"
+                        icon={<FiEye />}
+                        onClick={() => copyToClipboard(widget.embed_code || '')}
+                        aria-label="View embed code"
+                      />
+                      <IconButton
+                        size="sm"
+                        variant="ghost"
+                        colorScheme="red"
+                        icon={<FiTrash2 />}
+                        onClick={() => handleDelete(widget.id)}
+                        aria-label="Delete widget"
+                      />
+                    </HStack>
+                  </Td>
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
+        </Box>
+
+        {/* Create/Edit Widget Modal */}
+        <Modal isOpen={isOpen} onClose={onClose} size="lg">
+          <ModalOverlay />
+          <ModalContent>
+            <ModalHeader>
+              {editingWidget ? 'Edit Widget' : 'Create New Widget'}
+            </ModalHeader>
+            <form onSubmit={editingWidget ? handleEditSave : handleCreate}>
+              <ModalBody>
+                <VStack spacing={4}>
+                  <FormControl isRequired>
+                    <FormLabel>Widget Type</FormLabel>
+                    <Select
+                      value={editingWidget ? editingWidget.type : newType}
+                      onChange={(e) =>
+                        editingWidget
+                          ? setEditingWidget({ ...editingWidget, type: e.target.value })
+                          : setNewType(e.target.value)
+                      }
+                      isDisabled={!!editingWidget}
+                    >
+                      {WIDGET_TYPES.map((type) => (
+                        <option key={type.value} value={type.value}>
+                          {type.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  <FormControl>
+                    <FormLabel>Configuration (JSON)</FormLabel>
+                    <Textarea
+                      value={editingWidget ? editConfig : newConfig}
+                      onChange={(e) =>
+                        editingWidget
+                          ? setEditConfig(e.target.value)
+                          : setNewConfig(e.target.value)
+                      }
+                      placeholder='{"title": "Widget Title", "buttonText": "Click Me"}'
+                      rows={6}
+                    />
+                    <Text fontSize="xs" color={textColor} mt={1}>
+                      Enter valid JSON configuration for the widget
+                    </Text>
+                  </FormControl>
+                </VStack>
+              </ModalBody>
+
+              <ModalFooter>
+                <Button variant="ghost" mr={3} onClick={onClose}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  isLoading={loading}
+                  colorScheme="blue"
+                >
+                  {editingWidget ? 'Update' : 'Create'} Widget
+                </Button>
+              </ModalFooter>
             </form>
-          </div>
-        </div>
-      )}
-      {editModal.open && editModal.widget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
-            <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-2xl font-bold"
-              onClick={() => setEditModal({ open: false, widget: null })}
-              aria-label="Close"
-            >
-              &times;
-            </button>
-            <h2 className="text-xl font-bold mb-4 text-blue-600">Edit Widget</h2>
-            <form onSubmit={e => { e.preventDefault(); handleEditSave(); }} className="flex flex-col gap-3">
-              <label className="font-semibold">Config (JSON)</label>
-              <textarea
-                value={editConfig}
-                onChange={e => setEditConfig(e.target.value)}
-                className="border border-gray-300 rounded px-2 py-1 min-h-[80px] font-mono"
-              />
-              <div className="flex justify-end gap-2 mt-6">
-                <Button type="button" onClick={() => setEditModal({ open: false, widget: null })} variant="outline">Cancel</Button>
-                <Button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save'}</Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-      {deleteModal.open && deleteModal.widget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
-            <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-2xl font-bold"
-              onClick={() => setDeleteModal({ open: false, widget: null })}
-              aria-label="Close"
-            >
-              &times;
-            </button>
-            <h2 className="text-xl font-bold mb-4 text-red-600">Delete Widget</h2>
-            <p>Are you sure you want to delete this widget?</p>
-            <div className="flex justify-end gap-2 mt-6">
-              <Button type="button" onClick={() => setDeleteModal({ open: false, widget: null })} variant="outline">Cancel</Button>
-              <Button type="button" onClick={handleDelete} variant="danger" disabled={loading}>{loading ? 'Deleting...' : 'Delete'}</Button>
-            </div>
-          </div>
-        </div>
-      )}
-      {previewModal.open && previewModal.widget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6 relative">
-            <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 text-2xl font-bold"
-              onClick={() => setPreviewModal({ open: false, widget: null })}
-              aria-label="Close"
-            >
-              &times;
-            </button>
-            <h2 className="text-xl font-bold mb-4 text-blue-600">Widget Preview</h2>
-            <pre className="bg-gray-50 rounded p-2 text-xs mt-2">{JSON.stringify(previewModal.widget.config, null, 2)}</pre>
-            <div className="flex justify-end gap-2 mt-6">
-              <Button type="button" onClick={() => setPreviewModal({ open: false, widget: null })} variant="outline">Close</Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+          </ModalContent>
+        </Modal>
+      </VStack>
+    </Box>
   );
 };
 

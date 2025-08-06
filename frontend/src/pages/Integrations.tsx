@@ -124,7 +124,12 @@ const Integrations: React.FC = () => {
         <Box mt={4} mb={2}>
           <Heading size="sm" mb={1}>Your Webhook URL</Heading>
           <HStack>
-            <Input value={webhookUrl} isReadOnly size="sm" width="auto" isLoading={webhookLoading} />
+            <Input
+              value={webhookUrl}
+              isReadOnly
+              size="sm"
+              width="auto"
+            />
             <Button size="sm" onClick={() => {navigator.clipboard.writeText(webhookUrl); toast({ title: 'Copied to clipboard', status: 'success' });}} disabled={!webhookUrl}>Copy</Button>
           </HStack>
         </Box>

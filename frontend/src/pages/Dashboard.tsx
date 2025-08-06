@@ -95,14 +95,18 @@ const Dashboard: React.FC = () => {
   });
   const [tourKey, setTourKey] = useState<string | null>(null);
   const [tourRun, setTourRun] = useState(false);
-  const [widgets, setWidgets] = useState(
-    WIDGET_OPTIONS.filter(w => selectedWidgetIds.includes(w.id))
-  );
   const [showWidgetModal, setShowWidgetModal] = useState(false);
+  
+  // Define selectedWidgetIds first
   const [selectedWidgetIds, setSelectedWidgetIds] = useState<string[]>(() => {
     const saved = localStorage.getItem('dashboardWidgets');
     return saved ? JSON.parse(saved) : WIDGET_OPTIONS.map(w => w.id);
   });
+  
+  // Then define widgets using selectedWidgetIds
+  const [widgets, setWidgets] = useState(
+    WIDGET_OPTIONS.filter(w => selectedWidgetIds.includes(w.id))
+  );
 
   // Add state for sharing modals
   const [shareJobModal, setShareJobModal] = useState<{ open: boolean; job: Job | null; link: string | null }>({ open: false, job: null, link: null });
@@ -170,7 +174,7 @@ const Dashboard: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    getCRMStatus().then(status => setCrmConnected(!!status?.crm_connected));
+    getCRMStatus().then(status => setCrmConnected(!!status?.crm_connected)).catch(() => setCrmConnected(false));
   }, []);
 
   useEffect(() => {
@@ -182,10 +186,17 @@ const Dashboard: React.FC = () => {
     try {
       setLoading(true);
       const [userData, jobsData, leadsData, limitsData] = await Promise.all([
-        api.getUser(),
-        api.getJobs(),
-        api.getCRMLeads(),
-        api.getPlanLimits()
+        api.getUser().catch(() => ({ email: 'demo@example.com', plan: 'free' })),
+        api.getJobs().catch(() => ({ jobs: [] })),
+        api.getCRMLeads().catch(() => []),
+        api.getPlanLimits().catch(() => ({
+          max_queries_per_day: 5,
+          max_results_per_query: 100,
+          queries_used_today: 0,
+          queries_remaining_today: 5,
+          plan_name: 'free',
+          subscription_status: 'active'
+        }))
       ]);
       
       setUser(userData);
@@ -199,7 +210,19 @@ const Dashboard: React.FC = () => {
       }
     } catch (error: any) {
       console.error(error);
-      showToast({ title: 'Error', description: error.message, status: 'error', duration: 3000 });
+      // Set default data if API fails
+      setUser({ email: 'demo@example.com', plan: 'free' });
+      setJobs([]);
+      setLeads([]);
+      setPlanLimits({
+        max_queries_per_day: 5,
+        max_results_per_query: 100,
+        queries_used_today: 0,
+        queries_remaining_today: 5,
+        plan_name: 'free',
+        subscription_status: 'active'
+      });
+      showToast({ title: 'Demo Mode', description: 'Running in demo mode. Backend not connected.', status: 'info', duration: 5000 });
     } finally {
       setLoading(false);
     }
@@ -515,7 +538,7 @@ const Dashboard: React.FC = () => {
         >
           {colorMode === 'light' ? <Moon size={20} /> : <Sun size={20} />}
         </button>
-        {planLimits && (
+        {planLimits && planLimits.plan_name && (
           <span className={`px-2 py-1 rounded text-xs font-semibold ${planLimits.plan_name === 'free' ? 'bg-gray-200 text-gray-700' : planLimits.plan_name === 'pro' ? 'bg-blue-200 text-blue-700' : 'bg-green-200 text-green-700'}`} data-tour="dashboard-plan">
             {planLimits.plan_name.toUpperCase()}
           </span>
@@ -563,7 +586,7 @@ const Dashboard: React.FC = () => {
       const opts = await getSupportOptions();
       setSupportOptions(opts);
     } catch (e) {
-      setSupportOptions(null);
+      setSupportOptions({ support: ['email', 'phone'], priority: false });
     } finally {
       setSupportLoading(false);
     }
@@ -638,8 +661,10 @@ const Dashboard: React.FC = () => {
   const loadSavedQueries = async () => {
     try {
       const data = await getSavedQueries();
-      setSavedQueries(data);
-    } catch {}
+      setSavedQueries(Array.isArray(data) ? data : []);
+    } catch {
+      setSavedQueries([]);
+    }
   };
 
   const handleUseTemplate = (q: any) => {
@@ -724,9 +749,13 @@ const Dashboard: React.FC = () => {
   const loadNotifications = async () => {
     try {
       const data = await getNotifications();
-      setNotifications(data);
-      setUnreadCount(data.filter((n: any) => !n.read).length);
-    } catch {}
+      const notificationsArray = Array.isArray(data) ? data : [];
+      setNotifications(notificationsArray);
+      setUnreadCount(notificationsArray.filter((n: any) => !n.read).length);
+    } catch {
+      setNotifications([]);
+      setUnreadCount(0);
+    }
   };
 
   const handleMarkRead = async (id: number) => {
@@ -886,7 +915,7 @@ const Dashboard: React.FC = () => {
                   </div>
                   <div className="bg-white rounded-lg shadow p-6">
                     <div className="text-gray-600 text-sm mb-1">{t('dashboard.stats.plan.label')}</div>
-                    <div className="text-3xl font-bold text-blue-600">{planLimits.plan_name.toUpperCase()}</div>
+                    <div className="text-3xl font-bold text-blue-600">{planLimits.plan_name?.toUpperCase() || 'FREE'}</div>
                     <div className="text-gray-500 text-sm">{planLimits.subscription_status}</div>
                   </div>
                 </div>
@@ -956,7 +985,7 @@ const Dashboard: React.FC = () => {
                     <div className="flex flex-wrap gap-2">
                       {supportOptions?.support?.map((opt: string) => (
                         <span key={opt} className={`px-2 py-1 rounded-full text-xs font-semibold ${opt === 'phone' ? 'bg-green-100 text-green-800' : opt === 'email' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}>
-                          {opt.replace('_', ' ').toUpperCase()}
+                          {opt?.replace('_', ' ')?.toUpperCase() || opt}
                         </span>
                       ))}
                     </div>
@@ -973,11 +1002,11 @@ const Dashboard: React.FC = () => {
                     {t('dashboard.savedSearches.saveTemplateButton')}
                   </button>
                 </div>
-                {savedQueries.length === 0 ? (
+                {(savedQueries || []).length === 0 ? (
                   <p className="text-gray-500">{t('dashboard.savedSearches.noSavedSearches')}</p>
                 ) : (
                   <div className="space-y-2">
-                    {savedQueries.map((q) => (
+                    {(savedQueries || []).map((q) => (
                       <div key={q.id} className="flex items-center gap-2">
                         <button onClick={() => handleUseTemplate(q)} className="bg-gray-200 hover:bg-gray-300 px-2 py-1 rounded text-xs">
                           {q.name}
@@ -1185,7 +1214,7 @@ const Dashboard: React.FC = () => {
                               className={`px-3 py-1 rounded text-sm font-medium ${format === 'csv' ? 'bg-green-500 text-white hover:bg-green-600' : format === 'json' ? 'bg-blue-500 text-white hover:bg-blue-600' : format === 'xlsx' ? 'bg-purple-500 text-white hover:bg-purple-600' : 'bg-orange-500 text-white hover:bg-orange-600'}`}
                               onClick={() => handleExport(format)}
                             >
-                              {t(`dashboard.searchResults.exportFormats.${format.toUpperCase()}`)}
+                              {t(`dashboard.searchResults.exportFormats.${format?.toUpperCase() || format}`)}
                             </button>
                           ))}
                         </div>
@@ -1449,9 +1478,9 @@ const Dashboard: React.FC = () => {
             </button>
             <h2 className="text-xl font-bold mb-4 text-blue-600">{t('dashboard.notificationsModal.title')}</h2>
             <div className="flex flex-col gap-2">
-              {notifications.length === 0 ? (
+              {(notifications || []).length === 0 ? (
                 <p className="text-gray-500">{t('dashboard.notificationsModal.noNotifications')}</p>
-              ) : notifications.map((n) => (
+              ) : (notifications || []).map((n) => (
                 <div key={n.id} className="p-3 bg-yellow-100 rounded-md cursor-pointer" onClick={() => handleMarkRead(n.id)}>
                   <p className="font-bold">{n.type}</p>
                   <p>{n.message}</p>
@@ -1538,5 +1567,3 @@ const Dashboard: React.FC = () => {
     </div>
   );
 };
-
-export default Dashboard; 

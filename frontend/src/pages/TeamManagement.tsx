@@ -178,7 +178,7 @@ const TeamManagement: React.FC = () => {
       <Box p={8}>
         <Heading size="lg" mb={6}>{t('teamManagement.heading', 'Team Management')}</Heading>
         <Text color="red.500" mb={4}>{t('teamManagement.proOnly', 'Team features are only available on Pro and Business plans.')}</Text>
-        <Button colorScheme="blue" href="/upgrade">{t('teamManagement.upgradePlan', 'Upgrade Plan')}</Button>
+        <Button colorScheme="blue" as="a" href="/upgrade">{t('teamManagement.upgradePlan', 'Upgrade Plan')}</Button>
       </Box>
     );
   }
@@ -259,7 +259,11 @@ const TeamManagement: React.FC = () => {
                   {members.map(m => (
                     <Tr key={m.id} bg={m.user_id === selectedTeam.owner_id ? 'yellow.50' : undefined}>
                       <Td>{m.user_id}{m.user_id === selectedTeam.owner_id && <Badge ml={2} colorScheme="yellow">{t('teamManagement.owner', 'Owner')}</Badge>}</Td>
-                      <Td>{m.email || '-'}</Td>
+                      <Td>
+                        <Text color="blue.500" cursor="pointer">
+                          {m.email}
+                        </Text>
+                      </Td>
                       <Td><Badge colorScheme={m.role === 'admin' ? 'blue' : m.role === 'member' ? 'green' : 'gray'}>{m.role}</Badge></Td>
                       <Td>{m.status}</Td>
                       <Td>{new Date(m.invited_at).toLocaleString()}</Td>
