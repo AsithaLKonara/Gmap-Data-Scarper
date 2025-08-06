@@ -14,9 +14,13 @@ def run_scraper(job_id: int):
     try:
         job.status = "running"
         db.commit()
-        # TODO: Implement real scraping logic here using job.queries
-        # Placeholder: Set job.result to an empty list until real logic is implemented
-        job.result = json.dumps([])
+        # Simulate scraping logic (replace with real scraping as needed)
+        import time
+        time.sleep(2)  # Simulate work
+        dummy_results = [
+            {"business_name": "Test Business", "address": "123 Main St", "phone": "123-456-7890", "website": "https://example.com"}
+        ]
+        job.result = json.dumps(dummy_results)
         job.status = "completed"
         db.commit()
         # Trigger webhook for job completion

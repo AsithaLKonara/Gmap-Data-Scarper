@@ -2,6 +2,7 @@ from fastapi import Request, HTTPException, Depends, FastAPI
 from sqlalchemy.orm import Session
 from database import get_db
 from models import Tenant
+from auth import get_current_user
 
 def get_tenant_from_request(request: Request, db: Session = Depends(get_db)) -> Tenant:
     # Example: extract tenant from X-Tenant header

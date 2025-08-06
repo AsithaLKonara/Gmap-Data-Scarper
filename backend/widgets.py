@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Body, Request
+from fastapi import APIRouter, Depends, HTTPException, Body, Request, Path
 from sqlalchemy.orm import Session
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
-from models import Widgets, Users
+from models import Widgets, Users, Leads
 from database import get_db
 from auth import get_current_user
 from datetime import datetime
@@ -54,7 +54,7 @@ def list_widgets(db: Session = Depends(get_db), user: Users = Depends(get_curren
     return widgets
 
 @router.get("/{widget_id}", response_model=WidgetOut, summary="Get widget", description="Get a widget by ID.")
-def get_widget(widget_id: int = Field(..., description="ID of the widget."), db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
+def get_widget(widget_id: int = Path(..., description="ID of the widget."), db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     """Get a widget by ID."""
     w = db.query(Widgets).filter_by(id=widget_id, user_id=user.id).first()
     if not w:
@@ -62,7 +62,7 @@ def get_widget(widget_id: int = Field(..., description="ID of the widget."), db:
     return w
 
 @router.put("/{widget_id}", response_model=WidgetOut, summary="Update widget", description="Update a widget's config.")
-def update_widget(widget_id: int = Field(..., description="ID of the widget."), widget: WidgetCreate = Body(...), db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
+def update_widget(widget_id: int = Path(..., description="ID of the widget."), widget: WidgetCreate = Body(...), db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     """Update a widget's config."""
     w = db.query(Widgets).filter_by(id=widget_id, user_id=user.id).first()
     if not w:
@@ -75,7 +75,7 @@ def update_widget(widget_id: int = Field(..., description="ID of the widget."), 
 
 @router.delete("/{widget_id}", response_model=DeleteWidgetResponse, summary="Delete widget", description="Delete a widget by ID for the authenticated user.")
 @audit_log(action="delete_widget", target_type="widget", target_id_param="widget_id")
-def delete_widget(widget_id: int = Field(..., description="ID of the widget."), db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
+def delete_widget(widget_id: int = Path(..., description="ID of the widget."), db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
     # RBAC: Only allow if user has widgets:delete permission
     if not check_permission(user, "widgets", "delete", db):
         raise HTTPException(status_code=403, detail="Insufficient permissions to delete widgets")
@@ -88,12 +88,31 @@ def delete_widget(widget_id: int = Field(..., description="ID of the widget."), 
 
 # Public endpoint for lead capture widget submissions
 @router.post("/public/lead_capture/{widget_id}", response_model=SubmitLeadResponse, summary="Submit lead via widget", description="Public endpoint for lead capture widget submissions.")
-async def submit_lead(widget_id: int = Field(..., description="ID of the widget."), request: Request = Body(...), db: Session = Depends(get_db)):
+async def submit_lead(request: Request, widget_id: int = Path(..., description="ID of the widget."), db: Session = Depends(get_db)):
     """Public endpoint for lead capture widget submissions."""
     w = db.query(Widgets).filter_by(id=widget_id, type='lead_capture', is_active=True).first()
     if not w:
         raise HTTPException(status_code=404, detail="Widget not found")
     data = await request.json()
-    # TODO: Validate and save lead to CRM (integrate with CRM logic)
-    # Example: db.add(Lead(...)); db.commit()
+    # Validate and save lead to CRM
+    name = data.get("name")
+    email = data.get("email")
+    phone = data.get("phone")
+    company = data.get("company")
+    website = data.get("website")
+    notes = data.get("notes")
+    if not name:
+        return {"success": False, "message": "Name is required."}
+    lead = Leads(
+        user_id=w.user_id,
+        name=name,
+        email=email,
+        phone=phone,
+        company=company,
+        website=website,
+        notes=notes,
+        source="widget"
+    )
+    db.add(lead)
+    db.commit()
     return {"success": True, "message": "Lead submitted!"} 

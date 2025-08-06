@@ -15,9 +15,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 import asyncio
 import aiohttp
-from tenant_utils import get_tenant_record_or_403
-from fastapi import Request
-from tenant_utils import get_tenant_from_request
+from tenant_utils import get_tenant_record_or_403, get_tenant_from_request
 from realtime import broadcast_notification
 import os
 

@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Response, Request, HTTPException, Depends
+from fastapi import APIRouter, Response, Request, HTTPException, Depends, Query
 from fastapi.responses import FileResponse, JSONResponse
 import os
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
+from database import get_db
+from models import Tenant
 
 router = APIRouter(prefix="/api/integrations", tags=["integrations"])
 
@@ -106,7 +108,7 @@ async def connect_crm(
     db: Session = Depends(get_db)
 ):
     """Connect a CRM provider for a tenant."""
-    tenant = db.query(Tenants).get(data.tenant_id)
+    tenant = db.query(Tenant).get(data.tenant_id)
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
     if not tenant.branding:
@@ -117,11 +119,11 @@ async def connect_crm(
 
 @router.get("/crm/status", response_model=CRMStatusOut, summary="Get CRM integration status", description="Get the current CRM provider and configuration for a tenant.")
 def get_crm_status(
-    tenant_id: int = Field(..., description="Tenant ID to get CRM status for", example=1),
+    tenant_id: int = Query(..., description="Tenant ID to get CRM status for", example=1),
     db: Session = Depends(get_db)
 ):
     """Get the current CRM provider and configuration for a tenant."""
-    tenant = db.query(Tenants).get(tenant_id)
+    tenant = db.query(Tenant).get(tenant_id)
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
     crm = (tenant.branding or {}).get('crm', {})
@@ -133,7 +135,7 @@ async def set_webhook(
     db: Session = Depends(get_db)
 ):
     """Set a webhook URL for a tenant to receive events."""
-    tenant = db.query(Tenants).get(data.tenant_id)
+    tenant = db.query(Tenant).get(data.tenant_id)
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
     if not tenant.branding:
@@ -144,11 +146,11 @@ async def set_webhook(
 
 @router.get("/webhook", response_model=WebhookGetOut, summary="Get webhook URL", description="Get the current webhook URL for a tenant.")
 def get_webhook(
-    tenant_id: int = Field(..., description="Tenant ID to get webhook URL for", example=1),
+    tenant_id: int = Query(..., description="Tenant ID to get webhook URL for", example=1),
     db: Session = Depends(get_db)
 ):
     """Get the current webhook URL for a tenant."""
-    tenant = db.query(Tenants).get(tenant_id)
+    tenant = db.query(Tenant).get(tenant_id)
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
     url = (tenant.branding or {}).get('webhook_url')

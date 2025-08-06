@@ -34,7 +34,8 @@ from showcase import router as showcase_router
 from sso import router as sso_router
 from social_media_scraper import router as social_scraper_router
 from whatsapp_workflow import router as whatsapp_workflow_router
-from graphql_api import router as graphql_router
+# Temporarily disable GraphQL due to Python 3.13 compatibility
+# from graphql_api import router as graphql_router
 from realtime import router as realtime_router
 from payments import router as payments_router
 from webhooks import router as webhooks_router
@@ -58,24 +59,23 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS settings
+# Secure CORS settings
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+ALLOWED_ORIGINS = [
+    FRONTEND_URL,
+    "http://localhost:3000",  # Development
+    "https://leadtap.com",    # Production domain
+    "https://www.leadtap.com" # Production domain with www
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust for production
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["X-Total-Count"],
 )
-
-@app.middleware("http")
-async def add_security_headers(request: Request, call_next):
-    response: Response = await call_next(request)
-    response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Referrer-Policy"] = "same-origin"
-    return response
 
 # Include all routers
 app.include_router(auth_router)
@@ -105,11 +105,45 @@ app.include_router(showcase_router)
 app.include_router(sso_router)
 app.include_router(social_scraper_router)
 app.include_router(whatsapp_workflow_router)
-app.include_router(graphql_router)
+# app.include_router(graphql_router)  # Temporarily disabled
 app.include_router(realtime_router)
 app.include_router(payments_router)
 app.include_router(webhooks_router)
 app.include_router(affiliate_router)
+
+# Add security middleware
+from security import security_middleware
+
+@app.middleware("http")
+async def add_security_headers_and_rate_limit(request: Request, call_next):
+    # Apply rate limiting first
+    from security import check_rate_limit, get_rate_limit_key
+    if not check_rate_limit(request):
+        from fastapi import HTTPException, status
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Rate limit exceeded. Please try again later."
+        )
+    
+    # Process request
+    response = await call_next(request)
+    
+    # Add security headers
+    response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'none';"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    
+    # Add rate limit headers
+    from security import rate_limiter
+    key = get_rate_limit_key(request)
+    response.headers["X-RateLimit-Remaining"] = str(rate_limiter.get_remaining_requests(key))
+    response.headers["X-RateLimit-Limit"] = str(100)
+    
+    return response
 
 @app.on_event("startup")
 def on_startup():
@@ -176,4 +210,3 @@ async def test_notification():
         "message": "Test notification from admin",
         "timestamp": datetime.now().isoformat()
     }))
-    return {"message": "Notification sent"} 

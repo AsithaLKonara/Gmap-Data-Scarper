@@ -48,50 +48,34 @@ def get_onboarding_progress(
     db: Session = Depends(get_db),
     user: Users = Depends(get_current_user)
 ):
-    """Get user's onboarding progress."""
+    default_steps = [
+        {"step_id": "welcome", "name": "Welcome", "description": "Get started with LeadTap"},
+        {"step_id": "profile", "name": "Complete Profile", "description": "Set up your profile"},
+        {"step_id": "first_job", "name": "Create First Job", "description": "Create your first scraping job"},
+        {"step_id": "demo_project", "name": "Demo Project", "description": "Try our demo project"},
+        {"step_id": "crm_setup", "name": "CRM Setup", "description": "Connect your CRM"},
+        {"step_id": "analytics", "name": "Analytics Tour", "description": "Explore analytics features"},
+        {"step_id": "complete", "name": "Onboarding Complete", "description": "You're all set!"}
+    ]
+    # Ensure steps exist for user
     steps = db.query(OnboardingSteps).filter(OnboardingSteps.user_id == user.id).all()
-    
     if not steps:
-        # Initialize onboarding steps for new user
-        default_steps = [
-            {"step_id": "welcome", "name": "Welcome", "description": "Get started with LeadTap"},
-            {"step_id": "profile", "name": "Complete Profile", "description": "Set up your profile"},
-            {"step_id": "first_job", "name": "Create First Job", "description": "Create your first scraping job"},
-            {"step_id": "demo_project", "name": "Demo Project", "description": "Try our demo project"},
-            {"step_id": "crm_setup", "name": "CRM Setup", "description": "Connect your CRM"},
-            {"step_id": "analytics", "name": "Analytics Tour", "description": "Explore analytics features"},
-            {"step_id": "complete", "name": "Onboarding Complete", "description": "You're all set!"}
-        ]
-        
-        for step_data in default_steps:
-            step = OnboardingSteps(
-                user_id=user.id,
-                step_id=step_data["step_id"],
-                name=step_data["name"],
-                description=step_data["description"],
-                completed=False,
-                data=None
-            )
-            db.add(step)
-        
+        for step in default_steps:
+            db.add(OnboardingSteps(user_id=user.id, step_id=step["step_id"], completed=False))
         db.commit()
         steps = db.query(OnboardingSteps).filter(OnboardingSteps.user_id == user.id).all()
-    
     completed_steps = [step.step_id for step in steps if step.completed]
-    total_steps = len(steps)
+    total_steps = len(default_steps)
     progress_percentage = (len(completed_steps) / total_steps) * 100 if total_steps > 0 else 0
-    
-    # Determine current step (first incomplete step)
+    # Determine current step
     current_step = "complete"
-    for step in steps:
-        if not step.completed:
-            current_step = step.step_id
+    for step in default_steps:
+        s = next((x for x in steps if x.step_id == step["step_id"]), None)
+        if s and not s.completed:
+            current_step = step["step_id"]
             break
-    
-    # Estimate time remaining (2-5 minutes per remaining step)
     remaining_steps = total_steps - len(completed_steps)
-    estimated_time_remaining = remaining_steps * 3  # 3 minutes per step average
-    
+    estimated_time_remaining = remaining_steps * 3
     return OnboardingProgress(
         user_id=user.id,
         current_step=current_step,
@@ -107,22 +91,17 @@ def update_onboarding_step(
     db: Session = Depends(get_db),
     user: Users = Depends(get_current_user)
 ):
-    """Update onboarding step completion status."""
     step = db.query(OnboardingSteps).filter(
         OnboardingSteps.user_id == user.id,
         OnboardingSteps.step_id == step_update.step_id
     ).first()
-    
     if not step:
         raise HTTPException(status_code=404, detail="Onboarding step not found")
-    
     step.completed = step_update.completed
     if step_update.data:
-        step.data = json.dumps(step_update.data)
+        step.data = step_update.data
     step.completed_at = datetime.utcnow() if step_update.completed else None
-    
     db.commit()
-    
     return {"status": "updated", "step_id": step_update.step_id}
 
 @router.post("/demo-project", response_model=DemoProjectOut, summary="Create demo project", description="Create a demo project for onboarding.")
@@ -131,63 +110,54 @@ def create_demo_project(
     db: Session = Depends(get_db),
     user: Users = Depends(get_current_user)
 ):
-    """Create a demo project for onboarding."""
     demo_project = DemoProjects(
         user_id=user.id,
         name=project_data.name,
         description=project_data.description,
-        queries=json.dumps(project_data.queries),
-        tags=json.dumps(project_data.tags) if project_data.tags else None,
+        queries=project_data.queries,
+        tags=project_data.tags,
         is_demo=True
     )
-    
     db.add(demo_project)
     db.commit()
     db.refresh(demo_project)
-    
-    # Mark demo project step as completed
+    # Mark demo_project step as completed
     step = db.query(OnboardingSteps).filter(
         OnboardingSteps.user_id == user.id,
         OnboardingSteps.step_id == "demo_project"
     ).first()
-    
     if step:
         step.completed = True
         step.completed_at = datetime.utcnow()
         db.commit()
-    
-    return {
-        "id": demo_project.id,
-        "name": demo_project.name,
-        "description": demo_project.description,
-        "queries": json.loads(demo_project.queries),
-        "tags": json.loads(demo_project.tags) if demo_project.tags else [],
-        "is_demo": demo_project.is_demo,
-        "created_at": demo_project.created_at
-    }
+    return DemoProjectOut(
+        id=demo_project.id,
+        name=demo_project.name,
+        description=demo_project.description,
+        queries=demo_project.queries,
+        tags=demo_project.tags or [],
+        is_demo=demo_project.is_demo,
+        created_at=demo_project.created_at
+    )
 
 @router.get("/demo-projects", response_model=List[DemoProjectOut], summary="List demo projects", description="Get all demo projects for the current user.")
 def get_demo_projects(
     db: Session = Depends(get_db),
     user: Users = Depends(get_current_user)
 ):
-    """Get user's demo projects."""
     projects = db.query(DemoProjects).filter(
         DemoProjects.user_id == user.id,
         DemoProjects.is_demo == True
     ).all()
-    
-    return [
-        {
-            "id": project.id,
-            "name": project.name,
-            "description": project.description,
-            "queries": json.loads(project.queries),
-            "tags": json.loads(project.tags) if project.tags else [],
-            "created_at": project.created_at
-        }
-        for project in projects
-    ]
+    return [DemoProjectOut(
+        id=p.id,
+        name=p.name,
+        description=p.description,
+        queries=p.queries,
+        tags=p.tags or [],
+        is_demo=p.is_demo,
+        created_at=p.created_at
+    ) for p in projects]
 
 @router.get("/suggestions", summary="Get onboarding suggestions", description="Get personalized onboarding suggestions based on user progress.")
 def get_onboarding_suggestions(
@@ -244,14 +214,9 @@ def complete_onboarding(
     db: Session = Depends(get_db),
     user: Users = Depends(get_current_user)
 ):
-    """Mark onboarding as complete for the current user."""
-    # Mark all steps as completed
     steps = db.query(OnboardingSteps).filter(OnboardingSteps.user_id == user.id).all()
-    
     for step in steps:
         step.completed = True
         step.completed_at = datetime.utcnow()
-    
     db.commit()
-    
     return {"status": "completed", "message": "Onboarding completed successfully!"} 

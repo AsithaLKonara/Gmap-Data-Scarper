@@ -630,8 +630,8 @@ scraper = SocialMediaScraper()
     description="Start a background job to scrape social media platforms for leads. Requires Pro or Business plan."
 )
 async def scrape_social_media(
+    background_tasks: BackgroundTasks,
     request: SocialScrapingRequest = Body(..., description="Scraping job parameters."),
-    background_tasks: BackgroundTasks = Depends(),
     current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

@@ -14,6 +14,7 @@ import schedule
 import time
 import threading
 from audit import audit_log
+from jobs import create_job_internal
 
 logger = logging.getLogger("scheduler")
 
@@ -132,7 +133,6 @@ class JobScheduler:
             logger.info(f"Executing scheduled job {job_id}: {job_data['name']}")
             
             # Create actual job
-            from jobs import create_job_internal
             job_result = await create_job_internal(
                 queries=job_data['queries'],
                 user_id=job_data['user_id'],

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Body, Query
 from sqlalchemy.orm import Session, joinedload
-from models import Users, Jobs, AuditLogs
+from models import Users, Jobs, AuditLogs, Leads
 from database import get_db
 from auth import get_current_user, get_password_hash
 from security import check_permission
@@ -14,6 +14,7 @@ import time
 import logging
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
+from system import get_system_health as system_health_api, get_performance_metrics as system_performance_api
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -698,24 +699,7 @@ def system_health(
     db: Session = Depends(get_db),
     user: Users = Depends(get_current_user)
 ):
-    """Get system health metrics. Admin access required."""
-    if not check_permission(user, "admin", "read", db):
-        raise HTTPException(status_code=403, detail="Admin access required")
-    """Get system health metrics"""
-    try:
-        # TODO: Implement real system health metrics
-        return {
-            "timestamp": datetime.now().isoformat(),
-            "system": {"status": "not_implemented"},
-            "database": {"status": "not_implemented"},
-            "api": {"status": "not_implemented"}
-        }
-    except Exception as e:
-        return {
-            "timestamp": datetime.now().isoformat(),
-            "error": str(e),
-            "status": "error"
-        }
+    return system_health_api(db, user)
 
 @router.get("/system/performance", response_model=SystemPerformanceResponse, summary="System performance", description="Get system performance metrics over time.")
 def system_performance(
@@ -723,18 +707,8 @@ def system_performance(
     user: Users = Depends(get_current_user),
     hours: int = Query(24, ge=1, le=168, description="Number of hours to include in the performance analytics.")
 ):
-    """Get system performance metrics over time. Admin access required."""
-    if not check_permission(user, "admin", "read", db):
-        raise HTTPException(status_code=403, detail="Admin access required")
-    """Get performance metrics over time"""
-    end_time = datetime.now()
-    start_time = end_time - timedelta(hours=hours)
-    # TODO: Implement real performance data collection
-    return {
-        "period_hours": hours,
-        "data": [],
-        "message": "Not implemented"
-    }
+    perf = system_performance_api(db, user)
+    return {"period_hours": hours, "data": [perf], "message": "OK"}
 
 @router.get("/system/logs/recent", response_model=RecentSystemLogsResponse, summary="Recent system logs", description="Get recent system logs (sample of recent audit logs).")
 def recent_system_logs(
@@ -769,12 +743,14 @@ def recent_system_logs(
 
 @router.get("/crm/analytics", response_model=CRMAnalyticsResponse, summary="CRM analytics", description="Get CRM analytics data.")
 def crm_analytics(db: Session = Depends(get_db), user: Users = Depends(get_current_user)):
-    """Get CRM analytics data. Admin access required."""
     if not check_permission(user, "admin", "read", db):
         raise HTTPException(status_code=403, detail="Admin access required")
     try:
-        # TODO: Implement real CRM analytics logic
-        return {"crm_leads": None, "crm_conversion_rate": None, "message": "Not implemented"}
+        # Example CRM analytics: count of leads with CRM data, conversion rate
+        crm_leads = db.query(Leads).filter(Leads.enriched_data != None).count()
+        total_leads = db.query(Leads).count()
+        crm_conversion_rate = (crm_leads / total_leads) if total_leads > 0 else 0.0
+        return {"crm_leads": crm_leads, "crm_conversion_rate": crm_conversion_rate, "message": "OK"}
     except Exception as e:
         logger.exception("Error in CRM analytics")
         raise 

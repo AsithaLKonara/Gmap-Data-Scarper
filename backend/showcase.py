@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from typing import List, Optional
@@ -36,15 +36,13 @@ def submit_testimonial(
     db: Session = Depends(get_db),
     user: Users = Depends(get_current_user)
 ):
-    """Submit a new testimonial (user-authenticated)."""
     t = Testimonials(
         user_id=user.id,
         name=testimonial.name,
         company=testimonial.company,
         message=testimonial.message,
         avatar_url=testimonial.avatar_url,
-        featured=testimonial.featured,
-        created_at=datetime.utcnow()
+        featured=testimonial.featured
     )
     db.add(t)
     db.commit()
@@ -66,22 +64,19 @@ def submit_testimonial(
     description="List public testimonials. Optionally filter by featured status."
 )
 def list_testimonials(
-    featured: Optional[bool] = Field(None, description="If true, only return featured testimonials."),
+    featured: Optional[bool] = Query(None, description="If true, only return featured testimonials."),
     db: Session = Depends(get_db)
 ):
-    """List public testimonials (optionally only featured)."""
     query = db.query(Testimonials)
     if featured is not None:
         query = query.filter(Testimonials.featured == featured)
     testimonials = query.order_by(Testimonials.created_at.desc()).all()
-    return [
-        TestimonialOut(
-            id=t.id,
-            name=t.name,
-            company=t.company,
-            message=t.message,
-            avatar_url=t.avatar_url,
-            featured=t.featured,
-            created_at=t.created_at
-        ) for t in testimonials
-    ] 
+    return [TestimonialOut(
+        id=t.id,
+        name=t.name,
+        company=t.company,
+        message=t.message,
+        avatar_url=t.avatar_url,
+        featured=t.featured,
+        created_at=t.created_at
+    ) for t in testimonials] 

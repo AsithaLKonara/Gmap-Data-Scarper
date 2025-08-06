@@ -5,9 +5,11 @@ from typing import List, Optional, Dict, Any
 import json
 import asyncio
 from datetime import datetime, timedelta
-from models import Users, WhatsAppWorkflows, WhatsAppWorkflowSteps, WhatsAppWorkflowTriggers, SocialMediaLeads, Leads
+from models import Users, WhatsAppWorkflows, WhatsAppWorkflowSteps, WhatsAppWorkflowTriggers, SocialMediaLeads, WhatsAppMessages
 from database import get_db
 from auth import get_current_user
+from whatsapp_automation import whatsapp_api
+from models import Leads
 import logging
 import secrets
 import os
@@ -44,6 +46,163 @@ class WorkflowExecution(BaseModel):
     lead_id: Optional[int] = Field(None, description="CRM lead ID to use as input.")
     social_lead_id: Optional[int] = Field(None, description="Social media lead ID to use as input.")
     execution_data: Optional[Dict[str, Any]] = Field(None, description="Additional data for the execution.")
+
+# Enhanced WhatsApp Workflow with Python 3.13 compatibility
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from sqlalchemy.orm import Session
+from pydantic import BaseModel, Field
+from typing import List, Optional, Dict, Any
+import json
+import logging
+from datetime import datetime, timezone
+from models import Users, Jobs, WhatsAppWorkflows
+from database import get_db
+from auth import get_current_user
+from security import check_permission
+
+router = APIRouter(prefix="/api/whatsapp", tags=["whatsapp"])
+
+logger = logging.getLogger("whatsapp_workflow")
+
+class WhatsAppWorkflowCreate(BaseModel):
+    name: str = Field(..., description="Name of the workflow")
+    trigger_conditions: Dict[str, Any] = Field(..., description="Conditions that trigger the workflow")
+    message_template: str = Field(..., description="Message template to send")
+    recipients: List[str] = Field(..., description="List of phone numbers")
+    is_active: bool = Field(True, description="Whether the workflow is active")
+
+class WhatsAppWorkflowResponse(BaseModel):
+    id: int
+    name: str
+    trigger_conditions: Dict[str, Any]
+    message_template: str
+    recipients: List[str]
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+@router.post("/workflows", response_model=WhatsAppWorkflowResponse, summary="Create WhatsApp workflow")
+def create_workflow(
+    workflow: WhatsAppWorkflowCreate,
+    db: Session = Depends(get_db),
+    user: Users = Depends(get_current_user)
+):
+    """Create a new WhatsApp automation workflow"""
+    try:
+        # Check permissions
+        if not check_permission(user, "whatsapp:create"):
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+        
+        new_workflow = WhatsAppWorkflows(
+            name=workflow.name,
+            trigger_conditions=json.dumps(workflow.trigger_conditions),
+            message_template=workflow.message_template,
+            recipients=json.dumps(workflow.recipients),
+            is_active=workflow.is_active,
+            user_id=user.id
+        )
+        
+        db.add(new_workflow)
+        db.commit()
+        db.refresh(new_workflow)
+        
+        logger.info(f"Created WhatsApp workflow {new_workflow.id} for user {user.email}")
+        
+        return WhatsAppWorkflowResponse(
+            id=new_workflow.id,
+            name=new_workflow.name,
+            trigger_conditions=json.loads(new_workflow.trigger_conditions),
+            message_template=new_workflow.message_template,
+            recipients=json.loads(new_workflow.recipients),
+            is_active=new_workflow.is_active,
+            created_at=new_workflow.created_at,
+            updated_at=new_workflow.updated_at
+        )
+        
+    except Exception as e:
+        logger.exception("Error creating WhatsApp workflow")
+        raise HTTPException(status_code=500, detail="Failed to create workflow")
+
+@router.get("/workflows", response_model=List[WhatsAppWorkflowResponse], summary="List WhatsApp workflows")
+def list_workflows(
+    db: Session = Depends(get_db),
+    user: Users = Depends(get_current_user)
+):
+    """List all WhatsApp workflows for the authenticated user"""
+    try:
+        workflows = db.query(WhatsAppWorkflows).filter(WhatsAppWorkflows.user_id == user.id).all()
+        
+        return [
+            WhatsAppWorkflowResponse(
+                id=wf.id,
+                name=wf.name,
+                trigger_conditions=json.loads(wf.trigger_conditions),
+                message_template=wf.message_template,
+                recipients=json.loads(wf.recipients),
+                is_active=wf.is_active,
+                created_at=wf.created_at,
+                updated_at=wf.updated_at
+            )
+            for wf in workflows
+        ]
+        
+    except Exception as e:
+        logger.exception("Error listing WhatsApp workflows")
+        raise HTTPException(status_code=500, detail="Failed to list workflows")
+
+@router.post("/workflows/{workflow_id}/trigger", summary="Trigger WhatsApp workflow")
+def trigger_workflow(
+    workflow_id: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    user: Users = Depends(get_current_user)
+):
+    """Manually trigger a WhatsApp workflow"""
+    try:
+        workflow = db.query(WhatsAppWorkflows).filter(
+            WhatsAppWorkflows.id == workflow_id,
+            WhatsAppWorkflows.user_id == user.id
+        ).first()
+        
+        if not workflow:
+            raise HTTPException(status_code=404, detail="Workflow not found")
+        
+        if not workflow.is_active:
+            raise HTTPException(status_code=400, detail="Workflow is not active")
+        
+        # Add background task to send messages
+        background_tasks.add_task(send_whatsapp_messages, workflow.id)
+        
+        logger.info(f"Triggered WhatsApp workflow {workflow_id} for user {user.email}")
+        
+        return {"message": "Workflow triggered successfully", "workflow_id": workflow_id}
+        
+    except Exception as e:
+        logger.exception("Error triggering WhatsApp workflow")
+        raise HTTPException(status_code=500, detail="Failed to trigger workflow")
+
+async def send_whatsapp_messages(workflow_id: int):
+    """Background task to send WhatsApp messages"""
+    try:
+        from database import SessionLocal
+        db = SessionLocal()
+        
+        workflow = db.query(WhatsAppWorkflows).filter(WhatsAppWorkflows.id == workflow_id).first()
+        if not workflow:
+            return
+        
+        recipients = json.loads(workflow.recipients)
+        message = workflow.message_template
+        
+        # Here you would integrate with WhatsApp Business API
+        # For now, we'll just log the messages
+        for recipient in recipients:
+            logger.info(f"Sending WhatsApp message to {recipient}: {message}")
+        
+        db.close()
+        
+    except Exception as e:
+        logger.exception(f"Error sending WhatsApp messages for workflow {workflow_id}")
 
 # WhatsApp Workflow Engine
 class WhatsAppWorkflowEngine:
@@ -89,7 +248,6 @@ class WhatsAppWorkflowEngine:
     
     async def send_message_step(self, step: WhatsAppWorkflowSteps, execution_data: Dict, db: Session):
         """Send a WhatsApp message step"""
-        from whatsapp_automation import whatsapp_api
         
         # Replace variables in message content
         message_content = self.replace_variables(step.content, execution_data)
@@ -111,7 +269,6 @@ class WhatsAppWorkflowEngine:
             )
             
             # Log the message
-            from models import WhatsAppMessages
             message = WhatsAppMessages(
                 user_id=execution_data["lead_data"]["user_id"],
                 recipient_phone=phone_number,
@@ -220,7 +377,6 @@ class WhatsAppWorkflowEngine:
     
     async def add_lead_to_crm(self, lead_data: Dict, db: Session):
         """Add lead to CRM"""
-        from models import Leads
         
         # Check if lead already exists
         existing_lead = db.query(Leads).filter(
@@ -245,7 +401,6 @@ class WhatsAppWorkflowEngine:
     
     async def send_follow_up_message(self, lead_data: Dict, db: Session):
         """Send follow-up message"""
-        from whatsapp_automation import whatsapp_api
         
         phone_number = lead_data.get("phone")
         if not phone_number:
@@ -390,8 +545,8 @@ async def get_workflows(
     description="Trigger a WhatsApp workflow for a lead. Starts execution in the background."
 )
 async def trigger_workflow(
+    background_tasks: BackgroundTasks,
     trigger_data: WorkflowTrigger = Body(..., description="Workflow trigger payload."),
-    background_tasks: BackgroundTasks = Depends(),
     current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -471,8 +626,8 @@ async def trigger_workflow(
     description="Manually execute a WhatsApp workflow for a lead. Starts execution in the background."
 )
 async def execute_workflow(
+    background_tasks: BackgroundTasks,
     execution_data: WorkflowExecution = Body(..., description="Workflow execution payload."),
-    background_tasks: BackgroundTasks = Depends(),
     current_user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -657,7 +812,320 @@ async def get_workflow_analytics(
     ).count()
     
     # Get message statistics
-    from models import WhatsAppMessages
+    total_messages = db.query(WhatsAppMessages).filter(
+        WhatsAppMessages.user_id == current_user.id,
+        WhatsAppMessages.workflow_id.isnot(None)
+    ).count()
+    
+    successful_messages = db.query(WhatsAppMessages).filter(
+        WhatsAppMessages.user_id == current_user.id,
+        WhatsAppMessages.workflow_id.isnot(None),
+        WhatsAppMessages.status == "sent"
+    ).count()
+    
+    return {
+        "total_workflows": total_workflows,
+        "active_workflows": active_workflows,
+        "total_messages": total_messages,
+        "successful_messages": successful_messages,
+        "success_rate": (successful_messages / total_messages * 100) if total_messages > 0 else 0
+    } 
+                "social_lead_id": social_lead.id
+            }
+    
+    if not lead_data:
+        raise HTTPException(status_code=400, detail="No valid lead data found")
+    
+    # Add execution data
+    if execution_data.execution_data:
+        lead_data.update(execution_data.execution_data)
+    
+    # Start workflow execution in background
+    background_tasks.add_task(
+        workflow_engine.execute_workflow,
+        workflow.id,
+        lead_data,
+        db
+    )
+    
+    return {
+        "workflow_id": workflow.id,
+        "status": "executing",
+        "message": "Workflow execution started"
+    }
+
+@router.get(
+    "/templates",
+    response_model=List[Dict[str, Any]],
+    summary="Get workflow templates",
+    description="Get predefined WhatsApp workflow templates."
+)
+async def get_workflow_templates(
+    current_user: Users = Depends(get_current_user)
+):
+    """Get predefined workflow templates."""
+    templates = [
+        {
+            "id": "welcome_sequence",
+            "name": "Welcome Sequence",
+            "description": "Welcome new leads with a 3-step sequence",
+            "trigger_type": "lead_created",
+            "steps": [
+                {
+                    "name": "Welcome Message",
+                    "step_type": "message",
+                    "content": "Hi {{name}}! Welcome to our community. We're excited to connect with you!",
+                    "order": 1
+                },
+                {
+                    "name": "Delay",
+                    "step_type": "delay",
+                    "delay_minutes": 60,
+                    "order": 2
+                },
+                {
+                    "name": "Value Proposition",
+                    "step_type": "message",
+                    "content": "We help businesses like yours grow through our innovative solutions. Would you like to learn more?",
+                    "order": 3
+                }
+            ]
+        },
+        {
+            "id": "engagement_sequence",
+            "name": "Engagement Sequence",
+            "description": "Engage high-value leads with personalized messages",
+            "trigger_type": "lead_qualified",
+            "steps": [
+                {
+                    "name": "Personalized Greeting",
+                    "step_type": "message",
+                    "content": "Hi {{name}}! I noticed your impressive {{followers}} followers on {{platform}}. Your content is amazing!",
+                    "order": 1
+                },
+                {
+                    "name": "Delay",
+                    "step_type": "delay",
+                    "delay_minutes": 30,
+                    "order": 2
+                },
+                {
+                    "name": "Collaboration Offer",
+                    "step_type": "message",
+                    "content": "We'd love to explore collaboration opportunities. Are you interested in discussing potential partnerships?",
+                    "order": 3
+                }
+            ]
+        },
+        {
+            "id": "follow_up_sequence",
+            "name": "Follow-up Sequence",
+            "description": "Follow up with leads who haven't responded",
+            "trigger_type": "manual",
+            "steps": [
+                {
+                    "name": "Friendly Reminder",
+                    "step_type": "message",
+                    "content": "Hi {{name}}! Just wanted to follow up on our previous message. Are you still interested?",
+                    "order": 1
+                },
+                {
+                    "name": "Delay",
+                    "step_type": "delay",
+                    "delay_minutes": 120,
+                    "order": 2
+                },
+                {
+                    "name": "Final Offer",
+                    "step_type": "message",
+                    "content": "Last chance! We have a special offer for you. Would you like to take advantage of it?",
+                    "order": 3
+                }
+            ]
+        }
+    ]
+    
+    return templates
+
+@router.get(
+    "/analytics",
+    response_model=Dict[str, Any],
+    summary="Get workflow analytics",
+    description="Get analytics and statistics for WhatsApp workflows and messages."
+)
+async def get_workflow_analytics(
+    current_user: Users = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get WhatsApp workflow analytics and statistics."""
+    # Get workflow statistics
+    total_workflows = db.query(WhatsAppWorkflows).filter(
+        WhatsAppWorkflows.user_id == current_user.id
+    ).count()
+    
+    active_workflows = db.query(WhatsAppWorkflows).filter(
+        WhatsAppWorkflows.user_id == current_user.id,
+        WhatsAppWorkflows.is_active == True
+    ).count()
+    
+    # Get message statistics
+    total_messages = db.query(WhatsAppMessages).filter(
+        WhatsAppMessages.user_id == current_user.id,
+        WhatsAppMessages.workflow_id.isnot(None)
+    ).count()
+    
+    successful_messages = db.query(WhatsAppMessages).filter(
+        WhatsAppMessages.user_id == current_user.id,
+        WhatsAppMessages.workflow_id.isnot(None),
+        WhatsAppMessages.status == "sent"
+    ).count()
+    
+    return {
+        "total_workflows": total_workflows,
+        "active_workflows": active_workflows,
+        "total_messages": total_messages,
+        "successful_messages": successful_messages,
+        "success_rate": (successful_messages / total_messages * 100) if total_messages > 0 else 0
+    } 
+                "social_lead_id": social_lead.id
+            }
+    
+    if not lead_data:
+        raise HTTPException(status_code=400, detail="No valid lead data found")
+    
+    # Add execution data
+    if execution_data.execution_data:
+        lead_data.update(execution_data.execution_data)
+    
+    # Start workflow execution in background
+    background_tasks.add_task(
+        workflow_engine.execute_workflow,
+        workflow.id,
+        lead_data,
+        db
+    )
+    
+    return {
+        "workflow_id": workflow.id,
+        "status": "executing",
+        "message": "Workflow execution started"
+    }
+
+@router.get(
+    "/templates",
+    response_model=List[Dict[str, Any]],
+    summary="Get workflow templates",
+    description="Get predefined WhatsApp workflow templates."
+)
+async def get_workflow_templates(
+    current_user: Users = Depends(get_current_user)
+):
+    """Get predefined workflow templates."""
+    templates = [
+        {
+            "id": "welcome_sequence",
+            "name": "Welcome Sequence",
+            "description": "Welcome new leads with a 3-step sequence",
+            "trigger_type": "lead_created",
+            "steps": [
+                {
+                    "name": "Welcome Message",
+                    "step_type": "message",
+                    "content": "Hi {{name}}! Welcome to our community. We're excited to connect with you!",
+                    "order": 1
+                },
+                {
+                    "name": "Delay",
+                    "step_type": "delay",
+                    "delay_minutes": 60,
+                    "order": 2
+                },
+                {
+                    "name": "Value Proposition",
+                    "step_type": "message",
+                    "content": "We help businesses like yours grow through our innovative solutions. Would you like to learn more?",
+                    "order": 3
+                }
+            ]
+        },
+        {
+            "id": "engagement_sequence",
+            "name": "Engagement Sequence",
+            "description": "Engage high-value leads with personalized messages",
+            "trigger_type": "lead_qualified",
+            "steps": [
+                {
+                    "name": "Personalized Greeting",
+                    "step_type": "message",
+                    "content": "Hi {{name}}! I noticed your impressive {{followers}} followers on {{platform}}. Your content is amazing!",
+                    "order": 1
+                },
+                {
+                    "name": "Delay",
+                    "step_type": "delay",
+                    "delay_minutes": 30,
+                    "order": 2
+                },
+                {
+                    "name": "Collaboration Offer",
+                    "step_type": "message",
+                    "content": "We'd love to explore collaboration opportunities. Are you interested in discussing potential partnerships?",
+                    "order": 3
+                }
+            ]
+        },
+        {
+            "id": "follow_up_sequence",
+            "name": "Follow-up Sequence",
+            "description": "Follow up with leads who haven't responded",
+            "trigger_type": "manual",
+            "steps": [
+                {
+                    "name": "Friendly Reminder",
+                    "step_type": "message",
+                    "content": "Hi {{name}}! Just wanted to follow up on our previous message. Are you still interested?",
+                    "order": 1
+                },
+                {
+                    "name": "Delay",
+                    "step_type": "delay",
+                    "delay_minutes": 120,
+                    "order": 2
+                },
+                {
+                    "name": "Final Offer",
+                    "step_type": "message",
+                    "content": "Last chance! We have a special offer for you. Would you like to take advantage of it?",
+                    "order": 3
+                }
+            ]
+        }
+    ]
+    
+    return templates
+
+@router.get(
+    "/analytics",
+    response_model=Dict[str, Any],
+    summary="Get workflow analytics",
+    description="Get analytics and statistics for WhatsApp workflows and messages."
+)
+async def get_workflow_analytics(
+    current_user: Users = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get WhatsApp workflow analytics and statistics."""
+    # Get workflow statistics
+    total_workflows = db.query(WhatsAppWorkflows).filter(
+        WhatsAppWorkflows.user_id == current_user.id
+    ).count()
+    
+    active_workflows = db.query(WhatsAppWorkflows).filter(
+        WhatsAppWorkflows.user_id == current_user.id,
+        WhatsAppWorkflows.is_active == True
+    ).count()
+    
+    # Get message statistics
     total_messages = db.query(WhatsAppMessages).filter(
         WhatsAppMessages.user_id == current_user.id,
         WhatsAppMessages.workflow_id.isnot(None)

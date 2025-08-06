@@ -2,12 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Path
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from typing import Optional, List
-from models import Users
+from models import Users, SupportTicket
 from auth import get_current_user
 from database import get_db
 import logging
-from tenant_utils import get_tenant_from_request
-from tenant_utils import get_tenant_record_or_403
+from tenant_utils import get_tenant_from_request, get_tenant_record_or_403
 
 router = APIRouter(prefix="/api/support", tags=["support"])
 logger = logging.getLogger("support")
@@ -67,12 +66,19 @@ def get_faqs():
 
 @router.get("/support", response_model=List[dict], summary="Get Support Tickets", description="Get all support tickets for the current tenant.", response_description="List of support tickets")
 def get_support_tickets(request: Request, db: Session = Depends(get_db)):
-    """Get all support tickets for the current tenant."""
     tenant = get_tenant_from_request(request, db)
-    # Assuming SupportTicket model exists and is imported
-    # tickets = db.query(SupportTicket).filter_by(tenant_id=tenant.id).all()
-    # return tickets
-    return [] # Placeholder as SupportTicket model is not defined
+    tickets = db.query(SupportTicket).filter_by(tenant_id=tenant.id).all()
+    return [
+        {
+            "id": t.id,
+            "subject": t.subject,
+            "message": t.message,
+            "phone": t.phone,
+            "status": t.status,
+            "created_at": t.created_at,
+            "updated_at": t.updated_at
+        } for t in tickets
+    ]
 
 @router.post("/support", response_model=dict, summary="Create Support Ticket", description="Create a new support ticket for the current tenant.", response_description="Created support ticket")
 def create_support_ticket(
@@ -81,24 +87,32 @@ def create_support_ticket(
     user: Users = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Create a new support ticket for the current tenant."""
     tenant = get_tenant_from_request(request, db)
-    # Assuming SupportTicket model exists and is imported
-    # ticket = SupportTicket(
-    #     subject=req.subject,
-    #     message=req.message,
-    #     phone=req.phone,
-    #     user_id=user.id,
-    #     tenant_id=tenant.id
-    # )
-    # db.add(ticket)
-    # db.commit()
-    return {"message": "Support ticket creation not implemented."} # Placeholder
+    ticket = SupportTicket(
+        user_id=user.id,
+        tenant_id=tenant.id,
+        subject=req.subject,
+        message=req.message,
+        phone=req.phone,
+        status="open"
+    )
+    db.add(ticket)
+    db.commit()
+    db.refresh(ticket)
+    return {"id": ticket.id, "message": "Support ticket created successfully."}
 
 @router.get("/support/{ticket_id}", response_model=dict, summary="Get Support Ticket", description="Retrieve a specific support ticket by ID for the current tenant.", response_description="Retrieve a specific support ticket")
 def get_support_ticket(ticket_id: int = Path(..., description="ID of the support ticket."), request: Request = None, db: Session = Depends(get_db)):
-    """Retrieve a specific support ticket by ID for the current tenant."""
     tenant = get_tenant_from_request(request, db)
-    # Assuming SupportTicket model exists and is imported
-    # ticket = get_tenant_record_or_403(SupportTicket, ticket_id, tenant.id, db)
-    return {"message": "Support ticket retrieval not implemented."} # Placeholder 
+    ticket = db.query(SupportTicket).filter_by(id=ticket_id, tenant_id=tenant.id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Support ticket not found")
+    return {
+        "id": ticket.id,
+        "subject": ticket.subject,
+        "message": ticket.message,
+        "phone": ticket.phone,
+        "status": ticket.status,
+        "created_at": ticket.created_at,
+        "updated_at": ticket.updated_at
+    } 

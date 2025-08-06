@@ -8,7 +8,8 @@ from models import Users, Leads
 from auth import get_current_user
 from pydantic import BaseModel, Field
 import secrets
-from config import lru_cache, CACHE_TIMEOUT_SECONDS
+from functools import lru_cache
+from config import CACHE_TIMEOUT_SECONDS
 import threading
 from tenant_utils import get_tenant_from_request, get_tenant_record_or_403
 from webhook_utils import send_webhook_event

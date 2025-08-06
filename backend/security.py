@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, Body, Request, Path
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Body, Path
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
@@ -12,9 +13,89 @@ import logging
 from datetime import datetime, timedelta
 from enum import Enum
 from audit import audit_log
+import time
+import hashlib
+from config import RATE_LIMIT_REQUESTS, RATE_LIMIT_WINDOW
 
 router = APIRouter(prefix="/api/security", tags=["security"])
-logger = logging.getLogger("security")
+security = HTTPBearer()
+logger = logging.getLogger(__name__)
+
+# In-memory rate limiting (replace with Redis in production)
+_rate_limit_store: Dict[str, Dict[str, Any]] = {}
+
+class RateLimiter:
+    def __init__(self, max_requests: int = RATE_LIMIT_REQUESTS, window_seconds: int = RATE_LIMIT_WINDOW):
+        self.max_requests = max_requests
+        self.window_seconds = window_seconds
+    
+    def is_allowed(self, key: str) -> bool:
+        """Check if request is allowed based on rate limiting rules"""
+        now = time.time()
+        
+        if key not in _rate_limit_store:
+            _rate_limit_store[key] = {
+                'requests': [],
+                'blocked_until': None
+            }
+        
+        # Check if currently blocked
+        if _rate_limit_store[key]['blocked_until'] and now < _rate_limit_store[key]['blocked_until']:
+            return False
+        
+        # Clean old requests outside the window
+        window_start = now - self.window_seconds
+        _rate_limit_store[key]['requests'] = [
+            req_time for req_time in _rate_limit_store[key]['requests'] 
+            if req_time > window_start
+        ]
+        
+        # Check if under limit
+        if len(_rate_limit_store[key]['requests']) < self.max_requests:
+            _rate_limit_store[key]['requests'].append(now)
+            return True
+        
+        # Block for window duration
+        _rate_limit_store[key]['blocked_until'] = now + self.window_seconds
+        return False
+    
+    def get_remaining_requests(self, key: str) -> int:
+        """Get remaining requests for the current window"""
+        now = time.time()
+        window_start = now - self.window_seconds
+        
+        if key not in _rate_limit_store:
+            return self.max_requests
+        
+        # Clean old requests
+        _rate_limit_store[key]['requests'] = [
+            req_time for req_time in _rate_limit_store[key]['requests'] 
+            if req_time > window_start
+        ]
+        
+        return max(0, self.max_requests - len(_rate_limit_store[key]['requests']))
+
+# Global rate limiter instance
+rate_limiter = RateLimiter()
+
+def get_client_ip(request: Request) -> str:
+    """Extract client IP address from request"""
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return request.client.host
+
+def get_rate_limit_key(request: Request, user_id: Optional[int] = None) -> str:
+    """Generate rate limiting key based on IP and user"""
+    client_ip = get_client_ip(request)
+    if user_id:
+        return f"user:{user_id}:{client_ip}"
+    return f"ip:{client_ip}"
+
+def check_rate_limit(request: Request, user_id: Optional[int] = None) -> bool:
+    """Check if request is within rate limits"""
+    key = get_rate_limit_key(request, user_id)
+    return rate_limiter.is_allowed(key)
 
 # Security enums
 class PermissionType(str, Enum):
@@ -117,30 +198,17 @@ def verify_backup_code(user: Users, code: str, db: Session) -> bool:
             return True
     return False
 
-def log_security_event(
-    user_id: int,
-    action: str,
-    resource: str,
-    details: Optional[Dict[str, Any]] = None,
-    ip_address: Optional[str] = None,
-    user_agent: Optional[str] = None,
-    db: Session = None
-):
-    """Log security events for audit trail"""
+def log_security_event(db: Session, user_id: Optional[int], event_type: str, details: Dict[str, Any]):
+    """Log security events for audit purposes"""
     try:
-        if db:
-            audit_log = AuditLogs(
-                user_id=user_id,
-                action=action,
-                resource=resource,
-                details=json.dumps(details) if details else None,
-                ip_address=ip_address,
-                user_agent=user_agent,
-                timestamp=datetime.utcnow()
-            )
-            db.add(audit_log)
-            db.commit()
-        logger.info(f"Security event: {action} on {resource} by user {user_id}")
+        audit_log = AuditLogs(
+            user_id=user_id,
+            action=event_type,
+            target_type="security",
+            details=json.dumps(details)
+        )
+        db.add(audit_log)
+        db.commit()
     except Exception as e:
         logger.error(f"Failed to log security event: {e}")
 
@@ -639,3 +707,61 @@ def calculate_security_score(user: Users) -> int:
     return min(score, 100)
 
 # Removed @router.middleware('http') and its function, as APIRouter does not support middleware. If needed, move to main.py as app middleware. 
+
+@router.get("/rate-limit/status")
+async def get_rate_limit_status(request: Request, db: Session = Depends(get_db)):
+    """Get current rate limiting status for the client"""
+    client_ip = get_client_ip(request)
+    key = get_rate_limit_key(request)
+    
+    remaining = rate_limiter.get_remaining_requests(key)
+    
+    return {
+        "remaining_requests": remaining,
+        "max_requests": RATE_LIMIT_REQUESTS,
+        "window_seconds": RATE_LIMIT_WINDOW,
+        "client_ip": client_ip
+    }
+
+@router.post("/audit/log")
+async def log_security_event_endpoint(
+    request: Request,
+    event_data: Dict[str, Any],
+    db: Session = Depends(get_db)
+):
+    """Log a security event"""
+    client_ip = get_client_ip(request)
+    user_id = getattr(request.state, 'user_id', None)
+    
+    log_security_event(db, user_id, "security_event", {
+        "client_ip": client_ip,
+        "user_agent": request.headers.get("User-Agent"),
+        "event_data": event_data
+    })
+    
+    return {"status": "logged"}
+
+# Security middleware for rate limiting
+async def security_middleware(request: Request, call_next):
+    """Middleware to apply security checks including rate limiting"""
+    client_ip = get_client_ip(request)
+    
+    # Skip rate limiting for health checks and static files
+    if request.url.path in ["/health", "/api/health", "/docs", "/redoc"]:
+        return await call_next(request)
+    
+    # Check rate limiting
+    if not check_rate_limit(request):
+        logger.warning(f"Rate limit exceeded for IP: {client_ip}")
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Rate limit exceeded. Please try again later."
+        )
+    
+    # Add security headers
+    response = await call_next(request)
+    response.headers["X-RateLimit-Remaining"] = str(rate_limiter.get_remaining_requests(get_rate_limit_key(request)))
+    response.headers["X-RateLimit-Limit"] = str(RATE_LIMIT_REQUESTS)
+    response.headers["X-RateLimit-Reset"] = str(int(time.time() + RATE_LIMIT_WINDOW))
+    
+    return response 

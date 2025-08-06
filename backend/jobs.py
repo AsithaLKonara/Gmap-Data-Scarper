@@ -14,6 +14,7 @@ import logging
 import secrets
 from tenant_utils import get_tenant_from_request
 from security import check_permission
+import asyncio
 
 router = APIRouter(prefix="/api/scrape", tags=["scrape"])
 
@@ -43,6 +44,23 @@ class BulkDeleteRequest(BaseModel):
 
 class BulkDeleteResponse(BaseModel):
     deleted: int = Field(..., description="Number of jobs deleted.")
+
+async def create_job_internal(queries, user_id, priority):
+    """Internal function to create a job for the scheduler."""
+    from database import SessionLocal
+    db = SessionLocal()
+    try:
+        job = Jobs(queries=json.dumps(queries), status="pending", user_id=user_id, priority=priority)
+        db.add(job)
+        db.commit()
+        db.refresh(job)
+        # Optionally, you could trigger the scraper here if needed
+        return {"job_id": job.id, "status": job.status}
+    except Exception as e:
+        logger.exception("Error creating job (internal)")
+        raise
+    finally:
+        db.close()
 
 @router.post("/", response_model=JobStatus, summary="Create a new scraping job", description="Create a new Google Maps scraping job for the authenticated user.")
 def create_scrape_job(req: ScrapeRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db), user: Users = Depends(get_current_user)):

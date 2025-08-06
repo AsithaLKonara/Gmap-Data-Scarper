@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from pydantic import BaseModel, Field
-from models import Affiliates, Commissions
+from models import Affiliates, Commissions, Users
 from database import get_db
 from auth import get_current_user
 from datetime import datetime
