@@ -34,6 +34,7 @@ from showcase import router as showcase_router
 from sso import router as sso_router
 from social_media_scraper import router as social_scraper_router
 from whatsapp_workflow import router as whatsapp_workflow_router
+from bulk_whatsapp_sender import router as bulk_whatsapp_router
 # Temporarily disable GraphQL due to Python 3.13 compatibility
 # from graphql_api import router as graphql_router
 from realtime import router as realtime_router
@@ -105,6 +106,7 @@ app.include_router(showcase_router)
 app.include_router(sso_router)
 app.include_router(social_scraper_router)
 app.include_router(whatsapp_workflow_router)
+app.include_router(bulk_whatsapp_router)
 # app.include_router(graphql_router)  # Temporarily disabled
 app.include_router(realtime_router)
 app.include_router(payments_router)

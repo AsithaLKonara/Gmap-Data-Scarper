@@ -4,6 +4,7 @@ import { ChakraProvider, ColorModeScript } from '@chakra-ui/react';
 import theme from './theme';
 import Layout from './components/Layout';
 import { Box, Heading, Text } from '@chakra-ui/react';
+import BulkWhatsAppSender from './components/BulkWhatsAppSender';
 
 // Placeholder components
 const Dashboard = () => (
@@ -29,7 +30,7 @@ function App() {
           <Routes>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/leads/search" element={<LeadSearch />} />
-            {/* Add more routes as components are created */}
+            <Route path="/bulk-whatsapp" element={<BulkWhatsAppSender />} />
             <Route path="/" element={<Dashboard />} />
           </Routes>
         </Layout>

@@ -38,6 +38,7 @@ import {
   FiZap,
   FiShield,
   FiMonitor,
+  FiSend,
 } from 'react-icons/fi';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -118,6 +119,11 @@ const sidebarItems: SidebarItem[] = [
     label: 'Support',
     icon: FiHelpCircle,
     path: '/support',
+  },
+  {
+    label: 'Bulk WhatsApp Sender',
+    icon: FiSend,
+    path: '/bulk-whatsapp',
   },
 ];
 

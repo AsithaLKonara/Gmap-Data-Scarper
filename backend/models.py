@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
 import enum
+from datetime import datetime
 
 class UserRole(str, enum.Enum):
     ADMIN = "admin"
@@ -63,6 +64,7 @@ class Users(Base):
     demo_projects = relationship("DemoProjects", back_populates="user")
     support_tickets = relationship("SupportTicket", back_populates="user")
     testimonials = relationship("Testimonials", back_populates="user")
+    bulk_campaigns = relationship("BulkWhatsAppCampaigns", back_populates="user")
 
 class Plans(Base):
     __tablename__ = "plans"
@@ -661,3 +663,55 @@ class WhatsAppAutomations(Base):
 
     # Relationships
     user = relationship("Users") 
+
+class BulkWhatsAppCampaigns(Base):
+    __tablename__ = "bulk_whatsapp_campaigns"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    message_content = Column(Text, nullable=False)
+    template_id = Column(Integer, ForeignKey("whatsapp_templates.id"), nullable=True)
+    schedule_type = Column(String(50), default="immediate")  # immediate, scheduled, recurring
+    schedule_time = Column(DateTime, nullable=True)
+    delay_between_messages = Column(Integer, default=30)  # seconds
+    max_messages_per_hour = Column(Integer, default=50)
+    max_messages_per_day = Column(Integer, default=500)
+    retry_failed = Column(Boolean, default=True)
+    max_retries = Column(Integer, default=3)
+    status = Column(String(50), default="pending")  # pending, running, completed, failed, paused
+    total_contacts = Column(Integer, default=0)
+    sent_messages = Column(Integer, default=0)
+    failed_messages = Column(Integer, default=0)
+    start_time = Column(DateTime, nullable=True)
+    end_time = Column(DateTime, nullable=True)
+    error_message = Column(Text, nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("Users", back_populates="bulk_campaigns")
+    messages = relationship("BulkWhatsAppMessages", back_populates="campaign", cascade="all, delete-orphan")
+    template = relationship("WhatsAppTemplates", back_populates="bulk_campaigns")
+
+class BulkWhatsAppMessages(Base):
+    __tablename__ = "bulk_whatsapp_messages"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    campaign_id = Column(Integer, ForeignKey("bulk_whatsapp_campaigns.id"), nullable=False)
+    phone_number = Column(String(20), nullable=False)
+    contact_name = Column(String(255), nullable=True)
+    message_content = Column(Text, nullable=False)
+    status = Column(String(50), default="pending")  # pending, sent, failed, delivered, read
+    message_id = Column(String(255), nullable=True)  # WhatsApp message ID
+    sent_at = Column(DateTime, nullable=True)
+    delivered_at = Column(DateTime, nullable=True)
+    read_at = Column(DateTime, nullable=True)
+    retry_count = Column(Integer, default=0)
+    error_message = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    campaign = relationship("BulkWhatsAppCampaigns", back_populates="messages") 
