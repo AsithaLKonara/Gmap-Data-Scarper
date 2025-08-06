@@ -1,0 +1,121 @@
+version: '3.8'
+
+services:
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=sqlite:///./leadtap.db
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - JWT_SECRET=dev-jwt-secret-change-in-production
+      - FRONTEND_URL=http://localhost:3000
+      - DEBUG=true
+    volumes:
+      - ./backend:/app
+      - /app/__pycache__
+      - /app/venv
+    depends_on:
+      - db
+    restart: unless-stopped
+    networks:
+      - leadtap-network
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+      - VITE_ENVIRONMENT=development
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - leadtap-network
+
+  # SQLite Database (for development)
+  db:
+    image: alpine:latest
+    command: sh -c "echo 'SQLite database will be created in backend container'"
+    volumes:
+      - ./backend:/data
+    networks:
+      - leadtap-network
+
+networks:
+  leadtap-network:
+    driver: bridge 
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - ./frontend:/app
+      - frontend_static:/app/dist
+
+  db:
+    image: mysql:8.0
+    container_name: leadtap-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-leadtap}
+      MYSQL_USER: ${MYSQL_USER:-leadtap}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-leadtap}
+    ports:
+      - "3307:3306"
+    volumes:
+      - gmap-data-scraper_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  gmap-data-scraper_mysql_data:
+  backend_static:
+  frontend_static: 
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-leadtap}
+      MYSQL_USER: ${MYSQL_USER:-leadtap}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-leadtap}
+    ports:
+      - "3307:3306"
+    volumes:
+      - gmap-data-scraper_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  gmap-data-scraper_mysql_data:
+  backend_static:
+  frontend_static: 
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-leadtap}
+      MYSQL_USER: ${MYSQL_USER:-leadtap}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-leadtap}
+    ports:
+      - "3307:3306"
+    volumes:
+      - gmap-data-scraper_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  gmap-data-scraper_mysql_data:
+  backend_static:
+  frontend_static: 

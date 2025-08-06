@@ -1,5 +1,5 @@
 from backend.database import SessionLocal
-from backend.models import Tenant, Job, Lead, CRMRecord, AnalyticsEvent, Notification, SavedQuery, SupportTicket, ApiKey
+from backend.models import Tenant, Users, SupportTicket
 
 def main():
     db = SessionLocal()
@@ -14,15 +14,14 @@ def main():
         print('Created Default Tenant')
     else:
         print('Default Tenant already exists')
-    # 2. Assign orphaned records
-    models = [Job, Lead, CRMRecord, AnalyticsEvent, Notification, SavedQuery, SupportTicket, ApiKey]
+    # 2. Assign orphaned records (only models with tenant_id field)
+    models = [Users, SupportTicket]
     for model in models:
         orphaned = db.query(model).filter((model.tenant_id == None) | (model.tenant_id == 0)).all()
         for record in orphaned:
             record.tenant_id = default_tenant.id
-        if orphaned:
-            db.commit()
-        print(f'Assigned {len(orphaned)} {model.__name__} records to Default Tenant')
+        db.commit()
+        print(f'Assigned {len(orphaned)} orphaned {model.__tablename__} to default tenant')
     db.close()
 
 if __name__ == '__main__':

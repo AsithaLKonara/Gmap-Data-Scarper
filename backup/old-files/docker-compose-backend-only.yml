@@ -1,0 +1,82 @@
+ 
+
+services:
+  # Backend API only
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=sqlite:///./leadtap.db
+      - SECRET_KEY=production-secret-key-change-this
+      - JWT_SECRET=production-jwt-secret-change-this
+      - FRONTEND_URL=http://localhost:3000
+      - DEBUG=false
+    volumes:
+      - ./backend:/app
+      - /app/__pycache__
+    restart: unless-stopped
+    networks:
+      - leadtap-network
+
+networks:
+  leadtap-network:
+    driver: bridge 
+ 
+
+services:
+  # Backend API only
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=sqlite:///./leadtap.db
+      - SECRET_KEY=production-secret-key-change-this
+      - JWT_SECRET=production-jwt-secret-change-this
+      - FRONTEND_URL=http://localhost:3000
+      - DEBUG=false
+    volumes:
+      - ./backend:/app
+      - /app/__pycache__
+    restart: unless-stopped
+    networks:
+      - leadtap-network
+
+networks:
+  leadtap-network:
+    driver: bridge 
+ 
+
+services:
+  # Backend API only
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=sqlite:///./leadtap.db
+      - SECRET_KEY=production-secret-key-change-this
+      - JWT_SECRET=production-jwt-secret-change-this
+      - FRONTEND_URL=http://localhost:3000
+      - DEBUG=false
+    volumes:
+      - ./backend:/app
+      - /app/__pycache__
+    restart: unless-stopped
+    networks:
+      - leadtap-network
+
+networks:
+  leadtap-network:
+    driver: bridge 
+ 
