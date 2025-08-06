@@ -1,20 +1,20 @@
 version: '3.8'
 
 services:
-  # SQLite Database (for development)
+  # SQLite Database
   sqlite-db:
     image: alpine:latest
-    container_name: leadtap-sqlite
+    container_name: leadtap-sqlite-backend-only
     volumes:
       - ./backend/leadtap.db:/app/leadtap.db
     command: ["sh", "-c", "echo 'SQLite database ready' && tail -f /dev/null"]
 
-  # Backend API
+  # Backend API Only
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: leadtap-backend
+    container_name: leadtap-backend-only
     ports:
       - "8000:8000"
     environment:
@@ -34,23 +34,6 @@ services:
       retries: 3
       start_period: 40s
 
-  # Frontend (Development)
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: leadtap-frontend
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    environment:
-      - NODE_ENV=development
-    depends_on:
-      - backend
-    restart: unless-stopped
-
 networks:
   default:
-    name: leadtap-network 
+    name: leadtap-backend-only-network 
