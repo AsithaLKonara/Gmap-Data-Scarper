@@ -1,16 +1,45 @@
-FROM python:3.10-slim
+# Backend Dockerfile for LeadTap
+FROM python:3.11-slim
 
+# Set working directory
 WORKDIR /app
 
-COPY requirements.txt .
-ENV PIP_DEFAULT_TIMEOUT=180
-RUN pip install --default-timeout=180 --no-cache-dir -r requirements.txt
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
+# Install system dependencies
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        gcc \
+        g++ \
+        curl \
+        git \
+        && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
+COPY requirements-docker.txt requirements.txt
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
 COPY . .
 
-# Make the startup script executable
-RUN chmod +x /app/start.sh
+# Create non-root user for security
+RUN adduser --disabled-password --gecos '' appuser \
+    && chown -R appuser:appuser /app
+USER appuser
 
+# Expose port
 EXPOSE 8000
 
-CMD ["/app/start.sh"] 
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/api/health || exit 1
+
+# Start command
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"] 

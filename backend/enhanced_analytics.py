@@ -1,16 +1,304 @@
-from fastapi import APIRouter, Depends, HTTPException
+# Enhanced Analytics with Real-time Data and Advanced Reporting
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import func, desc, and_
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
-from models import Users, Jobs, Leads
+from enum import Enum
+import json
+import logging
+from datetime import datetime, timezone, timedelta
+from models import Users, Jobs, LeadScores, WhatsAppWorkflows, Leads, Goals
 from database import get_db
 from auth import get_current_user
-import json
-from datetime import datetime, timedelta
-from enum import Enum
+from security import check_permission
+from cache import cache_result
 
-router = APIRouter(prefix="/api/analytics", tags=["enhanced-analytics"])
+router = APIRouter(prefix="/api/analytics", tags=["analytics"])
 
+logger = logging.getLogger("enhanced_analytics")
+
+class AnalyticsSummary(BaseModel):
+    total_jobs: int
+    total_leads: int
+    success_rate: float
+    average_score: float
+    top_performing_queries: List[Dict[str, Any]]
+    recent_activity: List[Dict[str, Any]]
+
+class RealTimeMetrics(BaseModel):
+    active_jobs: int
+    jobs_completed_today: int
+    leads_generated_today: int
+    average_response_time: float
+    system_health: str
+
+class PerformanceReport(BaseModel):
+    period: str
+    jobs_created: int
+    jobs_completed: int
+    leads_generated: int
+    success_rate: float
+    average_lead_score: float
+    revenue_potential: float
+
+@router.get("/summary", response_model=AnalyticsSummary, summary="Get analytics summary")
+@cache_result(ttl_seconds=300, key_prefix="analytics")
+def get_analytics_summary(
+    db: Session = Depends(get_db),
+    user: Users = Depends(get_current_user)
+):
+    """Get comprehensive analytics summary for the user"""
+    try:
+        # Check permissions
+        if not check_permission(user, "analytics:read"):
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+        
+        # Get user's jobs
+        user_jobs = db.query(Jobs).filter(Jobs.user_id == user.id).all()
+        total_jobs = len(user_jobs)
+        
+        # Calculate total leads
+        total_leads = 0
+        for job in user_jobs:
+            if job.results:
+                results = json.loads(job.results)
+                total_leads += len(results)
+        
+        # Calculate success rate
+        completed_jobs = [job for job in user_jobs if job.status == "completed"]
+        success_rate = len(completed_jobs) / total_jobs if total_jobs > 0 else 0
+        
+        # Calculate average lead score
+        lead_scores = db.query(LeadScores).filter(LeadScores.user_id == user.id).all()
+        average_score = sum(score.score for score in lead_scores) / len(lead_scores) if lead_scores else 0
+        
+        # Get top performing queries
+        query_performance = {}
+        for job in user_jobs:
+            if job.queries:
+                queries = json.loads(job.queries)
+                for query in queries:
+                    if query not in query_performance:
+                        query_performance[query] = {"count": 0, "success_rate": 0}
+                    query_performance[query]["count"] += 1
+                    if job.status == "completed":
+                        query_performance[query]["success_rate"] += 1
+        
+        # Sort by success rate and count
+        top_queries = sorted(
+            [{"query": q, **stats} for q, stats in query_performance.items()],
+            key=lambda x: (x["success_rate"], x["count"]),
+            reverse=True
+        )[:5]
+        
+        # Get recent activity
+        recent_jobs = db.query(Jobs).filter(
+            Jobs.user_id == user.id
+        ).order_by(desc(Jobs.created_at)).limit(10).all()
+        
+        recent_activity = []
+        for job in recent_jobs:
+            recent_activity.append({
+                "id": job.id,
+                "type": "job_created",
+                "status": job.status,
+                "created_at": job.created_at.isoformat(),
+                "queries_count": len(json.loads(job.queries)) if job.queries else 0
+            })
+        
+        return AnalyticsSummary(
+            total_jobs=total_jobs,
+            total_leads=total_leads,
+            success_rate=round(success_rate * 100, 2),
+            average_score=round(average_score, 2),
+            top_performing_queries=top_queries,
+            recent_activity=recent_activity
+        )
+        
+    except Exception as e:
+        logger.exception("Error getting analytics summary")
+        raise HTTPException(status_code=500, detail="Failed to get analytics summary")
+
+@router.get("/realtime", response_model=RealTimeMetrics, summary="Get real-time metrics")
+def get_realtime_metrics(
+    db: Session = Depends(get_db),
+    user: Users = Depends(get_current_user)
+):
+    """Get real-time system metrics"""
+    try:
+        # Active jobs (running or pending)
+        active_jobs = db.query(Jobs).filter(
+            and_(
+                Jobs.user_id == user.id,
+                Jobs.status.in_(["running", "pending"])
+            )
+        ).count()
+        
+        # Jobs completed today
+        today = datetime.now(timezone.utc).date()
+        jobs_completed_today = db.query(Jobs).filter(
+            and_(
+                Jobs.user_id == user.id,
+                Jobs.status == "completed",
+                func.date(Jobs.updated_at) == today
+            )
+        ).count()
+        
+        # Leads generated today
+        leads_generated_today = 0
+        today_jobs = db.query(Jobs).filter(
+            and_(
+                Jobs.user_id == user.id,
+                func.date(Jobs.updated_at) == today
+            )
+        ).all()
+        
+        for job in today_jobs:
+            if job.results:
+                results = json.loads(job.results)
+                leads_generated_today += len(results)
+        
+        # Calculate average response time (simplified)
+        completed_jobs = db.query(Jobs).filter(
+            and_(
+                Jobs.user_id == user.id,
+                Jobs.status == "completed"
+            )
+        ).all()
+        
+        total_time = 0
+        count = 0
+        for job in completed_jobs:
+            if job.created_at and job.updated_at:
+                duration = (job.updated_at - job.created_at).total_seconds()
+                total_time += duration
+                count += 1
+        
+        average_response_time = total_time / count if count > 0 else 0
+        
+        # System health (simplified)
+        system_health = "healthy"
+        if active_jobs > 10:
+            system_health = "busy"
+        elif active_jobs == 0 and jobs_completed_today == 0:
+            system_health = "idle"
+        
+        return RealTimeMetrics(
+            active_jobs=active_jobs,
+            jobs_completed_today=jobs_completed_today,
+            leads_generated_today=leads_generated_today,
+            average_response_time=round(average_response_time, 2),
+            system_health=system_health
+        )
+        
+    except Exception as e:
+        logger.exception("Error getting real-time metrics")
+        raise HTTPException(status_code=500, detail="Failed to get real-time metrics")
+
+@router.get("/performance", response_model=List[PerformanceReport], summary="Get performance reports")
+def get_performance_reports(
+    period: str = Query("7d", description="Time period: 1d, 7d, 30d, 90d"),
+    db: Session = Depends(get_db),
+    user: Users = Depends(get_current_user)
+):
+    """Get performance reports for different time periods"""
+    try:
+        # Parse period
+        period_map = {
+            "1d": 1,
+            "7d": 7,
+            "30d": 30,
+            "90d": 90
+        }
+        
+        days = period_map.get(period, 7)
+        start_date = datetime.now(timezone.utc) - timedelta(days=days)
+        
+        # Get jobs in period
+        period_jobs = db.query(Jobs).filter(
+            and_(
+                Jobs.user_id == user.id,
+                Jobs.created_at >= start_date
+            )
+        ).all()
+        
+        jobs_created = len(period_jobs)
+        jobs_completed = len([j for j in period_jobs if j.status == "completed"])
+        
+        # Calculate leads generated
+        leads_generated = 0
+        for job in period_jobs:
+            if job.results:
+                results = json.loads(job.results)
+                leads_generated += len(results)
+        
+        # Calculate success rate
+        success_rate = jobs_completed / jobs_created if jobs_created > 0 else 0
+        
+        # Calculate average lead score
+        period_scores = db.query(LeadScores).filter(
+            and_(
+                LeadScores.user_id == user.id,
+                LeadScores.created_at >= start_date
+            )
+        ).all()
+        
+        average_lead_score = sum(score.score for score in period_scores) / len(period_scores) if period_scores else 0
+        
+        # Calculate revenue potential (simplified)
+        revenue_potential = leads_generated * average_lead_score * 100  # $100 per lead
+        
+        return [PerformanceReport(
+            period=period,
+            jobs_created=jobs_created,
+            jobs_completed=jobs_completed,
+            leads_generated=leads_generated,
+            success_rate=round(success_rate * 100, 2),
+            average_lead_score=round(average_lead_score, 2),
+            revenue_potential=round(revenue_potential, 2)
+        )]
+        
+    except Exception as e:
+        logger.exception("Error getting performance reports")
+        raise HTTPException(status_code=500, detail="Failed to get performance reports")
+
+@router.get("/export", summary="Export analytics data")
+def export_analytics_data(
+    format: str = Query("csv", description="Export format: csv, json, xlsx"),
+    db: Session = Depends(get_db),
+    user: Users = Depends(get_current_user)
+):
+    """Export analytics data in various formats"""
+    try:
+        # Get user's analytics data
+        summary = get_analytics_summary(db, user)
+        realtime = get_realtime_metrics(db, user)
+        performance = get_performance_reports("30d", db, user)
+        
+        data = {
+            "summary": summary.dict(),
+            "realtime": realtime.dict(),
+            "performance": [p.dict() for p in performance],
+            "exported_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        if format == "json":
+            return data
+        elif format == "csv":
+            # Convert to CSV format (simplified)
+            csv_data = "Metric,Value\n"
+            csv_data += f"Total Jobs,{summary.total_jobs}\n"
+            csv_data += f"Total Leads,{summary.total_leads}\n"
+            csv_data += f"Success Rate,{summary.success_rate}%\n"
+            csv_data += f"Average Score,{summary.average_score}\n"
+            return {"csv": csv_data}
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported format")
+            
+    except Exception as e:
+        logger.exception("Error exporting analytics data")
+        raise HTTPException(status_code=500, detail="Failed to export analytics data") 
 class GoalType(str, Enum):
     """Type of analytics goal."""
     LEADS = "leads"
@@ -76,7 +364,7 @@ def create_goal(
     """Create a new analytics goal for the current user."""
     # Calculate current progress based on goal type
     current_value = calculate_current_value(user.id, goal_data.goal_type, goal_data.period, db)
-    goal = Goal(
+    goal = Goals(
         user_id=user.id,
         name=goal_data.name,
         target=goal_data.target,
@@ -116,7 +404,7 @@ def get_goals(
     user: Users = Depends(get_current_user)
 ):
     """Get all analytics goals for the current user."""
-    goals = db.query(Goal).filter(Goal.user_id == user.id).all()
+    goals = db.query(Goals).filter(Goals.user_id == user.id).all()
     result = []
     for goal in goals:
         # Update current value
@@ -150,9 +438,9 @@ def update_goal(
     user: Users = Depends(get_current_user)
 ):
     """Update an existing analytics goal for the current user."""
-    goal = db.query(Goal).filter(
-        Goal.id == goal_id,
-        Goal.user_id == user.id
+    goal = db.query(Goals).filter(
+        Goals.id == goal_id,
+        Goals.user_id == user.id
     ).first()
     if not goal:
         raise HTTPException(status_code=404, detail="Goal not found")
@@ -178,9 +466,9 @@ def delete_goal(
     user: Users = Depends(get_current_user)
 ):
     """Delete an analytics goal for the current user."""
-    goal = db.query(Goal).filter(
-        Goal.id == goal_id,
-        Goal.user_id == user.id
+    goal = db.query(Goals).filter(
+        Goals.id == goal_id,
+        Goals.user_id == user.id
     ).first()
     if not goal:
         raise HTTPException(status_code=404, detail="Goal not found")

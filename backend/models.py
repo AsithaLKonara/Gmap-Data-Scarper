@@ -58,6 +58,11 @@ class Users(Base):
     webhooks = relationship("Webhooks", back_populates="user")
     saved_queries = relationship("SavedQueries", back_populates="user")
     notifications = relationship("Notifications", back_populates="user")
+    custom_dashboards = relationship("CustomDashboards", back_populates="user")
+    onboarding_steps = relationship("OnboardingSteps", back_populates="user")
+    demo_projects = relationship("DemoProjects", back_populates="user")
+    support_tickets = relationship("SupportTicket", back_populates="user")
+    testimonials = relationship("Testimonials", back_populates="user")
 
 class Plans(Base):
     __tablename__ = "plans"
@@ -130,6 +135,7 @@ class Leads(Base):
     
     # Relationships
     user = relationship("Users", back_populates="leads")
+    lead_scores = relationship("LeadScores", back_populates="lead")
 
 class ApiKeys(Base):
     __tablename__ = "api_keys"
@@ -339,6 +345,37 @@ class WhatsAppWorkflows(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+class WhatsAppWorkflowSteps(Base):
+    __tablename__ = "whatsapp_workflow_steps"
+
+    id = Column(Integer, primary_key=True, index=True)
+    workflow_id = Column(Integer, ForeignKey("whatsapp_workflows.id"), nullable=False)
+    name = Column(String(255), nullable=False)
+    step_type = Column(String(50), nullable=False)  # message, delay, condition, action
+    content = Column(Text)
+    delay_minutes = Column(Integer, default=0)
+    conditions = Column(JSON)
+    actions = Column(JSON)
+    order = Column(Integer, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    workflow = relationship("WhatsAppWorkflows", backref="steps")
+
+class WhatsAppWorkflowTriggers(Base):
+    __tablename__ = "whatsapp_workflow_triggers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    workflow_id = Column(Integer, ForeignKey("whatsapp_workflows.id"), nullable=False)
+    trigger_type = Column(String(50), nullable=False)  # lead_created, lead_qualified, manual, scheduled
+    conditions = Column(JSON)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    workflow = relationship("WhatsAppWorkflows", backref="triggers")
+
 class ROIProjects(Base):
     __tablename__ = "roi_projects"
     
@@ -433,3 +470,194 @@ class SocialMediaLeads(Base):
     collection_id = Column(Integer, ForeignKey("lead_collections.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now()) 
+
+class Affiliates(Base):
+    __tablename__ = "affiliates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    code = Column(String(100), unique=True, nullable=False)
+    total_earnings = Column(Float, default=0.0)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("Users")
+    commissions = relationship("Commissions", back_populates="affiliate")
+
+class Commissions(Base):
+    __tablename__ = "commissions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    affiliate_id = Column(Integer, ForeignKey("affiliates.id"), nullable=False)
+    referred_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    amount = Column(Float, nullable=False)
+    status = Column(String(50), default="pending")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    paid_at = Column(DateTime(timezone=True), nullable=True)
+    notes = Column(Text, nullable=True)
+
+    # Relationships
+    affiliate = relationship("Affiliates", back_populates="commissions")
+    referred_user = relationship("Users") 
+
+class CustomDashboards(Base):
+    __tablename__ = "custom_dashboards"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    name = Column(String(255), nullable=False)
+    config = Column(JSON, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    user = relationship("Users") 
+
+class LeadScores(Base):
+    __tablename__ = "lead_scores"
+
+    id = Column(Integer, primary_key=True, index=True)
+    lead_id = Column(Integer, ForeignKey("leads.id"), nullable=False, unique=True)
+    overall_score = Column(Float, nullable=False)
+    factors = Column(JSON, nullable=False)
+    recommendations = Column(JSON, nullable=False)
+    risk_level = Column(String(50), nullable=False)
+    conversion_probability = Column(Float, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    lead = relationship("Leads") 
+
+class OnboardingSteps(Base):
+    __tablename__ = "onboarding_steps"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    step_id = Column(String(100), nullable=False)
+    completed = Column(Boolean, default=False)
+    data = Column(JSON)
+    completed_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("Users")
+
+class DemoProjects(Base):
+    __tablename__ = "demo_projects"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    name = Column(String(255), nullable=False)
+    description = Column(Text)
+    queries = Column(JSON, nullable=False)
+    tags = Column(JSON)
+    is_demo = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("Users") 
+
+class SupportTicket(Base):
+    __tablename__ = "support_tickets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    tenant_id = Column(String(255), nullable=False)
+    subject = Column(String(255), nullable=False)
+    message = Column(Text, nullable=False)
+    phone = Column(String(50))
+    status = Column(String(50), default="open")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relationships
+    user = relationship("Users") 
+
+class Testimonials(Base):
+    __tablename__ = "testimonials"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    name = Column(String(255), nullable=False)
+    company = Column(String(255))
+    message = Column(Text, nullable=False)
+    avatar_url = Column(String(500))
+    featured = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("Users") 
+
+class WhatsAppMessages(Base):
+    __tablename__ = "whatsapp_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    workflow_id = Column(Integer, ForeignKey("whatsapp_workflows.id"), nullable=True)
+    contact_id = Column(Integer, nullable=True)  # Could be FK to WhatsAppContacts if exists
+    message = Column(Text, nullable=False)
+    status = Column(String(50), default="pending")  # pending, sent, failed, delivered, read
+    sent_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("Users")
+    workflow = relationship("WhatsAppWorkflows") 
+
+class WhatsAppCampaigns(Base):
+    __tablename__ = "whatsapp_campaigns"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    name = Column(String(255), nullable=False)
+    template_id = Column(Integer, nullable=True)  # Could be FK to WhatsAppTemplates if exists
+    status = Column(String(50), default="draft")  # draft, scheduled, running, completed, failed
+    scheduled_at = Column(DateTime(timezone=True))
+    sent_count = Column(Integer, default=0)
+    failed_count = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("Users") 
+
+class WhatsAppTemplates(Base):
+    __tablename__ = "whatsapp_templates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    name = Column(String(255), nullable=False)
+    content = Column(Text, nullable=False)
+    status = Column(String(50), default="draft")  # draft, approved, rejected, archived
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("Users") 
+
+class WhatsAppContacts(Base):
+    __tablename__ = "whatsapp_contacts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    name = Column(String(255), nullable=False)
+    phone = Column(String(50), nullable=False)
+    status = Column(String(50), default="active")  # active, blocked, unsubscribed
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("Users") 
+
+class WhatsAppAutomations(Base):
+    __tablename__ = "whatsapp_automations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    name = Column(String(255), nullable=False)
+    trigger_type = Column(String(50), nullable=False)  # e.g., lead_created, scheduled, manual
+    actions = Column(JSON, nullable=False)  # List of actions as JSON
+    status = Column(String(50), default="active")  # active, paused, disabled
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    user = relationship("Users") 
