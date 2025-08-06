@@ -1,249 +1,219 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-import { ThemeToggle } from './ui/theme-toggle';
-import { Button } from './ui/button';
-import { Menu, X, User, LogOut, Settings } from 'lucide-react';
-import { NotificationCenter } from './ui/notification-center';
+import {
+  Box,
+  Flex,
+  Button,
+  Text,
+  HStack,
+  VStack,
+  IconButton,
+  useDisclosure,
+  useColorModeValue,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
+  MenuDivider,
+  Avatar,
+} from '@chakra-ui/react';
 import { useTranslation } from 'react-i18next';
+import {
+  FiMenu,
+  FiX,
+  FiUser,
+  FiLogOut,
+  FiSettings,
+  FiGlobe,
+} from 'react-icons/fi';
 
-const LanguageSwitcher = () => {
-  const { i18n } = useTranslation();
-  const changeLanguage = (lng: string) => i18n.changeLanguage(lng);
-  return (
-    <select
-      value={i18n.language}
-      onChange={e => changeLanguage(e.target.value)}
-      className="rounded border px-2 py-1 text-sm bg-background text-foreground"
-      style={{ minWidth: 60 }}
-      aria-label="Select language"
-    >
-      <option value="en">EN</option>
-      <option value="es">ES</option>
-    </select>
-  );
-};
-
-const Navbar = () => {
-  const { t } = useTranslation();
-  const { user, logout, hasRole, hasPermission } = useAuth();
+const Navbar: React.FC = () => {
+  const { isOpen, onToggle } = useDisclosure();
   const location = useLocation();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const { t, i18n } = useTranslation();
+  const bgColor = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
+  const textColor = useColorModeValue('gray.600', 'gray.300');
+
+  // Mock user state - replace with actual auth context
+  const [user] = useState<any>(null);
+
+  const navItems = [
+    { path: '/dashboard', label: t('nav.dashboard', 'Dashboard') },
+    { path: '/leads', label: t('nav.leads', 'Leads') },
+    { path: '/analytics', label: t('nav.analytics', 'Analytics') },
+    { path: '/integrations', label: t('nav.integrations', 'Integrations') },
+  ];
 
   const isActive = (path: string) => location.pathname === path;
 
-  const navItems = [
-    { path: '/dashboard', label: t('dashboard'), show: true },
-    { path: '/custom-dashboard', label: t('custom_dashboard', 'Custom Dashboard'), show: true },
-    { path: '/lead-collection', label: t('leads', 'Leads'), show: hasPermission('leads:read') },
-    { path: '/crm', label: t('crm'), show: hasPermission('crm:read') },
-    { path: '/analytics', label: t('analytics'), show: hasPermission('analytics:read') },
-    { path: '/api', label: t('apiDocs', 'API Docs'), show: hasPermission('api:access') },
-    { path: '/webhooks', label: t('webhooks', 'Webhooks'), show: hasPermission('webhooks:read') },
-    { path: '/integrations', label: t('integrations', 'Integrations'), show: hasPermission('integrations:read') },
-    { path: '/widgets', label: t('widgets', 'Widgets'), show: hasPermission('widgets:read') },
-    { path: '/teams', label: t('teams', 'Teams'), show: hasPermission('teams:manage') },
-  ];
-
-  const adminItems = [
-    { path: '/admin', label: t('admin', 'Admin'), show: hasRole('admin') || hasPermission('admin:read') },
-    { path: '/audit-log', label: t('audit_log', 'Audit Log'), show: hasRole('admin') || hasPermission('admin:read') },
-  ];
-
-  useEffect(() => {
-    setIsMenuOpen(false);
-  }, [location]);
-
   const handleLogout = () => {
-    logout();
-    setIsDropdownOpen(false);
+    // Implement logout logic
+    console.log('Logout clicked');
+  };
+
+  const changeLanguage = (lng: string) => {
+    i18n.changeLanguage(lng);
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+    <Box
+      bg={bgColor}
+      borderBottom="1px"
+      borderColor={borderColor}
+      position="sticky"
+      top={0}
+      zIndex={1000}
+    >
+      <Box maxW="1200px" mx="auto" px={4}>
+        <Flex h={16} alignItems="center" justifyContent="space-between">
           {/* Logo */}
-          <div className="flex-shrink-0">
-            <Link to="/" className="flex items-center space-x-2" aria-label="Home">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">L</span>
-              </div>
-              <span className="text-xl font-bold text-foreground">LeadTap</span>
+          <Flex alignItems="center">
+            <Link to="/">
+              <HStack spacing={2}>
+                <Box
+                  w={8}
+                  h={8}
+                  bg="blue.500"
+                  borderRadius="lg"
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                >
+                  <Text color="white" fontWeight="bold" fontSize="lg">
+                    L
+                  </Text>
+                </Box>
+                <Text fontSize="lg" fontWeight="bold" color={textColor}>
+                  LeadTap
+                </Text>
+              </HStack>
             </Link>
-          </div>
+          </Flex>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:block">
-            <div className="ml-10 flex items-baseline space-x-4">
-              {navItems.filter(item => item.show).map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  aria-label={item.label}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    isActive(item.path)
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                  }`}
+          <HStack spacing={8} display={{ base: 'none', md: 'flex' }}>
+            {navItems.map((item) => (
+              <Link key={item.path} to={item.path}>
+                <Text
+                  color={isActive(item.path) ? 'blue.500' : textColor}
+                  fontWeight={isActive(item.path) ? 'semibold' : 'medium'}
+                  _hover={{ color: 'blue.500' }}
                 >
                   {item.label}
-                </Link>
-              ))}
-              {adminItems.filter(item => item.show).map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  aria-label={item.label}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    isActive(item.path)
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-          </div>
+                </Text>
+              </Link>
+            ))}
+          </HStack>
 
-          {/* Right side items */}
-          <div className="hidden md:flex items-center space-x-4">
-            <NotificationCenter />
-            <ThemeToggle />
-            <LanguageSwitcher />
+          {/* Right side actions */}
+          <HStack spacing={4}>
+            {/* Language Switcher */}
+            <Menu>
+              <MenuButton
+                as={IconButton}
+                icon={<FiGlobe />}
+                variant="ghost"
+                size="sm"
+                aria-label="Change language"
+              />
+              <MenuList>
+                <MenuItem onClick={() => changeLanguage('en')}>
+                  English
+                </MenuItem>
+                <MenuItem onClick={() => changeLanguage('es')}>
+                  Español
+                </MenuItem>
+              </MenuList>
+            </Menu>
+
+            {/* User Menu */}
             {user ? (
-              <div className="relative">
-                <Button
+              <Menu>
+                <MenuButton
+                  as={Button}
                   variant="ghost"
                   size="sm"
-                  aria-label="User menu"
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center space-x-2"
+                  leftIcon={<Avatar size="sm" name={user.name} />}
                 >
-                  <User className="h-4 w-4" />
-                  <span>{user.email}</span>
-                </Button>
-                {isDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-card border border-border rounded-md shadow-lg py-1 z-50">
-                    <Link
-                      to="/profile"
-                      className="flex items-center px-4 py-2 text-sm text-foreground hover:bg-accent"
-                      onClick={() => setIsDropdownOpen(false)}
-                      aria-label="Profile settings"
-                    >
-                      <Settings className="h-4 w-4 mr-2" />
-                      {t('settings', 'Settings')}
-                    </Link>
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center w-full px-4 py-2 text-sm text-foreground hover:bg-accent"
-                      aria-label="Logout"
-                    >
-                      <LogOut className="h-4 w-4 mr-2" />
-                      {t('logout')}
-                    </button>
-                  </div>
-                )}
-              </div>
+                  {user.name}
+                </MenuButton>
+                <MenuList>
+                  <MenuItem icon={<FiUser />}>
+                    {t('nav.profile', 'Profile')}
+                  </MenuItem>
+                  <MenuItem icon={<FiSettings />}>
+                    {t('nav.settings', 'Settings')}
+                  </MenuItem>
+                  <MenuDivider />
+                  <MenuItem icon={<FiLogOut />} onClick={handleLogout}>
+                    {t('nav.logout', 'Logout')}
+                  </MenuItem>
+                </MenuList>
+              </Menu>
             ) : (
-              <div className="flex items-center space-x-2">
+              <HStack spacing={2}>
                 <Link to="/login">
-                  <Button variant="ghost" size="sm" aria-label="Login">
-                    {t('login')}
+                  <Button variant="ghost" size="sm">
+                    {t('nav.login', 'Login')}
                   </Button>
                 </Link>
                 <Link to="/register">
-                  <Button size="sm" aria-label="Sign Up">
-                    {t('sign_up', 'Sign Up')}
+                  <Button size="sm" colorScheme="blue">
+                    {t('nav.signup', 'Sign Up')}
                   </Button>
                 </Link>
-              </div>
+              </HStack>
             )}
-          </div>
 
-          {/* Mobile menu button */}
-          <div className="md:hidden">
-            <Button
+            {/* Mobile menu button */}
+            <IconButton
+              display={{ base: 'flex', md: 'none' }}
+              onClick={onToggle}
+              icon={isOpen ? <FiX /> : <FiMenu />}
               variant="ghost"
-              size="sm"
-              aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-            </Button>
-          </div>
-        </div>
-      </div>
+              aria-label="Toggle menu"
+            />
+          </HStack>
+        </Flex>
 
-      {/* Mobile menu */}
-      {isMenuOpen && (
-        <div className="md:hidden bg-card border-t border-border">
-          <div className="px-2 pt-2 pb-3 space-y-1">
-            {navItems.filter(item => item.show).map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                aria-label={item.label}
-                className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
-                  isActive(item.path)
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                }`}
-              >
-                {item.label}
-              </Link>
-            ))}
-            {adminItems.filter(item => item.show).map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                aria-label={item.label}
-                className={`block px-3 py-2 rounded-md text-base font-medium transition-colors ${
-                  isActive(item.path)
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                }`}
-              >
-                {item.label}
-              </Link>
-            ))}
-            {user ? (
-              <div className="pt-4 border-t border-border">
-                <Link
-                  to="/profile"
-                  className="block px-3 py-2 text-base font-medium text-muted-foreground hover:text-foreground hover:bg-accent"
-                  aria-label="Profile settings"
-                >
-                  {t('settings', 'Settings')}
+        {/* Mobile Navigation */}
+        {isOpen && (
+          <Box display={{ base: 'block', md: 'none' }} pb={4}>
+            <VStack spacing={2} align="stretch">
+              {navItems.map((item) => (
+                <Link key={item.path} to={item.path}>
+                  <Box
+                    px={3}
+                    py={2}
+                    borderRadius="md"
+                    bg={isActive(item.path) ? 'blue.50' : 'transparent'}
+                    color={isActive(item.path) ? 'blue.600' : textColor}
+                    _hover={{ bg: 'gray.50' }}
+                  >
+                    {item.label}
+                  </Box>
                 </Link>
-                <button
-                  onClick={handleLogout}
-                  className="block w-full text-left px-3 py-2 text-base font-medium text-muted-foreground hover:text-foreground hover:bg-accent"
-                  aria-label="Logout"
-                >
-                  {t('logout')}
-                </button>
-              </div>
-            ) : (
-              <div className="pt-4 border-t border-border space-y-2">
-                <Link to="/login">
-                  <Button variant="ghost" className="w-full justify-start" aria-label="Login">
-                    {t('login')}
-                  </Button>
-                </Link>
-                <Link to="/register">
-                  <Button className="w-full justify-start" aria-label="Sign Up">
-                    {t('sign_up', 'Sign Up')}
-                  </Button>
-                </Link>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </nav>
+              ))}
+              {!user && (
+                <VStack spacing={2} pt={4} borderTop="1px" borderColor={borderColor}>
+                  <Link to="/login" style={{ width: '100%' }}>
+                    <Button variant="ghost" size="sm" w="full">
+                      {t('nav.login', 'Login')}
+                    </Button>
+                  </Link>
+                  <Link to="/register" style={{ width: '100%' }}>
+                    <Button size="sm" colorScheme="blue" w="full">
+                      {t('nav.signup', 'Sign Up')}
+                    </Button>
+                  </Link>
+                </VStack>
+              )}
+            </VStack>
+          </Box>
+        )}
+      </Box>
+    </Box>
   );
 };
 

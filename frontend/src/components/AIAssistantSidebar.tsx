@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { Sparkles } from 'lucide-react';
-import { Select } from './ui/input';
+import { Select } from '@chakra-ui/react';
 
 const examplePrompts = [
   'What are my top 5 leads this week?',

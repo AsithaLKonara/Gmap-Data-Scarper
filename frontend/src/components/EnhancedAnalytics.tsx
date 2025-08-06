@@ -4,8 +4,6 @@ import {
   VStack,
   HStack,
   Text,
-  Card,
-  CardBody,
   SimpleGrid,
   Stat,
   StatLabel,
@@ -35,10 +33,16 @@ import {
   ModalBody,
   ModalFooter,
   useDisclosure,
-  Input,
+  Switch,
   FormControl,
   FormLabel,
+  NumberInput,
+  NumberInputField,
+  NumberInputStepper,
+  NumberIncrementStepper,
+  NumberDecrementStepper,
 } from '@chakra-ui/react';
+import { useTranslation } from 'react-i18next';
 import {
   LineChart,
   Line,
@@ -56,14 +60,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import { 
-  TrendingUpIcon, 
-  TargetIcon, 
-  FunnelIcon,
-  CalendarIcon,
-  DownloadIcon,
-  SettingsIcon,
-} from '@chakra-ui/icons';
+// Removed problematic Chakra UI icon imports
 import * as api from '../api';
 
 interface AnalyticsData {

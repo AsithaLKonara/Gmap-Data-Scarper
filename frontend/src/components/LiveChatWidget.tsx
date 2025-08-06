@@ -3,6 +3,12 @@ import React, { useEffect } from 'react';
 const TAWK_TO_PROPERTY_ID = 'YOUR_TAWKTO_PROPERTY_ID'; // Replace with your real property ID
 const TAWK_TO_WIDGET_ID = 'YOUR_TAWKTO_WIDGET_ID'; // Replace with your real widget ID
 
+declare global {
+  interface Window {
+    Tawk_API?: any;
+  }
+}
+
 const LiveChatWidget: React.FC = () => {
   useEffect(() => {
     if (process.env.NODE_ENV !== 'production') return;

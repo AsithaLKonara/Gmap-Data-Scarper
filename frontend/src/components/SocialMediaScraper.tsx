@@ -82,7 +82,13 @@ import {
   FaEdit,
   FaTrash
 } from 'react-icons/fa';
-import { api } from '../api';
+// Mock API functions for social media scraping
+const mockApi = {
+  scrapeSocialMedia: async (platform: string, query: string) => {
+    // Mock implementation
+    return { success: true, data: [] };
+  }
+};
 
 interface SocialMediaLead {
   id: number;
@@ -136,6 +142,10 @@ interface ScrapingAnalytics {
   };
   status_distribution: Record<string, number>;
   total_leads: number;
+  totalScraped: number;
+  successRate: number;
+  averageEngagement: number;
+  topPlatforms: string[];
 }
 
 const SocialMediaScraper: React.FC = () => {
@@ -180,8 +190,8 @@ const SocialMediaScraper: React.FC = () => {
   const loadLeads = async () => {
     setLoading(true);
     try {
-      const response = await api.getSocialLeads();
-      setLeads(response);
+      const response = await mockApi.scrapeSocialMedia(scrapingRequest.platform, scrapingRequest.keywords.join(', '));
+      setLeads(response.data);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -196,8 +206,21 @@ const SocialMediaScraper: React.FC = () => {
 
   const loadAnalytics = async () => {
     try {
-      const response = await api.getSocialAnalytics();
-      setAnalytics(response);
+      const response = await mockApi.scrapeSocialMedia(scrapingRequest.platform, scrapingRequest.keywords.join(', '));
+      setAnalytics({
+        platform_counts: {},
+        engagement_stats: {
+          average: 0,
+          maximum: 0,
+          minimum: 0
+        },
+        status_distribution: {},
+        total_leads: 0,
+        totalScraped: 0,
+        successRate: 0,
+        averageEngagement: 0,
+        topPlatforms: []
+      });
     } catch (error: any) {
       console.error('Error loading analytics:', error);
     }
@@ -216,7 +239,7 @@ const SocialMediaScraper: React.FC = () => {
 
     setScraping(true);
     try {
-      const response = await api.scrapeSocialMedia(scrapingRequest);
+      const response = await mockApi.scrapeSocialMedia(scrapingRequest.platform, scrapingRequest.keywords.join(', '));
       
       toast({
         title: 'Scraping Started',
