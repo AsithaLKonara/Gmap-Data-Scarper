@@ -635,7 +635,8 @@ class WhatsAppTemplates(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
-    user = relationship("Users") 
+    user = relationship("Users")
+    bulk_campaigns = relationship("BulkWhatsAppCampaigns", back_populates="template")
 
 class WhatsAppContacts(Base):
     __tablename__ = "whatsapp_contacts"

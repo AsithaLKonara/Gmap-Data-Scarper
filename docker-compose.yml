@@ -34,7 +34,7 @@ services:
       retries: 3
       start_period: 40s
 
-  # Frontend (Development)
+  # Frontend (Production)
   frontend:
     build:
       context: ./frontend
@@ -42,14 +42,18 @@ services:
     container_name: leadtap-frontend
     ports:
       - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
+      - VITE_API_URL=http://localhost:8000
     depends_on:
       - backend
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 networks:
   default:

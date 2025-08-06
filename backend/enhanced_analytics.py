@@ -1,5 +1,5 @@
 # Enhanced Analytics with Real-time Data and Advanced Reporting
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Body, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, and_
 from pydantic import BaseModel, Field
@@ -8,7 +8,7 @@ from enum import Enum
 import json
 import logging
 from datetime import datetime, timezone, timedelta
-from models import Users, Jobs, LeadScores, WhatsAppWorkflows, Leads, Goals
+from models import Users, Jobs, LeadScores, WhatsAppWorkflows, Leads
 from database import get_db
 from auth import get_current_user
 from security import check_permission
