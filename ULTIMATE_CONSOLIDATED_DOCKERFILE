@@ -1,0 +1,425 @@
+# 🐳 ULTIMATE CONSOLIDATED DOCKERFILE
+# Google Maps Data Scraper - LeadTap Platform
+# Multi-stage Dockerfile for All Deployment Scenarios
+
+# =============================================================================
+# BACKEND DOCKERFILE (Python FastAPI)
+# =============================================================================
+
+# Backend Base Stage
+FROM python:3.13-slim AS backend-base
+
+# Set working directory
+WORKDIR /app
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install system dependencies
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        gcc \
+        g++ \
+        curl \
+        git \
+        libpq-dev \
+        && rm -rf /var/lib/apt/lists/*
+
+# Backend Development Stage
+FROM backend-base AS backend-dev
+
+# Copy requirements first for better caching
+COPY backend/requirements.txt requirements.txt
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY backend/ .
+
+# Create non-root user for security
+RUN adduser --disabled-password --gecos '' appuser \
+    && chown -R appuser:appuser /app
+USER appuser
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/api/health || exit 1
+
+# Start command for development
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+# Backend Production Stage
+FROM backend-base AS backend-prod
+
+# Copy requirements first for better caching
+COPY backend/requirements-docker.txt requirements.txt
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY backend/ .
+
+# Create non-root user for security
+RUN adduser --disabled-password --gecos '' appuser \
+    && chown -R appuser:appuser /app
+USER appuser
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/api/health || exit 1
+
+# Start command for production
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+
+# =============================================================================
+# FRONTEND DOCKERFILE (React + TypeScript + Vite)
+# =============================================================================
+
+# Frontend Build Stage
+FROM node:18-alpine AS frontend-builder
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY frontend/package*.json ./
+
+# Install dependencies (including dev dependencies for build)
+RUN npm ci
+
+# Copy source code
+COPY frontend/ .
+
+# Build the application
+RUN npm run build
+
+# Frontend Development Stage
+FROM node:18-alpine AS frontend-dev
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY frontend/package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code
+COPY frontend/ .
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000 || exit 1
+
+# Start command for development
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+# Frontend Production Stage
+FROM nginx:alpine AS frontend-prod
+
+# Copy built application
+COPY --from=frontend-builder /app/dist /usr/share/nginx/html
+
+# Copy nginx configuration
+COPY frontend/nginx.conf /etc/nginx/nginx.conf
+
+# Create nginx user if it doesn't exist
+RUN addgroup -g 1001 -S nginx && \
+    adduser -S -D -H -u 1001 -h /var/cache/nginx -s /sbin/nologin -G nginx -g nginx nginx
+
+# Set proper permissions
+RUN chown -R nginx:nginx /usr/share/nginx/html && \
+    chmod -R 755 /usr/share/nginx/html
+
+# Expose port
+EXPOSE 80
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost/ || exit 1
+
+# Start command for production
+CMD ["nginx", "-g", "daemon off;"]
+
+# =============================================================================
+# CELERY WORKER DOCKERFILE
+# =============================================================================
+
+# Celery Worker Stage
+FROM backend-prod AS celery-worker
+
+# Install additional dependencies for Celery
+RUN pip install --no-cache-dir celery[redis] flower
+
+# Create Celery configuration
+RUN echo 'from main import app\ncelery = app.celery' > celery_app.py
+
+# Expose Flower port
+EXPOSE 5555
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD celery -A celery_app.celery inspect ping || exit 1
+
+# Start command for Celery worker
+CMD ["celery", "-A", "celery_app.celery", "worker", "--loglevel=info"]
+
+# Celery Beat Stage
+FROM backend-prod AS celery-beat
+
+# Install additional dependencies for Celery
+RUN pip install --no-cache-dir celery[redis]
+
+# Create Celery configuration
+RUN echo 'from main import app\ncelery = app.celery' > celery_app.py
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD celery -A celery_app.celery inspect ping || exit 1
+
+# Start command for Celery beat
+CMD ["celery", "-A", "celery_app.celery", "beat", "--loglevel=info"]
+
+# =============================================================================
+# MONITORING DOCKERFILE
+# =============================================================================
+
+# Prometheus Configuration Stage
+FROM prom/prometheus:latest AS prometheus-config
+
+# Copy Prometheus configuration
+COPY monitoring/prometheus.yml /etc/prometheus/prometheus.yml
+
+# Grafana Configuration Stage
+FROM grafana/grafana:latest AS grafana-config
+
+# Copy Grafana dashboards and datasources
+COPY monitoring/grafana/dashboards /etc/grafana/provisioning/dashboards
+COPY monitoring/grafana/datasources /etc/grafana/provisioning/datasources
+
+# =============================================================================
+# DATABASE DOCKERFILE
+# =============================================================================
+
+# PostgreSQL Stage
+FROM postgres:15-alpine AS postgres
+
+# Copy initialization scripts
+COPY backend/init_db.sql /docker-entrypoint-initdb.d/
+
+# Set environment variables
+ENV POSTGRES_DB=leadtap \
+    POSTGRES_USER=leadtap \
+    POSTGRES_PASSWORD=leadtap
+
+# Expose port
+EXPOSE 5432
+
+# Health check
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
+    CMD pg_isready -U leadtap -d leadtap || exit 1
+
+# Redis Stage
+FROM redis:7-alpine AS redis
+
+# Copy Redis configuration
+COPY monitoring/redis.conf /usr/local/etc/redis/redis.conf
+
+# Expose port
+EXPOSE 6379
+
+# Health check
+HEALTHCHECK --interval=10s --timeout=5s --retries=5 \
+    CMD redis-cli ping || exit 1
+
+# =============================================================================
+# UTILITY DOCKERFILES
+# =============================================================================
+
+# Database Migration Stage
+FROM backend-prod AS db-migrate
+
+# Copy migration scripts
+COPY backend/init_db.py /app/
+COPY backend/create_users.py /app/
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD python -c "import sqlite3; sqlite3.connect('/app/data/leadtap.db')" || exit 1
+
+# Start command for database migration
+CMD ["python", "init_db.py"]
+
+# Admin User Creation Stage
+FROM backend-prod AS create-admin
+
+# Copy user creation scripts
+COPY backend/create_users.py /app/
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD python -c "import sqlite3; sqlite3.connect('/app/data/leadtap.db')" || exit 1
+
+# Start command for admin user creation
+CMD ["python", "create_users.py"]
+
+# =============================================================================
+# TESTING DOCKERFILE
+# =============================================================================
+
+# Testing Stage
+FROM backend-dev AS testing
+
+# Install testing dependencies
+RUN pip install --no-cache-dir pytest pytest-cov pytest-asyncio
+
+# Copy test files
+COPY backend/tests/ /app/tests/
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD pytest --version || exit 1
+
+# Start command for testing
+CMD ["pytest", "-v", "--cov=app", "--cov-report=html"]
+
+# =============================================================================
+# LINTING DOCKERFILE
+# =============================================================================
+
+# Linting Stage
+FROM backend-dev AS linting
+
+# Install linting dependencies
+RUN pip install --no-cache-dir flake8 black isort mypy
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD flake8 --version || exit 1
+
+# Start command for linting
+CMD ["flake8", ".", "--max-line-length=88", "--extend-ignore=E203,W503"]
+
+# =============================================================================
+# DEPLOYMENT TARGETS
+# =============================================================================
+
+# Development target
+FROM backend-dev AS development
+# Uses backend-dev stage
+
+# Simple production target
+FROM backend-prod AS simple
+# Uses backend-prod stage
+
+# Full production target
+FROM backend-prod AS production
+# Uses backend-prod stage
+
+# Backend-only target
+FROM backend-prod AS backend-only
+# Uses backend-prod stage
+
+# Monitoring target
+FROM prometheus-config AS monitoring
+# Uses prometheus-config stage
+
+# =============================================================================
+# USAGE INSTRUCTIONS
+# =============================================================================
+
+# Build for development:
+# docker build --target development -t leadtap-backend:dev .
+
+# Build for simple production:
+# docker build --target simple -t leadtap-backend:simple .
+
+# Build for full production:
+# docker build --target production -t leadtap-backend:prod .
+
+# Build for backend-only:
+# docker build --target backend-only -t leadtap-backend:api .
+
+# Build for monitoring:
+# docker build --target monitoring -t leadtap-monitoring:latest .
+
+# Build frontend for development:
+# docker build --target frontend-dev -t leadtap-frontend:dev .
+
+# Build frontend for production:
+# docker build --target frontend-prod -t leadtap-frontend:prod .
+
+# Build Celery worker:
+# docker build --target celery-worker -t leadtap-celery:worker .
+
+# Build Celery beat:
+# docker build --target celery-beat -t leadtap-celery:beat .
+
+# Build database migration:
+# docker build --target db-migrate -t leadtap-migrate:latest .
+
+# Build admin creation:
+# docker build --target create-admin -t leadtap-admin:latest .
+
+# Build for testing:
+# docker build --target testing -t leadtap-test:latest .
+
+# Build for linting:
+# docker build --target linting -t leadtap-lint:latest .
+
+# =============================================================================
+# ENVIRONMENT-SPECIFIC CONFIGURATIONS
+# =============================================================================
+
+# Development Environment:
+# - Hot reload enabled
+# - Debug mode on
+# - SQLite database
+# - Development dependencies included
+
+# Production Environment:
+# - Optimized for performance
+# - Security hardened
+# - PostgreSQL database
+# - Production dependencies only
+
+# Testing Environment:
+# - Test dependencies included
+# - Coverage reporting
+# - Isolated test database
+
+# =============================================================================
+# SECURITY CONSIDERATIONS
+# =============================================================================
+
+# All stages use non-root users where possible
+# Security headers are configured in the application
+# Secrets are managed through environment variables
+# Health checks ensure service availability
+# Multi-stage builds reduce attack surface
+
+# =============================================================================
+# PERFORMANCE OPTIMIZATIONS
+# =============================================================================
+
+# Layer caching for faster builds
+# Multi-stage builds reduce image size
+# Production builds exclude development dependencies
+# Optimized base images for each stage
+# Health checks for service monitoring 

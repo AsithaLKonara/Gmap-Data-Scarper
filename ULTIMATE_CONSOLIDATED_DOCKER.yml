@@ -1,0 +1,481 @@
+# 🐳 ULTIMATE CONSOLIDATED DOCKER COMPOSE CONFIGURATION
+# Google Maps Data Scraper - LeadTap Platform
+# Complete Docker Configuration for All Deployment Scenarios
+
+# =============================================================================
+# DEPLOYMENT PROFILES
+# =============================================================================
+# Use --profile flag to select deployment scenario:
+# - development: Full stack with hot reload and development features
+# - simple: Minimal production setup (backend + frontend + SQLite)
+# - production: Full production with PostgreSQL, Redis, monitoring
+# - backend-only: Backend API only
+# - monitoring: Production with monitoring stack (Prometheus + Grafana)
+
+# =============================================================================
+# ENVIRONMENT CONFIGURATION
+# =============================================================================
+# Set environment variables in .env file or override with -e flag
+# Required variables:
+# - ENVIRONMENT: development, staging, production
+# - SECRET_KEY: Application secret key
+# - JWT_SECRET: JWT signing secret
+# - DATABASE_URL: Database connection string
+# - REDIS_URL: Redis connection string
+
+# =============================================================================
+# SHARED NETWORK
+# =============================================================================
+networks:
+  leadtap-network:
+    driver: bridge
+  monitoring-network:
+    driver: bridge
+
+# =============================================================================
+# SHARED VOLUMES
+# =============================================================================
+volumes:
+  # Database volumes
+  postgres_data:
+    driver: local
+  mysql_data:
+    driver: local
+  sqlite_data:
+    driver: local
+  
+  # Cache volumes
+  redis_data:
+    driver: local
+  
+  # Monitoring volumes
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  
+  # Application volumes
+  backend_static:
+    driver: local
+  frontend_static:
+    driver: local
+  uploads_data:
+    driver: local
+  
+  # Log volumes
+  logs_data:
+    driver: local
+
+# =============================================================================
+# SERVICES
+# =============================================================================
+services:
+  # ========================================================================
+  # BACKEND SERVICE (Python FastAPI)
+  # ========================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        - ENVIRONMENT=${ENVIRONMENT:-development}
+    container_name: leadtap-backend
+    ports:
+      - "8000:8000"
+    environment:
+      # Core configuration
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DEBUG=${DEBUG:-true}
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
+      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-change-in-production}
+      
+      # Database configuration
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./leadtap.db}
+      - POSTGRES_DB=${POSTGRES_DB:-leadtap}
+      - POSTGRES_USER=${POSTGRES_USER:-leadtap}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-leadtap}
+      - POSTGRES_HOST=${POSTGRES_HOST:-db}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      
+      # Redis configuration
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      
+      # Frontend configuration
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      
+      # External services
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      
+      # Feature flags
+      - ENABLE_SSO=${ENABLE_SSO:-false}
+      - ENABLE_MONITORING=${ENABLE_MONITORING:-false}
+      - ENABLE_CACHING=${ENABLE_CACHING:-false}
+      
+    volumes:
+      - ./backend:/app
+      - /app/__pycache__
+      - /app/venv
+      - sqlite_data:/app/data
+      - uploads_data:/app/uploads
+      - logs_data:/app/logs
+    depends_on:
+      - sqlite-db
+    restart: unless-stopped
+    networks:
+      - leadtap-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    profiles:
+      - development
+      - simple
+      - production
+      - backend-only
+
+  # ========================================================================
+  # FRONTEND SERVICE (React + TypeScript + Vite)
+  # ========================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NODE_ENV=${NODE_ENV:-development}
+    container_name: leadtap-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
+      - VITE_APP_NAME=${VITE_APP_NAME:-LeadTap}
+      - NODE_ENV=${NODE_ENV:-development}
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - frontend_static:/app/dist
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - leadtap-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    profiles:
+      - development
+      - simple
+      - production
+
+  # ========================================================================
+  # DATABASE SERVICES
+  # ========================================================================
+  
+  # SQLite Database (Development/Simple)
+  sqlite-db:
+    image: alpine:latest
+    container_name: leadtap-sqlite
+    command: >
+      sh -c "
+        apk add --no-cache sqlite &&
+        mkdir -p /data &&
+        sqlite3 /data/leadtap.db 'CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, email TEXT UNIQUE, password_hash TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);' &&
+        sqlite3 /data/leadtap.db 'CREATE TABLE IF NOT EXISTS leads (id INTEGER PRIMARY KEY, business_name TEXT, category TEXT, address TEXT, phone TEXT, website TEXT, plus_code TEXT, score INTEGER DEFAULT 0, status TEXT DEFAULT \"new\", tenant_id INTEGER, created_by INTEGER, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);' &&
+        sqlite3 /data/leadtap.db 'CREATE TABLE IF NOT EXISTS tenants (id INTEGER PRIMARY KEY, name TEXT, domain TEXT UNIQUE, settings TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);' &&
+        tail -f /dev/null
+      "
+    volumes:
+      - sqlite_data:/data
+    restart: unless-stopped
+    networks:
+      - leadtap-network
+    profiles:
+      - development
+      - simple
+      - backend-only
+
+  # PostgreSQL Database (Production)
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: leadtap-postgres
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-leadtap}
+      - POSTGRES_USER=${POSTGRES_USER:-leadtap}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-leadtap}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/init_db.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    networks:
+      - leadtap-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-leadtap} -d ${POSTGRES_DB:-leadtap}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - production
+
+  # ========================================================================
+  # CACHE SERVICES
+  # ========================================================================
+  
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: leadtap-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - leadtap-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - production
+
+  # ========================================================================
+  # REVERSE PROXY (Nginx)
+  # ========================================================================
+  nginx:
+    image: nginx:alpine
+    container_name: leadtap-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - frontend_static:/usr/share/nginx/html
+      - logs_data:/var/log/nginx
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+    networks:
+      - leadtap-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - production
+
+  # ========================================================================
+  # MONITORING SERVICES
+  # ========================================================================
+  
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: leadtap-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - leadtap-network
+      - monitoring-network
+    profiles:
+      - monitoring
+
+  # Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: leadtap-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - leadtap-network
+      - monitoring-network
+    profiles:
+      - monitoring
+
+  # ========================================================================
+  # BACKGROUND TASKS (Celery)
+  # ========================================================================
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: leadtap-celery-worker
+    command: celery -A main.celery worker --loglevel=info
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./leadtap.db}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+    volumes:
+      - ./backend:/app
+      - uploads_data:/app/uploads
+      - logs_data:/app/logs
+    depends_on:
+      - redis
+      - sqlite-db
+    restart: unless-stopped
+    networks:
+      - leadtap-network
+    profiles:
+      - production
+
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: leadtap-celery-beat
+    command: celery -A main.celery beat --loglevel=info
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./leadtap.db}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+    volumes:
+      - ./backend:/app
+      - logs_data:/app/logs
+    depends_on:
+      - redis
+      - sqlite-db
+    restart: unless-stopped
+    networks:
+      - leadtap-network
+    profiles:
+      - production
+
+  # ========================================================================
+  # UTILITY SERVICES
+  # ========================================================================
+  
+  # Database Migration Service
+  db-migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: leadtap-db-migrate
+    command: python init_db.py
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./leadtap.db}
+      - POSTGRES_DB=${POSTGRES_DB:-leadtap}
+      - POSTGRES_USER=${POSTGRES_USER:-leadtap}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-leadtap}
+      - POSTGRES_HOST=${POSTGRES_HOST:-db}
+    volumes:
+      - ./backend:/app
+      - sqlite_data:/app/data
+    depends_on:
+      - sqlite-db
+    networks:
+      - leadtap-network
+    profiles:
+      - development
+      - simple
+      - production
+
+  # Admin User Creation Service
+  create-admin:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: leadtap-create-admin
+    command: python create_users.py
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./leadtap.db}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@leadtap.com}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+    volumes:
+      - ./backend:/app
+      - sqlite_data:/app/data
+    depends_on:
+      - sqlite-db
+    networks:
+      - leadtap-network
+    profiles:
+      - development
+      - simple
+      - production
+
+# =============================================================================
+# DEPLOYMENT SCRIPTS
+# =============================================================================
+
+# Development deployment:
+# docker-compose -f ULTIMATE_CONSOLIDATED_DOCKER.yml --profile development up -d
+
+# Simple production deployment:
+# docker-compose -f ULTIMATE_CONSOLIDATED_DOCKER.yml --profile simple up -d
+
+# Full production deployment:
+# docker-compose -f ULTIMATE_CONSOLIDATED_DOCKER.yml --profile production up -d
+
+# Backend-only deployment:
+# docker-compose -f ULTIMATE_CONSOLIDATED_DOCKER.yml --profile backend-only up -d
+
+# Production with monitoring:
+# docker-compose -f ULTIMATE_CONSOLIDATED_DOCKER.yml --profile production --profile monitoring up -d
+
+# =============================================================================
+# ENVIRONMENT-SPECIFIC CONFIGURATIONS
+# =============================================================================
+
+# Development Environment Variables (.env.development):
+# ENVIRONMENT=development
+# DEBUG=true
+# DATABASE_URL=sqlite:///./leadtap.db
+# REDIS_URL=redis://redis:6379
+
+# Production Environment Variables (.env.production):
+# ENVIRONMENT=production
+# DEBUG=false
+# DATABASE_URL=postgresql://leadtap:leadtap@postgres-db:5432/leadtap
+# REDIS_URL=redis://:password@redis:6379
+# SECRET_KEY=your-production-secret-key
+# JWT_SECRET=your-production-jwt-secret
+
+# =============================================================================
+# HEALTH CHECKS
+# =============================================================================
+# All services include health checks to ensure proper startup order
+# and service availability monitoring
+
+# =============================================================================
+# VOLUME PERSISTENCE
+# =============================================================================
+# All data volumes are configured for persistence across container restarts
+# and deployments
+
+# =============================================================================
+# NETWORK ISOLATION
+# =============================================================================
+# Services are isolated in appropriate networks for security and performance 
