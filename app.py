@@ -1,177 +1,333 @@
 import time
-import logging
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service as ChromeService
-from selenium.webdriver.chrome.options import Options as ChromeOptions
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException, TimeoutException
+import csv
 import os
 import re
+import sys
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import (
+    TimeoutException, NoSuchElementException, ElementClickInterceptedException
+)
+from webdriver_manager.chrome import ChromeDriverManager
 
-# Set up logging
-logging.basicConfig(filename='gmap_script_errors.log', level=logging.ERROR,
-                    format='%(asctime)s - %(levelname)s - %(message)s')
+# === CONFIG ===
+HEADLESS = False  # Set to False to see Chrome browser window
+QUERIES_FILE = os.path.join(os.path.dirname(__file__), "search_queries.txt")
+OUTPUT_CSV = os.path.expanduser("~/Documents/gmap_all_leads.csv")
+RETRY_ATTEMPTS = 3
+DELAY_BETWEEN_QUERIES = 10  # Add delay between queries
+MAX_RESULTS_PER_QUERY = 20  # Increased limit for more results per query
+RESUME_MODE = False  # Process all queries (including already done ones)
 
+# Use simple text instead of emojis for better compatibility
 
-def open_google_maps_and_search(file_path):
-    if not os.path.isfile(file_path):
-        logging.error(f"File not found: {file_path}")
+# === SETUP DRIVER ===
+def setup_driver():
+    options = Options()
+    if HEADLESS:
+        options.add_argument("--headless")
+    
+    # Performance optimizations
+    options.add_argument("--disable-gpu")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-web-security")
+    options.add_argument("--disable-features=VizDisplayCompositor")
+    options.add_argument("--disable-extensions")
+    options.add_argument("--disable-plugins")
+    options.add_argument("--disable-images")
+    options.add_argument("--disable-javascript")
+    options.add_argument("--disable-css")
+    options.add_argument("--memory-pressure-off")
+    options.add_argument("--max_old_space_size=4096")
+    
+    # Reduce memory usage
+    options.add_argument("--disable-background-timer-throttling")
+    options.add_argument("--disable-backgrounding-occluded-windows")
+    options.add_argument("--disable-renderer-backgrounding")
+    
+    service = Service(ChromeDriverManager().install())
+    return webdriver.Chrome(service=service, options=options)
+
+def safe_get(driver, url, retries=RETRY_ATTEMPTS):
+    for attempt in range(1, retries + 1):
+        try:
+            driver.get(url)
+            return True
+        except Exception as e:
+            print(f"[RETRY {attempt}] Failed to open URL: {e}")
+            time.sleep(5)
+    return False
+
+# === SCROLL RESULTS PANEL ===
+def scroll_results(driver):
+    try:
+        # Wait for results panel
+        results_box = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CLASS_NAME, "m6QErb"))
+        )
+        print("[INFO] Found results panel. Scrolling to load all results...")
+        
+        # Get initial count
+        initial_count = len(driver.find_elements(By.CLASS_NAME, "Nv2PK"))
+        print(f"[INFO] Initial results found: {initial_count}")
+        
+        # Scroll multiple times to load more results
+        last_count = initial_count
+        stable_count = 0
+        
+        for scroll_attempt in range(100):  # Increased to 100 scroll attempts
+            # Scroll to bottom with multiple scroll steps
+            for i in range(3):  # Multiple scroll steps per attempt
+                driver.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", results_box)
+                time.sleep(0.5)  # Short wait between scrolls
+            
+            time.sleep(3)  # Longer wait time for loading
+            
+            # Also try scrolling by a large amount to trigger more loading
+            driver.execute_script("arguments[0].scrollTop += 2000", results_box)
+            time.sleep(2)
+            
+            # Check if new results loaded
+            current_count = len(driver.find_elements(By.CLASS_NAME, "Nv2PK"))
+            
+            if current_count > last_count:
+                print(f"[INFO] Loaded more results: {current_count} (was {last_count})")
+                last_count = current_count
+                stable_count = 0
+            else:
+                stable_count += 1
+                
+            # If no new results for 5 consecutive scrolls, we're done (increased from 3)
+            if stable_count >= 5:
+                print(f"[INFO] No more results loading. Final count: {current_count}")
+                break
+                
+            # Additional check: if we have more than 20 results, scroll even more aggressively
+            if current_count > 20:
+                for extra_scroll in range(5):
+                    driver.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", results_box)
+                    time.sleep(1)
+                    driver.execute_script("arguments[0].scrollTop += 1000", results_box)
+                    time.sleep(1)
+                    
+            # Try alternative scrolling methods
+            if scroll_attempt % 10 == 0:  # Every 10th attempt
+                # Try scrolling with page down
+                results_box.send_keys(Keys.PAGE_DOWN)
+                time.sleep(2)
+                results_box.send_keys(Keys.PAGE_DOWN)
+                time.sleep(2)
+                
+                # Try scrolling with end key
+                results_box.send_keys(Keys.END)
+                time.sleep(2)
+                
+        # Final aggressive scroll to ensure all are loaded
+        print("[INFO] Performing final aggressive scroll...")
+        for final_scroll in range(10):
+            driver.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", results_box)
+            time.sleep(1)
+            driver.execute_script("arguments[0].scrollTop += 3000", results_box)
+            time.sleep(1)
+            results_box.send_keys(Keys.END)
+            time.sleep(1)
+        
+        # Scroll back to top
+        driver.execute_script("arguments[0].scrollTop = 0", results_box)
+        time.sleep(1)
+        
+        final_count = len(driver.find_elements(By.CLASS_NAME, "Nv2PK"))
+        print(f"[INFO] Scrolling complete. Total results: {final_count}")
+        return True
+        
+    except TimeoutException:
+        print("[WARNING] No results panel found. Possibly a single place page.")
+        return False
+    except Exception as e:
+        print(f"[ERROR] Error during scrolling: {e}")
+        return False
+
+# === EXTRACT BUSINESS DETAILS ===
+def extract_info(driver, query):
+    def safe_find(css_selector, fallback="N/A"):
+        try:
+            return driver.find_element(By.CSS_SELECTOR, css_selector).text
+        except:
+            return fallback
+
+    name = safe_find('h1[class*="DUwDvf"]')
+    category = safe_find('button[class*="DkEaL"]')
+
+    address, phone, website, plus_code = "N/A", "N/A", "N/A", "N/A"
+    try:
+        elements = driver.find_elements(By.CLASS_NAME, "Io6YTe")
+        for el in elements:
+            text = el.text
+            if re.search(r'\d{3} \d{3} \d{4}', text):
+                phone = text
+            elif '.' in text and any(ext in text for ext in ['.com', '.net', '.org']):
+                website = text
+            elif '+' in text:
+                plus_code = text
+            elif address == "N/A":
+                address = text
+    except:
+        pass
+
+    return [query, name, category, address, phone, website, plus_code]
+
+# === INCREMENTAL CSV WRITER ===
+def write_result_to_csv(result_data, csv_file):
+    """Write a single result to CSV file immediately"""
+    file_exists = os.path.exists(csv_file)
+    
+    with open(csv_file, "a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        
+        # Write header if file is new
+        if not file_exists:
+            writer.writerow(["Search Query", "Business Name", "Category", "Address", "Phone", "Website", "Plus Code"])
+        
+        # Write the result
+        writer.writerow(result_data)
+    
+    print(f"[SAVE] Saved to CSV: {result_data[1]}")
+
+def get_processed_queries(csv_file):
+    """Get list of queries that have already been processed"""
+    if not os.path.exists(csv_file):
+        return set()
+    
+    processed = set()
+    try:
+        with open(csv_file, 'r', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            next(reader)  # Skip header
+            for row in reader:
+                if row and len(row) > 0:
+                    processed.add(row[0])  # First column is search query
+    except Exception as e:
+        print(f"[WARNING] Error reading existing CSV: {e}")
+    
+    return processed
+
+# === MAIN ===
+def main():
+    if not os.path.isfile(QUERIES_FILE):
+        print(f"[ERROR] Query file not found: {QUERIES_FILE}")
         return
 
-    chrome_driver_path = r"C:\selenium driver\chromedriver-win32\chromedriver.exe"
-    chrome_service = ChromeService(executable_path=chrome_driver_path)
-    chrome_options = ChromeOptions()
-    chrome_options.add_argument('--disable-gpu')
-    browser = webdriver.Chrome(service=chrome_service, options=chrome_options)
+    with open(QUERIES_FILE, 'r', encoding='utf-8') as f:
+        all_queries = list(set([line.strip() for line in f.readlines() if line.strip()]))
 
-    browser.get("https://maps.google.com")
-    time.sleep(5)
+    if not all_queries:
+        print("[ERROR] No valid queries found.")
+        return
 
-    search_dir = os.path.dirname(file_path)
-    result_file_path = os.path.join(search_dir, 'gmap_results.txt')
-    failed_queries_file_path = os.path.join(search_dir, 'failed_queries.txt')
+    # Filter out already processed queries if resume mode is enabled
+    if RESUME_MODE:
+        processed_queries = get_processed_queries(OUTPUT_CSV)
+        queries = [q for q in all_queries if q not in processed_queries]
+        
+        if processed_queries:
+            print(f"[INFO] Found {len(processed_queries)} already processed queries")
+            print(f"[RESUME] Resuming with {len(queries)} remaining queries")
+        else:
+            print(f"[START] Starting fresh with {len(queries)} queries")
+    else:
+        queries = all_queries
+        print(f"[START] Processing all {len(queries)} queries")
 
-    with open(result_file_path, 'a', encoding='utf-8') as result_file, open(failed_queries_file_path, 'a',
-                                                                            encoding='utf-8') as failed_file:
-        while True:
-            with open(file_path, 'r') as file:
-                search_terms = file.readlines()
+    if not queries:
+        print("[DONE] All queries have already been processed!")
+        return
 
-            if not search_terms:
-                break  # Exit the loop if there are no more terms to process
+    driver = setup_driver()
+    total_saved = 0
 
-            for term in search_terms:
-                term = term.strip()
-                if not term:
+    for q_index, query in enumerate(queries):
+        print(f"\n[SEARCH] [{q_index+1}/{len(queries)}] Searching: {query}")
+        
+        # Add delay between queries to prevent overload
+        if q_index > 0:
+            print(f"[WAIT] Waiting {DELAY_BETWEEN_QUERIES} seconds before next query...")
+            time.sleep(DELAY_BETWEEN_QUERIES)
+
+        if not safe_get(driver, "https://maps.google.com"):
+            print("[ERROR] Failed to open Google Maps.")
+            continue
+
+        try:
+            search_box = WebDriverWait(driver, 20).until(
+                EC.presence_of_element_located((By.CLASS_NAME, "searchboxinput"))
+            )
+            search_box.clear()
+            search_box.send_keys(query)
+            search_box.send_keys(Keys.ENTER)
+            time.sleep(5)
+        except Exception as e:
+            print(f"[ERROR] Failed to input search: {e}")
+            continue
+
+        has_results_list = scroll_results(driver)
+
+        if not has_results_list:
+            info = extract_info(driver, query)
+            write_result_to_csv(info, OUTPUT_CSV)
+            total_saved += 1
+            print(f"[SUCCESS] Direct page scraped: {info[1]}")
+            continue
+
+        result_items = driver.find_elements(By.CLASS_NAME, "Nv2PK")
+        print(f"[INFO] Found {len(result_items)} businesses")
+
+        visited = set()
+
+        # Limit results to prevent overload
+        max_results = min(len(result_items), MAX_RESULTS_PER_QUERY)
+        
+        for index in range(max_results):
+            try:
+                result_items = driver.find_elements(By.CLASS_NAME, "Nv2PK")
+                if index >= len(result_items):
+                    break
+
+                result = result_items[index]
+                if result in visited:
                     continue
+                visited.add(result)
 
-                attempts = 0
-                success = False
-                printed_websites = set()  # To keep track of printed website URLs
-                query_results = []  # Collect results for the current query
+                driver.execute_script("arguments[0].scrollIntoView();", result)
+                time.sleep(2)  # Increased delay
 
-                while attempts < 3 and not success:
-                    try:
-                        search_box = WebDriverWait(browser, 15).until(
-                            EC.presence_of_element_located((By.CLASS_NAME, "searchboxinput"))
-                        )
-                        search_box.clear()
-                        search_box.send_keys(term)
-                        search_box.send_keys(u'\ue007')  # Press Enter key
+                try:
+                    result.click()
+                except ElementClickInterceptedException:
+                    driver.execute_script("arguments[0].click();", result)
 
-                        time.sleep(5)
+                time.sleep(3)  # Reduced wait time
+                info = extract_info(driver, query)
+                write_result_to_csv(info, OUTPUT_CSV)
+                total_saved += 1
+                print(f"  [SUCCESS] {index+1}. {info[1]}")
+                
+                # Add delay between results
+                time.sleep(2)
+            except Exception as e:
+                print(f"  [WARNING] Error at result {index+1}: {e}")
+                continue
 
-                        try:
-                            clickable_div = WebDriverWait(browser, 15).until(
-                                EC.element_to_be_clickable((By.CLASS_NAME, "Nv2PK"))
-                            )
-                            clickable_div.click()
-                            print(f"Clicked on the div for search term: {term}")
+    driver.quit()
 
-                            time.sleep(5)
+    print(f"\n[DONE] Scraped {total_saved} records.")
+    print(f"[SAVE] All data saved incrementally to: {OUTPUT_CSV}")
+    print(f"[SAFE] Data is safe even if program stops unexpectedly!")
 
-                            # Wait for the business name to be available
-                            business_name_element = WebDriverWait(browser, 15).until(
-                                EC.presence_of_element_located((By.CSS_SELECTOR, 'h1[class*="DUwDvf"]'))
-                            )
-                            business_name = business_name_element.text
-                            query_results.append(f"Business Name: {business_name}")
-
-                            # Try to get the business type first
-                            business_type_element = None
-                            try:
-                                business_type_element = WebDriverWait(browser, 15).until(
-                                    EC.presence_of_element_located((By.CSS_SELECTOR, 'button[class*="DkEaL"]'))
-                                )
-                                business_type = business_type_element.text
-                                query_results.append(f"Category: {business_type}")
-                            except (NoSuchElementException, TimeoutException):
-                                # If not found, attempt to get the category with class mgr77e
-                                try:
-                                    business_type_element = WebDriverWait(browser, 15).until(
-                                        EC.presence_of_element_located((By.CLASS_NAME, "mgr77e"))
-                                    )
-                                    business_type = business_type_element.text
-                                    query_results.append(f"Category: {business_type}")
-                                except (NoSuchElementException, TimeoutException):
-                                    query_results.append("Business category not found.")
-                                    logging.error(f"Business category not found for search term '{term}'.")
-
-                            # Wait for the elements with class Io6YTe
-                            elements = WebDriverWait(browser, 15).until(
-                                EC.presence_of_all_elements_located((By.CLASS_NAME, "Io6YTe"))
-                            )
-
-                            if elements:
-                                query_results.append(f"Address: {elements[0].text}")
-
-                            phone_found = False
-                            website_found = False
-                            plus_code_found = False
-
-                            for element in elements[1:]:
-                                element_text = element.text
-                                if any(junk in element_text for junk in
-                                       ["Find a table", "Menu", "Place an order", "linktr.ee",
-                                        "Identifies as women-owned", "Claim this business"]):
-                                    continue
-                                if re.search(r'\.(com|org|net|edu|gov|info|biz|io|me|edu.gh|co|us)', element_text):
-                                    if element_text not in printed_websites:
-                                        query_results.append(f"Website: {element_text}")
-                                        printed_websites.add(element_text)
-                                        website_found = True
-                                elif re.search(r'\b\d{3} \d{3} \d{4}\b', element_text):
-                                    query_results.append(f"Phone: {element_text}")
-                                    phone_found = True
-                                elif '+' in element_text:
-                                    query_results.append(f"Plus Code: {element_text}")
-                                    plus_code_found = True
-                                else:
-                                    query_results.append(f"{element_text}")
-
-                            if not phone_found:
-                                query_results.append("Phone: N/A")
-                            if not website_found:
-                                query_results.append("Website: N/A")
-                            if not plus_code_found:
-                                query_results.append("Plus Code: N/A")
-
-                            success = True
-
-                        except (NoSuchElementException, TimeoutException) as e:
-                            logging.error(f"Error during search for term '{term}': {str(e)}")
-                            logging.error("Current page URL: " + browser.current_url)
-                            browser.save_screenshot(f"error_{term}.png")
-                            attempts += 1
-
-                    except (NoSuchElementException, TimeoutException) as e:
-                        logging.error(f"Error during search for term '{term}': {str(e)}")
-                        attempts += 1
-
-                if not success:
-                    query_results.append(f"Failed to process search term '{term}' after 3 attempts")
-                    failed_file.write(term + '\n')
-
-                # Write results for the current query to the result file
-                if query_results:
-                    result_file.write('\n'.join(query_results) + '\n\n')
-
-                print(f"Completed search for term '{term}'\n")
-                time.sleep(3)
-
-                # Remove the successfully processed term from the original file
-                with open(file_path, 'r') as file:
-                    remaining_terms = file.readlines()
-
-                with open(file_path, 'w') as file:
-                    for line in remaining_terms:
-                        if line.strip() != term:
-                            file.write(line)
-
-    browser.quit()
-
-
-file_path = r"C:\search term\search_querries.txt"
-open_google_maps_and_search(file_path)
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,9 @@
+enabled_platforms: [facebook, instagram, linkedin, x, youtube, tiktok]
+max_results_per_query: 5
+headless: true
+per_platform_delay_seconds: 8
+per_request_delay_seconds: 2
+resume: true
+site_search_engine: google
+output_dir: "~/Documents/social_leads"
+
