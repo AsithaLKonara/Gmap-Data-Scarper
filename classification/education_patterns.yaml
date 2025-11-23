@@ -1,0 +1,66 @@
+# Education Level Patterns
+# Regex patterns for extracting and classifying education levels
+
+education_levels:
+  doctorate:
+    patterns:
+      - "phd"
+      - "ph\.d"
+      - "doctorate"
+      - "d\.phil"
+      - "ed\.d"
+      - "doctor of"
+    level: "Doctorate"
+    priority: 4
+
+  postgraduate:
+    patterns:
+      - "mba"
+      - "master"
+      - "m\.a"
+      - "m\.s"
+      - "m\.sc"
+      - "m\.ed"
+      - "m\.eng"
+      - "postgraduate"
+      - "graduate degree"
+      - "masters"
+    level: "Postgraduate"
+    priority: 3
+
+  undergraduate:
+    patterns:
+      - "bachelor"
+      - "b\.a"
+      - "b\.s"
+      - "b\.sc"
+      - "b\.eng"
+      - "undergraduate"
+      - "bachelor's"
+      - "bachelors"
+      - "degree"
+    level: "Undergraduate"
+    priority: 2
+
+  high_school:
+    patterns:
+      - "high school"
+      - "secondary"
+      - "diploma"
+      - "certificate"
+      - "gce"
+      - "a level"
+      - "o level"
+    level: "High School"
+    priority: 1
+
+# Institution name patterns
+institution_patterns:
+  - "university"
+  - "college"
+  - "institute"
+  - "academy"
+  - "school"
+  - "university of"
+  - "college of"
+

@@ -1,0 +1,193 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: lead-intelligence-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-lead_intelligence}
+      POSTGRES_USER: ${POSTGRES_USER:-lead_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_in_production}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lead_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - lead-intelligence-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: lead-intelligence-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - lead-intelligence-network
+
+  # Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lead-intelligence-backend
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      # API Configuration
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - API_RELOAD=false
+      
+      # CORS - Set your frontend URL
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+      
+      # Database
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-lead_user}:${POSTGRES_PASSWORD:-change_me_in_production}@postgres:5432/${POSTGRES_DB:-lead_intelligence}
+      
+      # Redis
+      - REDIS_URL=redis://redis:6379/0
+      
+      # JWT Authentication
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change_me_in_production}
+      - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
+      - JWT_REFRESH_TOKEN_EXPIRE_DAYS=${JWT_REFRESH_TOKEN_EXPIRE_DAYS:-30}
+      
+      # Task Management
+      - TASK_TIMEOUT_SECONDS=${TASK_TIMEOUT_SECONDS:-3600}
+      
+      # Chrome Configuration
+      - CHROME_DEBUG_PORT=9222
+      - STREAM_FPS=${STREAM_FPS:-2}
+      - SCREENSHOT_DIR=/app/screenshots
+      
+      # Output Directory
+      - OUTPUT_DIR=/app/data
+      
+      # AI Configuration
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - USE_HUGGINGFACE=${USE_HUGGINGFACE:-true}
+      
+      # Stripe (Optional)
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      - STRIPE_PRICE_ID_MONTHLY=${STRIPE_PRICE_ID_MONTHLY:-}
+      - STRIPE_PRICE_ID_USAGE_BASED=${STRIPE_PRICE_ID_USAGE_BASED:-}
+      
+      # SSO (Optional)
+      - OAUTH_CLIENT_ID=${OAUTH_CLIENT_ID:-}
+      - OAUTH_CLIENT_SECRET=${OAUTH_CLIENT_SECRET:-}
+      
+      # Zoho CRM (Optional)
+      - ZOHO_CLIENT_ID=${ZOHO_CLIENT_ID:-}
+      - ZOHO_CLIENT_SECRET=${ZOHO_CLIENT_SECRET:-}
+      - ZOHO_REFRESH_TOKEN=${ZOHO_REFRESH_TOKEN:-}
+    volumes:
+      - ./screenshots:/app/screenshots
+      - ./data:/app/data
+      - chrome_data:/root/.gmap_scraper
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    shm_size: '2gb'
+    networks:
+      - lead-intelligence-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Celery Worker
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lead-intelligence-worker
+    command: celery -A backend.celery_app worker --loglevel=info --concurrency=4 --queues=scraping,enrichment,default
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-lead_user}:${POSTGRES_PASSWORD:-change_me_in_production}@postgres:5432/${POSTGRES_DB:-lead_intelligence}
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change_me_in_production}
+      - OUTPUT_DIR=/app/data
+      - SCREENSHOT_DIR=/app/screenshots
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - USE_HUGGINGFACE=${USE_HUGGINGFACE:-true}
+    volumes:
+      - ./screenshots:/app/screenshots
+      - ./data:/app/data
+      - chrome_data:/root/.gmap_scraper
+    depends_on:
+      - postgres
+      - redis
+      - backend
+    restart: unless-stopped
+    shm_size: '2gb'
+    networks:
+      - lead-intelligence-network
+
+  # Celery Beat (Scheduler)
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lead-intelligence-beat
+    command: celery -A backend.celery_app beat --loglevel=info
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-lead_user}:${POSTGRES_PASSWORD:-change_me_in_production}@postgres:5432/${POSTGRES_DB:-lead_intelligence}
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    networks:
+      - lead-intelligence-network
+
+  # Nginx Reverse Proxy (Optional - for production)
+  nginx:
+    image: nginx:alpine
+    container_name: lead-intelligence-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - lead-intelligence-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  chrome_data:
+    driver: local
+
+networks:
+  lead-intelligence-network:
+    driver: bridge
+

@@ -1,0 +1,110 @@
+# Job Title Patterns and Seniority Classification
+
+job_titles:
+  # Executive Level
+  executive:
+    patterns:
+      - "ceo"
+      - "chief executive"
+      - "president"
+      - "founder"
+      - "co-founder"
+      - "owner"
+      - "proprietor"
+      - "managing director"
+      - "executive director"
+    seniority: "Executive"
+    level: 5
+
+  # Senior Management
+  senior_management:
+    patterns:
+      - "vp"
+      - "vice president"
+      - "director"
+      - "senior director"
+      - "head of"
+      - "chief"
+      - "cfo"
+      - "cto"
+      - "cmo"
+      - "coo"
+    seniority: "Senior"
+    level: 4
+
+  # Mid-Level Management
+  mid_management:
+    patterns:
+      - "manager"
+      - "senior manager"
+      - "general manager"
+      - "operations manager"
+      - "project manager"
+      - "product manager"
+      - "marketing manager"
+      - "sales manager"
+      - "account manager"
+    seniority: "Mid"
+    level: 3
+
+  # Junior/Entry Level
+  junior:
+    patterns:
+      - "assistant"
+      - "junior"
+      - "intern"
+      - "trainee"
+      - "entry level"
+      - "associate"
+      - "coordinator"
+    seniority: "Junior"
+    level: 1
+
+  # Specialist/Individual Contributor
+  specialist:
+    patterns:
+      - "specialist"
+      - "analyst"
+      - "consultant"
+      - "advisor"
+      - "developer"
+      - "engineer"
+      - "designer"
+      - "writer"
+      - "editor"
+      - "researcher"
+    seniority: "Mid"
+    level: 2
+
+  # Freelancer/Contractor
+  freelancer:
+    patterns:
+      - "freelance"
+      - "freelancer"
+      - "contractor"
+      - "independent"
+      - "self-employed"
+      - "consultant"
+    seniority: "Freelancer"
+    level: 2
+
+  # Recruiter/HR
+  recruiter:
+    patterns:
+      - "recruiter"
+      - "talent acquisition"
+      - "hr"
+      - "human resources"
+      - "hiring manager"
+      - "recruitment"
+    seniority: "Mid"
+    level: 2
+
+# Seniority levels mapping
+seniority_levels:
+  - "Junior"
+  - "Mid"
+  - "Senior"
+  - "Executive"
+  - "Freelancer"
+

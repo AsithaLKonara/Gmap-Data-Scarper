@@ -1,0 +1,674 @@
+﻿
+> tests/e2e/test_data_volume.py::TestDataVolume::test_error_recovery_scenarios 
+FAILED [ 12%]
+> tests/e2e/test_deployment.py::TestAPIHealth::test_root_endpoint FAILED   [ 
+13%]
+> tests/e2e/test_deployment.py::TestAPIHealth::test_health_endpoint FAILED [ 
+13%]
+> tests/e2e/test_deployment.py::TestAPIHealth::test_metrics_endpoint FAILED [ 
+14%]
+> tests/e2e/test_deployment.py::TestScrapingWorkflow::test_start_scraping_task 
+FAILED [ 14%]
+> tests/e2e/test_deployment.py::TestScrapingWorkflow::test_get_task_status 
+FAILED [ 15%]
+> tests/e2e/test_deployment.py::TestScrapingWorkflow::test_stop_task FAILED [ 
+15%]
+> tests/e2e/test_deployment.py::TestScrapingWorkflow::test_list_tasks FAILED [ 
+16%]
+> tests/e2e/test_deployment.py::TestConcurrency::test_multiple_concurrent_tasks 
+FAILED [ 17%]
+> tests/e2e/test_deployment.py::TestWebSocket::test_websocket_logs_connection 
+SKIPPEDecause the target machine actively refused it) [ 17%]
+> tests/e2e/test_deployment.py::TestDataVolume::test_export_with_many_results 
+FAILED [ 18%]
+> tests/e2e/test_deployment.py::TestErrorRecovery::test_invalid_task_id FAILED 
+[ 18%]
+> tests/e2e/test_deployment.py::TestErrorRecovery::test_invalid_request_data 
+FAILED [ 19%]
+> tests/e2e/test_scraping_flow.py::TestCompleteScrapingFlow::test_start_scrape_a
+nd_get_results FAILED [ 19%]
+> tests/e2e/test_scraping_flow.py::TestCompleteScrapingFlow::test_pause_and_resu
+me_workflow FAILED [ 20%]
+> tests/e2e/test_scraping_flow.py::TestCompleteScrapingFlow::test_bulk_actions_w
+orkflow FAILED [ 20%]
+> tests/e2e/test_websocket_stability.py::TestWebSocketStability::test_websocket_
+logs_stream_stability FAILED [ 21%]
+> tests/e2e/test_websocket_stability.py::TestWebSocketStability::test_websocket_
+progress_stream FAILED [ 21%]
+> tests/e2e/test_websocket_stability.py::TestWebSocketStability::test_websocket_
+results_stream FAILED [ 22%]
+  tests/e2e/test_websocket_stability.py::TestWebSocketStability::test_websocket_
+reconnection_logic PASSED [ 23%]
+  tests/enrichment/test_activity_scraper.py::TestActivityScraper::test_scrape_ac
+tivity_facebook PASSED [ 23%]
+> tests/integration/test_e2e.py::test_e2e_complete_scraping_session 
+SKIPPEDesult: [Errno 13] Permission denied:
+  'C:\\\\Users\\\\asith\\\\AppData\\\\Local\\\\Temp\\\\tmptqrnyt6b'", "
+> [ERROR] Failed to write result: [Errno 13] Permission denied:
+  'C:\\\\Users\\\\asith\\\\AppData\\\\Local\\\\Temp\\\\tmptqrnyt6b'", "
+> [ERROR] Failed to write result: [Errno 13] Permission denied:
+  'C:\\\\Users\\\\asith\\\\AppData\\\\Local\\\\Temp\\\\tmptqrnyt6b'"])     [ 
+29%]
+  tests/integration/test_e2e.py::test_e2e_resume_functionality PASSED      [ 
+30%]
+> tests/integration/test_e2e.py::test_e2e_csv_output_format SKIPPED (CSV
+  file not created at
+  C:\Users\asith\AppData\Local\Temp\tmp1zr8zq6t\all_platforms.csv. This
+> tests/integration/test_orchestrator.py::test_orchestrator_runs_scrapers 
+SKIPPEDite result: [Errno 13] Permission denied:
+  'C:\\\\Users\\\\asith\\\\AppData\\\\Local\\\\Temp\\\\tmph3fg1i_s'", "
+> [ERROR] Failed to write result: [Errno 13] Permission denied:
+  'C:\\\\Users\\\\asith\\\\AppData\\\\Local\\\\Temp\\\\tmph3fg1i_s'"])     [ 
+32%]
+  tests/integration/test_orchestrator.py::test_orchestrator_respects_stop_flag 
+PASSED [ 33%]
+> tests/integration/test_orchestrator.py::test_orchestrator_with_google_maps 
+SKIPPEDte issues) [ 34%]
+> tests/integration/test_orchestrator.py::test_orchestrator_multi_platform_sessi
+on SKIPPEDte issues) [ 35%]
+  tests/integration/test_postgresql_storage.py::TestPostgreSQLStorage::test_save
+_lead PASSED [ 35%]
+  tests/integration/test_postgresql_storage.py::TestPostgreSQLStorage::test_save
+_lead_with_phones PASSED [ 36%]
+> tests/ocr/test_image_phone_ocr.py::TestImagePhoneOCR::test_extract_text_from_i
+mage SKIPPED [ 47%]
+> tests/ocr/test_image_phone_ocr.py::TestImagePhoneOCR::test_extract_phone_from_
+image SKIPPED at position 149 (line 5, column 19)) [ 47%]
+  tests/ocr/test_image_phone_ocr.py::TestImagePhoneOCR::test_capture_screenshot 
+PASSED [ 48%]
+> tests/performance/test_benchmarks.py::TestPerformanceBenchmarks::test_health_e
+ndpoint_performance SKIPPEDst', port=8000): Max retries exceeded
+  with url: /api/health (Caused by
+  NewConnectionError('<urllib3.connection.HTTPConnection object at
+> 0x000001A1E1B38740>: Failed to establish a new connection: [WinError
+  10061] No connection could be made because the target machine actively
+  refused it')))                                                           [ 
+48%]
+> tests/performance/test_benchmarks.py::TestPerformanceBenchmarks::test_task_cre
+ation_performance SKIPPEDst', port=8000): Max retries exceeded
+  with url: /api/scraper/start (Caused by
+  NewConnectionError('<urllib3.connection.HTTPConnection object at
+> 0x000001A1D916F140>: Failed to establish a new connection: [WinError
+  10061] No connection could be made because the target machine actively
+  refused it')))                                                           [ 
+49%]
+> tests/performance/test_benchmarks.py::TestPerformanceBenchmarks::test_concurre
+nt_task_creation SKIPPED [ 50%]
+> tests/performance/test_benchmarks.py::TestPerformanceBenchmarks::test_list_tas
+ks_performance SKIPPEDst', port=8000): Max retries exceeded
+  with url: /api/tasks (Caused by
+  NewConnectionError('<urllib3.connection.HTTPConnection object at
+> 0x000001A1E196C2C0>: Failed to establish a new connection: [WinError
+  10061] No connection could be made because the target machine actively
+  refused it')))                                                           [ 
+50%]
+> tests/test_comprehensive_api.py::TestScraperEndpoints::test_start_scraper_empt
+y_queries FAILED [ 73%]
+> tests/test_comprehensive_api.py::TestScraperEndpoints::test_start_scraper_inva
+lid_platform FAILED [ 74%]
+  tests/test_comprehensive_api.py::TestScraperEndpoints::test_start_scraper_with
+_lead_objective PASSED [ 74%]
+  tests/test_comprehensive_api.py::TestScraperEndpoints::test_get_task_status 
+[GMAPS] Starting search for: test
+> tests/test_comprehensive_api.py::TestAIEndpoints::test_generate_queries 
+FAILED [ 79%]
+  tests/test_comprehensive_api.py::TestHealthEndpoints::test_health_check 
+PASSED [ 80%]
+  tests/test_comprehensive_api.py::TestHealthEndpoints::test_root_endpoint 
+PASSED [ 80%]
+> tests/test_comprehensive_api.py::TestSecurity::test_protected_endpoint_without
+_auth FAILED [ 81%]
+> tests/test_comprehensive_api.py::TestSecurity::test_protected_endpoint_with_in
+valid_token FAILED [ 81%]
+> tests/test_comprehensive_api.py::TestSecurity::test_sql_injection_prevention 
+FAILED [ 82%]
+> tests/test_comprehensive_api.py::TestSecurity::test_xss_prevention FAILED [ 
+82%]
+> tests/test_new_endpoints.py::TestTeamsAPI::test_create_team FAILED       [ 
+83%]
+> tests/test_new_endpoints.py::TestTeamsAPI::test_list_teams FAILED        [ 
+84%]
+> tests/test_new_endpoints.py::TestAnalyticsAPI::test_dashboard_metrics FAILED 
+[ 84%]
+> tests/test_new_endpoints.py::TestAnalyticsAPI::test_pipeline_metrics FAILED [ 
+85%]
+> tests/test_new_endpoints.py::TestAnalyticsAPI::test_forecast FAILED      [ 
+85%]
+> tests/test_new_endpoints.py::TestPredictiveAPI::test_conversion_prediction 
+FAILED [ 86%]
+> tests/test_new_endpoints.py::TestPredictiveAPI::test_churn_prediction FAILED 
+[ 86%]
+> tests/test_new_endpoints.py::TestPredictiveAPI::test_sentiment_analysis 
+FAILED [ 87%]
+> tests/test_new_endpoints.py::TestPredictiveAPI::test_intent_detection FAILED 
+[ 87%]
+> tests/test_new_endpoints.py::TestReportsAPI::test_build_report FAILED    [ 
+88%]
+> tests/test_new_endpoints.py::TestReportsAPI::test_create_scheduled_report 
+FAILED [ 89%]
+> tests/test_new_endpoints.py::TestWorkflowsAPI::test_create_workflow FAILED [ 
+89%]
+  tests/test_new_endpoints.py::TestSSOAPI::test_oauth_authorize_url PASSED [ 
+90%]
+> tests/test_new_endpoints.py::TestBrandingAPI::test_get_branding FAILED   [ 
+90%]
+  tests/unit/test_base_scraper.py::test_base_scraper_interface PASSED      [ 
+91%]
+  tests/unit/test_base_scraper.py::test_common_fields_defined PASSED       [ 
+91%]
+> E   urllib3.exceptions.NewConnectionError: <urllib3.connection.HTTPConnection 
+object at 0x000001A1E338FAA0>: Failed to establish a new connection: [WinError 
+10061] No connection could be made because the target machine actively refused 
+it
+  
+  The above exception was the direct cause of the following exception:
+> E   urllib3.exceptions.MaxRetryError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: / (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E338FAA0>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  
+  During handling of the above exception, another exception occurred:
+> E   requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: / (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E338FAA0>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  _____________________ TestAPIHealth.test_health_endpoint 
+______________________
+  ..\..\..\AppData\Local\Programs\Python\Python312\Lib\site-packages\urllib3\con
+nection.py:198: in _new_conn
+> E   urllib3.exceptions.NewConnectionError: <urllib3.connection.HTTPConnection 
+object at 0x000001A1E1BC0680>: Failed to establish a new connection: [WinError 
+10061] No connection could be made because the target machine actively refused 
+it
+  
+  The above exception was the direct cause of the following exception:
+> E   urllib3.exceptions.MaxRetryError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/health (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E1BC0680>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  
+  During handling of the above exception, another exception occurred:
+> E   requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/health (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E1BC0680>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  _____________________ TestAPIHealth.test_metrics_endpoint 
+_____________________
+  ..\..\..\AppData\Local\Programs\Python\Python312\Lib\site-packages\urllib3\con
+nection.py:198: in _new_conn
+> E   urllib3.exceptions.NewConnectionError: <urllib3.connection.HTTPConnection 
+object at 0x000001A1E1BDD9D0>: Failed to establish a new connection: [WinError 
+10061] No connection could be made because the target machine actively refused 
+it
+  
+  The above exception was the direct cause of the following exception:
+> E   urllib3.exceptions.MaxRetryError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/health/metrics/prometheus 
+(Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E1BDD9D0>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  
+  During handling of the above exception, another exception occurred:
+> E   requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/health/metrics/prometheus 
+(Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E1BDD9D0>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  ________________ TestScrapingWorkflow.test_start_scraping_task 
+________________
+  ..\..\..\AppData\Local\Programs\Python\Python312\Lib\site-packages\urllib3\con
+nection.py:198: in _new_conn
+> E   urllib3.exceptions.NewConnectionError: <urllib3.connection.HTTPConnection 
+object at 0x000001A1E1BDE720>: Failed to establish a new connection: [WinError 
+10061] No connection could be made because the target machine actively refused 
+it
+  
+  The above exception was the direct cause of the following exception:
+> E   urllib3.exceptions.MaxRetryError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/scraper/start (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E1BDE720>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  
+  During handling of the above exception, another exception occurred:
+> E   requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/scraper/start (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E1BDE720>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  ---------------------------- Captured stdout call 
+-----------------------------
+  [GMAPS] Entering search query...
+> E   urllib3.exceptions.NewConnectionError: <urllib3.connection.HTTPConnection 
+object at 0x000001A1E3542C00>: Failed to establish a new connection: [WinError 
+10061] No connection could be made because the target machine actively refused 
+it
+  
+  The above exception was the direct cause of the following exception:
+> E   urllib3.exceptions.MaxRetryError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/scraper/start (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E3542C00>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  
+  During handling of the above exception, another exception occurred:
+> E   requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/scraper/start (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E3542C00>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  _____________________ TestScrapingWorkflow.test_stop_task 
+_____________________
+  ..\..\..\AppData\Local\Programs\Python\Python312\Lib\site-packages\urllib3\con
+nection.py:198: in _new_conn
+> E   urllib3.exceptions.NewConnectionError: <urllib3.connection.HTTPConnection 
+object at 0x000001A1E35410A0>: Failed to establish a new connection: [WinError 
+10061] No connection could be made because the target machine actively refused 
+it
+  
+  The above exception was the direct cause of the following exception:
+> E   urllib3.exceptions.MaxRetryError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/scraper/start (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E35410A0>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  
+  During handling of the above exception, another exception occurred:
+> E   requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/scraper/start (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E35410A0>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  ---------------------------- Captured stdout call 
+-----------------------------
+  [GMAPS] Search submitted, waiting for results...
+> E   urllib3.exceptions.NewConnectionError: <urllib3.connection.HTTPConnection 
+object at 0x000001A1E1FA1EB0>: Failed to establish a new connection: [WinError 
+10061] No connection could be made because the target machine actively refused 
+it
+  
+  The above exception was the direct cause of the following exception:
+> E   urllib3.exceptions.MaxRetryError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/tasks (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E1FA1EB0>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  
+  During handling of the above exception, another exception occurred:
+> E   requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/tasks (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E1FA1EB0>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  ---------------------------- Captured stdout call 
+-----------------------------
+  [SCROLL] Trying selector: class name=m6QErb
+> E   urllib3.exceptions.NewConnectionError: <urllib3.connection.HTTPConnection 
+object at 0x000001A1E1FA1D30>: Failed to establish a new connection: [WinError 
+10061] No connection could be made because the target machine actively refused 
+it
+  
+  The above exception was the direct cause of the following exception:
+> E   urllib3.exceptions.MaxRetryError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/scraper/start (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E1FA1D30>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  
+  During handling of the above exception, another exception occurred:
+> E   requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/scraper/start (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E1FA1D30>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  ________________ TestDataVolume.test_export_with_many_results 
+_________________
+  ..\..\..\AppData\Local\Programs\Python\Python312\Lib\site-packages\urllib3\con
+nection.py:198: in _new_conn
+> E   urllib3.exceptions.NewConnectionError: <urllib3.connection.HTTPConnection 
+object at 0x000001A1E34B7980>: Failed to establish a new connection: [WinError 
+10061] No connection could be made because the target machine actively refused 
+it
+  
+  The above exception was the direct cause of the following exception:
+> E   urllib3.exceptions.MaxRetryError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/export/csv (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E34B7980>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  
+  During handling of the above exception, another exception occurred:
+> E   requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/export/csv (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E34B7980>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  ___________________ TestErrorRecovery.test_invalid_task_id 
+____________________
+  ..\..\..\AppData\Local\Programs\Python\Python312\Lib\site-packages\urllib3\con
+nection.py:198: in _new_conn
+> E   urllib3.exceptions.NewConnectionError: <urllib3.connection.HTTPConnection 
+object at 0x000001A1E34B4500>: Failed to establish a new connection: [WinError 
+10061] No connection could be made because the target machine actively refused 
+it
+  
+  The above exception was the direct cause of the following exception:
+> E   urllib3.exceptions.MaxRetryError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/scraper/status/invalid-task-id 
+(Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E34B4500>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  
+  During handling of the above exception, another exception occurred:
+> E   requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/scraper/status/invalid-task-id 
+(Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E34B4500>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  ---------------------------- Captured stdout call 
+-----------------------------
+  [SCROLL] Trying selector: css selector=div.m6QErb
+> E   urllib3.exceptions.NewConnectionError: <urllib3.connection.HTTPConnection 
+object at 0x000001A1E34B7860>: Failed to establish a new connection: [WinError 
+10061] No connection could be made because the target machine actively refused 
+it
+  
+  The above exception was the direct cause of the following exception:
+> E   urllib3.exceptions.MaxRetryError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/scraper/start (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E34B7860>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  
+  During handling of the above exception, another exception occurred:
+> E   requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/scraper/start (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E34B7860>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  ---------------------------- Captured stdout call 
+-----------------------------
+  [SCROLL] Trying selector: xpath=//div[contains(@class, 'm6QErb')]
+> E   urllib3.exceptions.NewConnectionError: <urllib3.connection.HTTPConnection 
+object at 0x000001A1E1C5B8F0>: Failed to establish a new connection: [WinError 
+10061] No connection could be made because the target machine actively refused 
+it
+  
+  The above exception was the direct cause of the following exception:
+> E   urllib3.exceptions.MaxRetryError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/scraper/start (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E1C5B8F0>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  
+  During handling of the above exception, another exception occurred:
+> E   requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/scraper/start (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E1C5B8F0>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  ___________ TestCompleteScrapingFlow.test_pause_and_resume_workflow 
+___________
+  ..\..\..\AppData\Local\Programs\Python\Python312\Lib\site-packages\urllib3\con
+nection.py:198: in _new_conn
+> E   urllib3.exceptions.NewConnectionError: <urllib3.connection.HTTPConnection 
+object at 0x000001A1E1C5BD40>: Failed to establish a new connection: [WinError 
+10061] No connection could be made because the target machine actively refused 
+it
+  
+  The above exception was the direct cause of the following exception:
+> E   urllib3.exceptions.MaxRetryError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/scraper/start (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E1C5BD40>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  
+  During handling of the above exception, another exception occurred:
+> E   requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/scraper/start (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E1C5BD40>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  ---------------------------- Captured stdout call 
+-----------------------------
+  [SCROLL] Trying selector: css selector=[role='main']
+> E   urllib3.exceptions.NewConnectionError: <urllib3.connection.HTTPConnection 
+object at 0x000001A1E1B38A70>: Failed to establish a new connection: [WinError 
+10061] No connection could be made because the target machine actively refused 
+it
+  
+  The above exception was the direct cause of the following exception:
+> E   urllib3.exceptions.MaxRetryError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/scraper/start (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E1B38A70>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  
+  During handling of the above exception, another exception occurred:
+> E   requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/scraper/start (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E1B38A70>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+  _________ TestWebSocketStability.test_websocket_logs_stream_stability 
+_________
+  tests\e2e\test_websocket_stability.py:22: in 
+test_websocket_logs_stream_stability
+> [SCROLL] Selector m6QErb failed: Message: invalid session id: session deleted 
+as the browser has closed the connection
+  from disconnected: not connected to DevTools
+    (Session info: chrome=142.0.7444.163); For documentation on this error, 
+please visit: https://www.selenium.dev/documentation/webdriver/troubleshooting/e
+rrors#invalidsessionidexception
+> [SCROLL] Selector .m6QErb failed: Message: invalid session id; For 
+documentation on this error, please visit: https://www.selenium.dev/documentatio
+n/webdriver/troubleshooting/errors#invalidsessionidexception
+  Stacktrace:
+  Symbols not available. Dumping unresolved backtrace:
+> [SCROLL] Selector div.m6QErb failed: Message: invalid session id; For 
+documentation on this error, please visit: https://www.selenium.dev/documentatio
+n/webdriver/troubleshooting/errors#invalidsessionidexception
+  Stacktrace:
+  Symbols not available. Dumping unresolved backtrace:
+> [SCROLL] Selector //div[contains(@class, 'm6QErb')] failed: Message: invalid 
+session id; For documentation on this error, please visit: https://www.selenium.
+dev/documentation/webdriver/troubleshooting/errors#invalidsessionidexception
+  Stacktrace:
+  Symbols not available. Dumping unresolved backtrace:
+> [SCROLL] Selector [role='main'] failed: Message: invalid session id; For 
+documentation on this error, please visit: https://www.selenium.dev/documentatio
+n/webdriver/troubleshooting/errors#invalidsessionidexception
+  Stacktrace:
+  Symbols not available. Dumping unresolved backtrace:
+> [SCROLL] Selector div[aria-label*='Results'] failed: Message: invalid session 
+id; For documentation on this error, please visit: https://www.selenium.dev/docu
+mentation/webdriver/troubleshooting/errors#invalidsessionidexception
+  Stacktrace:
+  Symbols not available. Dumping unresolved backtrace:
+> [GMAPS] ERROR: Failed to extract single place: Message: invalid session id; 
+For documentation on this error, please visit: https://www.selenium.dev/document
+ation/webdriver/troubleshooting/errors#invalidsessionidexception
+  Stacktrace:
+  Symbols not available. Dumping unresolved backtrace:
+> [GMAPS] ERROR: Failed to open Google Maps
+  [GMAPS] Browser closed
+  ____________ TestScraperEndpoints.test_start_scraper_empty_queries 
+____________
+> FAILED 
+tests/e2e/test_data_volume.py::TestDataVolume::test_error_recovery_scenarios - 
+fastapi.exceptions.HTTPException: 429: {'error': 'Rate limit exceeded', 
+'message': 'Too many requests. Limit: 10 per 60 seconds', 'retry_after': 10}
+> FAILED tests/e2e/test_deployment.py::TestAPIHealth::test_root_endpoint - 
+requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: / (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E338FAA0>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+> FAILED tests/e2e/test_deployment.py::TestAPIHealth::test_health_endpoint - 
+requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/health (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E1BC0680>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+> FAILED tests/e2e/test_deployment.py::TestAPIHealth::test_metrics_endpoint - 
+requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/health/metrics/prometheus 
+(Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E1BDD9D0>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+> FAILED 
+tests/e2e/test_deployment.py::TestScrapingWorkflow::test_start_scraping_task - 
+requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/scraper/start (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E1BDE720>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+> FAILED 
+tests/e2e/test_deployment.py::TestScrapingWorkflow::test_get_task_status - 
+requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/scraper/start (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E3542C00>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+> FAILED tests/e2e/test_deployment.py::TestScrapingWorkflow::test_stop_task - 
+requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/scraper/start (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E35410A0>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+> FAILED tests/e2e/test_deployment.py::TestScrapingWorkflow::test_list_tasks - 
+requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/tasks (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E1FA1EB0>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+> FAILED 
+tests/e2e/test_deployment.py::TestConcurrency::test_multiple_concurrent_tasks - 
+requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/scraper/start (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E1FA1D30>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+> FAILED 
+tests/e2e/test_deployment.py::TestDataVolume::test_export_with_many_results - 
+requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/export/csv (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E34B7980>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+> FAILED tests/e2e/test_deployment.py::TestErrorRecovery::test_invalid_task_id 
+- requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/scraper/status/invalid-task-id 
+(Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E34B4500>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+> FAILED 
+tests/e2e/test_deployment.py::TestErrorRecovery::test_invalid_request_data - 
+requests.exceptions.ConnectionError: HTTPConnectionPool(host='localhost', 
+port=8000): Max retries exceeded with url: /api/scraper/start (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E34B7860>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+> FAILED tests/e2e/test_scraping_flow.py::TestCompleteScrapingFlow::test_start_s
+crape_and_get_results - requests.exceptions.ConnectionError: 
+HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: 
+/api/scraper/start (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E1C5B8F0>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+> FAILED tests/e2e/test_scraping_flow.py::TestCompleteScrapingFlow::test_pause_a
+nd_resume_workflow - requests.exceptions.ConnectionError: 
+HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: 
+/api/scraper/start (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E1C5BD40>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+> FAILED tests/e2e/test_scraping_flow.py::TestCompleteScrapingFlow::test_bulk_ac
+tions_workflow - requests.exceptions.ConnectionError: 
+HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: 
+/api/scraper/start (Caused by 
+NewConnectionError('<urllib3.connection.HTTPConnection object at 
+0x000001A1E1B38A70>: Failed to establish a new connection: [WinError 10061] No 
+connection could be made because the target machine actively refused it'))
+> FAILED tests/e2e/test_websocket_stability.py::TestWebSocketStability::test_web
+socket_logs_stream_stability - ConnectionRefusedError: [WinError 1225] The 
+remote computer refused the network connection
+> FAILED tests/e2e/test_websocket_stability.py::TestWebSocketStability::test_web
+socket_progress_stream - ConnectionRefusedError: [WinError 1225] The remote 
+computer refused the network connection
+> FAILED tests/e2e/test_websocket_stability.py::TestWebSocketStability::test_web
+socket_results_stream - ConnectionRefusedError: [WinError 1225] The remote 
+computer refused the network connection
+> FAILED tests/test_comprehensive_api.py::TestScraperEndpoints::test_start_scrap
+er_empty_queries - assert 422 == 400
+   +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+> FAILED tests/test_comprehensive_api.py::TestScraperEndpoints::test_start_scrap
+er_invalid_platform - assert 422 in [200, 400]
+   +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+> FAILED 
+tests/test_comprehensive_api.py::TestAIEndpoints::test_generate_queries - 
+assert 404 in [200, 401, 403, 500]
+   +  where 404 = <Response [404 Not Found]>.status_code
+> FAILED tests/test_comprehensive_api.py::TestSecurity::test_protected_endpoint_
+without_auth - assert 404 == 401
+   +  where 404 = <Response [404 Not Found]>.status_code
+> FAILED tests/test_comprehensive_api.py::TestSecurity::test_protected_endpoint_
+with_invalid_token - assert 404 == 401
+   +  where 404 = <Response [404 Not Found]>.status_code
+> FAILED 
+tests/test_comprehensive_api.py::TestSecurity::test_sql_injection_prevention - 
+fastapi.exceptions.HTTPException: 429: {'error': 'Rate limit exceeded', 
+'message': 'Too many requests. Limit: 10 per 60 seconds', 'retry_after': 24}
+> FAILED tests/test_comprehensive_api.py::TestSecurity::test_xss_prevention - 
+fastapi.exceptions.HTTPException: 429: {'error': 'Rate limit exceeded', 
+'message': 'Too many requests. Limit: 10 per 60 seconds', 'retry_after': 22}
+> FAILED tests/test_new_endpoints.py::TestTeamsAPI::test_create_team - assert 
+401 == 200
+   +  where 401 = <Response [401 Unauthorized]>.status_code
+> FAILED tests/test_new_endpoints.py::TestTeamsAPI::test_list_teams - assert 
+401 == 200
+   +  where 401 = <Response [401 Unauthorized]>.status_code
+> FAILED tests/test_new_endpoints.py::TestAnalyticsAPI::test_dashboard_metrics 
+- assert 401 == 200
+   +  where 401 = <Response [401 Unauthorized]>.status_code
+> FAILED tests/test_new_endpoints.py::TestAnalyticsAPI::test_pipeline_metrics - 
+assert 401 == 200
+   +  where 401 = <Response [401 Unauthorized]>.status_code
+> FAILED tests/test_new_endpoints.py::TestAnalyticsAPI::test_forecast - assert 
+401 == 200
+   +  where 401 = <Response [401 Unauthorized]>.status_code
+> FAILED 
+tests/test_new_endpoints.py::TestPredictiveAPI::test_conversion_prediction - 
+assert 401 == 200
+   +  where 401 = <Response [401 Unauthorized]>.status_code
+> FAILED tests/test_new_endpoints.py::TestPredictiveAPI::test_churn_prediction 
+- assert 401 == 200
+   +  where 401 = <Response [401 Unauthorized]>.status_code
+> FAILED 
+tests/test_new_endpoints.py::TestPredictiveAPI::test_sentiment_analysis - 
+assert 401 == 200
+   +  where 401 = <Response [401 Unauthorized]>.status_code
+> FAILED tests/test_new_endpoints.py::TestPredictiveAPI::test_intent_detection 
+- assert 401 == 200
+   +  where 401 = <Response [401 Unauthorized]>.status_code
+> FAILED tests/test_new_endpoints.py::TestReportsAPI::test_build_report - 
+assert 401 == 200
+   +  where 401 = <Response [401 Unauthorized]>.status_code
+> FAILED 
+tests/test_new_endpoints.py::TestReportsAPI::test_create_scheduled_report - 
+assert 401 == 200
+   +  where 401 = <Response [401 Unauthorized]>.status_code
+> FAILED tests/test_new_endpoints.py::TestWorkflowsAPI::test_create_workflow - 
+assert 401 == 200
+   +  where 401 = <Response [401 Unauthorized]>.status_code
+> FAILED tests/test_new_endpoints.py::TestBrandingAPI::test_get_branding - 
+assert 401 == 200
+   +  where 401 = <Response [401 Unauthorized]>.status_code
+> ==== 38 failed, 132 passed, 12 skipped, 94 warnings in 2481.21s (0:41:21) 
+=====
+
+

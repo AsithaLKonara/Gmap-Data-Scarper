@@ -1,9 +1,44 @@
-enabled_platforms: [facebook, instagram, linkedin, x, youtube, tiktok]
-max_results_per_query: 5
-headless: true
+enabled_platforms:
+- facebook
+- instagram
+- linkedin
+- x
+- youtube
+- tiktok
+max_results_per_query: 0  # 0 = unlimited, process all results found
+headless: false
 per_platform_delay_seconds: 8
-per_request_delay_seconds: 2
 resume: true
-site_search_engine: google
-output_dir: "~/Documents/social_leads"
+output_dir: C:\Users\asith/Documents/social_leads
 
+# v2.0+ Filter Options
+filters:
+  # Business type filter (restaurant, clinic, salon, software_company, etc.)
+  business_type: []  # Empty list = no filter, include all types
+  
+  # Job level filter (Junior, Mid, Senior, Executive, Freelancer)
+  job_level: []  # Empty list = no filter, include all levels
+  
+  # Location filter (city, region, or country name)
+  location: null  # null = no location filter
+  
+  # Radius in kilometers for location filtering (requires location)
+  radius_km: null  # null = no radius limit
+  
+  # Education level filter (High School, Undergraduate, Postgraduate, Doctorate)
+  education_level: []  # Empty list = no filter (Phase 2)
+  
+  # Date range filter (YYYY-MM-DD:YYYY-MM-DD)
+  date_range: null  # null = no date filter (Phase 2)
+  
+  # Active within days
+  active_within_days: null  # null = no activity filter (Phase 2)
+  
+  # Boosted posts only
+  boosted_only: false  # false = include all posts (Phase 2)
+
+# v2.0+ Category-based query generation
+categories: []  # List of categories to auto-generate queries for
+
+# v3.0+ Legal & Compliance
+retention_policy_days: 180  # Automatically delete records older than this (6 months default)

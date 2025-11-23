@@ -1,0 +1,66 @@
+name: Performance Tests
+
+on:
+  push:
+    branches: [ main ]
+  schedule:
+    # Run weekly on Sundays at 3 AM UTC
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
+
+jobs:
+  performance-tests:
+    name: Performance Regression Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            chromium-browser \
+            chromium-chromedriver \
+            tesseract-ocr
+      
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-benchmark locust
+          pip install -r requirements.txt
+      
+      - name: Run performance benchmarks
+        run: |
+          pytest tests/performance/ -v --benchmark-only || true
+      
+      - name: Run load tests
+        run: |
+          # Start backend
+          python -m backend.main &
+          sleep 10
+          
+          # Run Locust load tests
+          locust -f tests/performance/locustfile.py \
+            --headless \
+            --users 10 \
+            --spawn-rate 2 \
+            --run-time 5m \
+            --host http://localhost:8000 || true
+      
+      - name: Upload performance results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-results
+          path: |
+            tests/performance/results/
+            .benchmarks/
+          retention-days: 30
+

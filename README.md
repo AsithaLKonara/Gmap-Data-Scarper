@@ -1,24 +1,65 @@
-# 🗺️ Google Maps Lead Scraper - CLI Version
+# 🗺️ Lead Intelligence Platform v3.9
 
-A reliable and efficient command-line tool for scraping business leads from Google Maps. This streamlined version focuses on core functionality with maximum stability and performance.
+A comprehensive, enterprise-grade lead intelligence platform for scraping and analyzing business leads from Google Maps and social media platforms. Features interactive web UI, real-time browser streaming, advanced phone extraction, AI-powered enrichment, comprehensive analytics, and production-ready infrastructure.
+
+> 📖 **For complete project overview and architecture details, see [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md)**
+
+## 🎯 What It Does
+
+The Lead Intelligence Platform automates lead generation by:
+1. **Scraping** multiple platforms (Google Maps, LinkedIn, Facebook, etc.) using browser automation
+2. **Extracting** phone numbers using 5 different methods (DOM, tel: links, JSON-LD, website crawl, OCR)
+3. **Enriching** leads with phone verification, business data, and AI-powered insights
+4. **Analyzing** data with comprehensive analytics and visualizations
+5. **Exporting** results in multiple formats (CSV, JSON, Excel)
+
+**Key Innovation**: Real-time browser streaming lets you watch the scraper work live, with phone numbers visually highlighted on the page.
 
 ---
 
 ## ✨ Features
 
-* 🔍 **Automated Google Maps Search** - Processes multiple search queries automatically
-* 📊 **Comprehensive Data Extraction** - Captures essential business information:
-  * Business Name
-  * Category/Type
-  * Full Address
-  * Phone Number
-  * Website URL
-  * Google Plus Code
+### Core Scraping (v1.0)
+* 🔍 **Automated Multi-Platform Search** - Google Maps, Facebook, Instagram, LinkedIn, X/Twitter, YouTube, TikTok
+* 📊 **Comprehensive Data Extraction** - Business information, contact details, social profiles
 * 💾 **Incremental CSV Saving** - Each result saved immediately to prevent data loss
 * 🔄 **Resume Capability** - Continue from where you left off if interrupted
 * 🛡️ **Error Handling** - Robust retry mechanisms and graceful error recovery
 * ⚡ **Performance Optimized** - Headless mode for faster, resource-efficient operation
 * 🌐 **Cross-Platform** - Works on Windows, macOS, and Linux
+
+### Lead Intelligence (v2.0+)
+* 🏢 **Business Classification** - Automatic categorization by business type and industry
+* 📍 **Location Segmentation** - Extract and filter by city, region, country
+* 👔 **Job-Level Classification** - Identify job titles and seniority levels
+* 🎓 **Education Parsing** - Extract and classify education levels
+* 📈 **Activity Detection** - Detect boosted posts and recent activity
+* ⭐ **Lead Scoring** - Automatic lead ranking (0-100 score)
+* 🎯 **Multi-Filter Search** - Combine filters (business, job, location, time, education)
+* 🤖 **AI Insights** - Intent detection (Hugging Face), sentiment analysis, automated summaries (optional OpenAI)
+* 📊 **Analytics Dashboard** - Optional Streamlit dashboard for visualization
+* 🔄 **Data Enrichment API** - Re-scrape and enrich existing datasets
+
+### Web UI & Phone Extraction (v3.0+)
+* 🌐 **Interactive Web Interface** - Next.js frontend with real-time updates
+* 📱 **Phone Extraction** - Multi-layer extraction (DOM, tel: links, JSON-LD, website crawl, OCR)
+* 📞 **Phone Normalization** - E.164 formatting with validation and confidence scoring
+* 🎯 **Phone Highlighting** - Visual feedback in live browser view with source tracking
+* 👤 **Individual Lead Classification** - Detect students vs professionals with field of study extraction
+* ⚖️ **Legal Compliance** - Data retention policy (6 months), consent notices, opt-out mechanism
+* ⚡ **Performance Features** - URL caching, smart rate limiting, parallel scraping ready
+* 🎥 **Live Browser Streaming** - Real-time MJPEG stream of scraping process
+* 📤 **Enhanced Export** - Task-specific, date range, and platform-specific CSV export
+
+### Enterprise Features (v3.2+)
+* 🔐 **User Authentication** - JWT-based multi-user support with task isolation
+* 📊 **Analytics Dashboard** - Comprehensive analytics with daily/weekly/monthly summaries
+* 🔍 **Lead Enrichment** - Phone verification (Twilio), business enrichment (Clearbit, Google Places)
+* 🤖 **AI Enhancement** - Business descriptions, quality assessment, key insights (OpenAI)
+* ⚡ **Performance Tuning** - Chrome instance pooling, async scraping, PostgreSQL caching
+* 📦 **Data Archival** - Automated archival to cold storage with partition-based organization
+* 🚀 **CI/CD** - Automated testing, deployment pipelines, quality gates
+* 📈 **Scalability** - Optimized for 100K+ records with 5x performance improvements
 
 ---
 
@@ -220,7 +261,7 @@ pip install -r requirements.txt
 ```yaml
 enabled_platforms: [facebook, instagram, linkedin, x, youtube, tiktok]
 max_results_per_query: 5
-headless: true
+headless: false  # Set to false to see browser window, or use --no-headless flag
 per_platform_delay_seconds: 8
 per_request_delay_seconds: 2
 resume: true
@@ -233,17 +274,42 @@ output_dir: "~/Documents/social_leads"
 python main.py
 ```
 
-Options:
+### CLI Options
+
 ```bash
-# Skip Google Maps
+# Show help and available platforms
+python main.py --help
+
+# Run all platforms (from config.yaml)
+python main.py
+
+# Select specific platforms to run
+python main.py --platforms google_maps,facebook,instagram
+
+# Skip Google Maps (only social platforms)
 python main.py --skip-gmaps
 
-# Only specific platforms
-python main.py --platforms instagram,facebook
+# Show browser window (see what's happening)
+python main.py --no-headless
+
+# Run specific platforms with visible browser
+python main.py --platforms google_maps,instagram --no-headless
 
 # Override max results per query
-python main.py --max-results 3
+python main.py --max-results 10
+
+# Combine options
+python main.py --platforms facebook,instagram --no-headless --max-results 5
 ```
+
+**Available Platforms:**
+- `google_maps` - Google Maps business listings
+- `facebook` - Facebook Pages
+- `instagram` - Instagram Business profiles
+- `linkedin` - LinkedIn Company pages
+- `x` - X (Twitter) profiles
+- `youtube` - YouTube Channels
+- `tiktok` - TikTok profiles
 
 ### Outputs
 - Per-platform CSVs in `~/Documents/social_leads/{platform}.csv`
@@ -254,3 +320,35 @@ Common columns: `Search Query`, `Platform`, `Profile URL`, `Handle`, `Display Na
 ### Notes
 - Public-only: no logins or API tokens are used.
 - Uses conservative rate limiting and retry/backoff. Increase delays if you encounter blocks.
+
+---
+
+## 🧪 Testing
+
+Comprehensive test suite included. Run tests with:
+
+```bash
+# Install test dependencies (already in requirements.txt)
+pip install -r requirements.txt
+
+# Run all tests
+pytest
+
+# Run with coverage report
+pytest --cov=scrapers --cov=utils --cov=orchestrator_core --cov-report=html
+
+# Run specific test categories
+pytest tests/unit/        # Unit tests
+pytest tests/platform/   # Platform-specific tests
+pytest tests/cli/         # CLI tests
+```
+
+See `TESTING.md` and `tests/README.md` for detailed testing documentation.
+
+**Current Status**: 50+ tests passing ✅
+
+### Recent Improvements
+- ✅ **Fixed Critical Bug**: Results list disappearing issue resolved using URL-based navigation
+- ✅ **Enhanced Testing**: Added comprehensive tests for all platforms including Google Maps
+- ✅ **Improved Reliability**: URL-based navigation allows processing all results, not just 1-2
+

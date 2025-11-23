@@ -1,0 +1,60 @@
+name: Dependency Updates
+
+on:
+  schedule:
+    # Run weekly on Mondays at 1 AM UTC
+    - cron: '0 1 * * 1'
+  workflow_dispatch:
+
+jobs:
+  check-updates:
+    name: Check for Dependency Updates
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Check Python dependencies
+        run: |
+          pip install pip-audit safety
+          pip-audit --requirement requirements.txt || true
+          safety check --file requirements.txt || true
+      
+      - name: Check npm dependencies
+        working-directory: frontend
+        run: |
+          npm install -g npm-check-updates
+          ncu --format json > dependency-updates.json || true
+      
+      - name: Create issue for updates
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const updates = JSON.parse(fs.readFileSync('frontend/dependency-updates.json', 'utf8'));
+            
+            const outdated = Object.entries(updates)
+              .filter(([pkg, version]) => version !== 'latest')
+              .map(([pkg, version]) => `- ${pkg}: ${version}`)
+              .join('\n');
+            
+            if (outdated) {
+              github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: 'Dependency Updates Available',
+                body: `The following dependencies have updates available:\n\n${outdated}`,
+                labels: ['dependencies', 'maintenance']
+              });
+            }
+

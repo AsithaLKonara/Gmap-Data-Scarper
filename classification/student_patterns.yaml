@@ -1,0 +1,54 @@
+# Student identification patterns
+student_patterns:
+  - student
+  - studying
+  - undergraduate
+  - graduate student
+  - phd student
+  - masters student
+  - bachelor student
+  - alumni
+  - graduate
+  - enrolled
+  - matriculated
+  - pursuing degree
+  - majoring
+  - minor in
+
+# Field of study keywords
+field_of_study_keywords:
+  ICT:
+    - ict
+    - information and communication technology
+    - information technology
+    - it
+  Computer Science:
+    - computer science
+    - cs
+    - comp sci
+    - computing
+  Engineering:
+    - engineering
+    - engineer
+    - eng
+  Business:
+    - business
+    - business administration
+    - mba
+    - commerce
+  Medicine:
+    - medicine
+    - medical
+    - md
+    - doctor
+  Law:
+    - law
+    - legal
+    - llb
+    - jd
+  Education:
+    - education
+    - teaching
+    - teacher
+    - pedagogy
+

@@ -1,0 +1,85 @@
+# Lead Scoring Weights Configuration
+# Adjust weights to prioritize different factors
+
+weights:
+  recency_of_activity: 30  # Weight for recent activity (0-100)
+  engagement: 25           # Weight for followers, boosted posts, engagement
+  data_completeness: 20    # Weight for how complete the data is
+  business_relevance: 15  # Weight for business type relevance
+  education_seniority: 10  # Weight for education and seniority level
+
+# Scoring thresholds
+thresholds:
+  high_score: 70           # Leads with score >= this are "high quality"
+  medium_score: 40         # Leads with score >= this are "medium quality"
+  low_score: 0            # Leads below this are "low quality"
+
+# Recency scoring (days)
+recency:
+  very_recent: 7           # Within 7 days = full points
+  recent: 30              # Within 30 days = 80% points
+  somewhat_recent: 60      # Within 60 days = 60% points
+  old: 90                 # Within 90 days = 40% points
+  very_old: 999999        # Beyond 90 days = 20% points
+
+# Engagement scoring
+engagement:
+  high_followers: 10000    # >= 10K followers = full points
+  medium_followers: 5000   # >= 5K followers = 80% points
+  low_followers: 1000      # >= 1K followers = 60% points
+  very_low_followers: 100  # >= 100 followers = 40% points
+  no_followers: 0         # < 100 followers = 20% points
+  
+  boosted_bonus: 10        # Bonus points if has boosted posts
+  high_engagement_bonus: 5 # Bonus if engagement > 1K
+
+# Data completeness scoring
+completeness:
+  required_fields:
+    - "Display Name"
+    - "Profile URL"
+    - "Platform"
+  
+  valuable_fields:
+    - "Address"
+    - "Phone"
+    - "Website"
+    - "Email"
+    - "Bio/About"
+    - "business_type"
+    - "job_title"
+    - "education_level"
+    - "city"
+    - "region"
+  
+  required_weight: 0.5     # 50% of completeness score
+  valuable_weight: 0.5     # 50% of completeness score
+
+# Business relevance scoring
+business_relevance:
+  # Higher score for certain business types (can be customized)
+  preferred_types:
+    - "software_company"
+    - "marketing"
+    - "real_estate"
+    - "healthcare"
+  
+  preferred_bonus: 5       # Bonus points for preferred types
+
+# Education/seniority scoring
+education_seniority:
+  education_levels:
+    "Doctorate": 10
+    "Postgraduate": 8
+    "Undergraduate": 5
+    "High School": 2
+    "N/A": 0
+  
+  seniority_levels:
+    "Executive": 10
+    "Senior": 8
+    "Mid": 5
+    "Junior": 2
+    "Freelancer": 3
+    "N/A": 0
+

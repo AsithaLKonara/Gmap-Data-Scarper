@@ -56,10 +56,17 @@ class InstagramScraper(BaseScraper):
         return result
 
     def search(self, query: str, max_results: int) -> Iterable[ScrapeResult]:
-        candidates: List[str] = site_search(query=query, site="instagram.com", num=max_results, engine="duckduckgo")
+        # Use much higher limit to get maximum results
+        search_limit = max(max_results * 10, 500) if max_results > 0 else 1000
+        candidates: List[str] = site_search(query=query, site="instagram.com", num=search_limit, engine="duckduckgo", debug=False)
+        if not candidates:
+            return
+        
         for url in candidates:
             try:
-                yield self._extract_profile(url, query)
+                result = self._extract_profile(url, query)
+                if result.get("Profile URL") and result.get("Profile URL") != "N/A":
+                    yield result
             except Exception:
                 continue
 

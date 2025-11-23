@@ -1,0 +1,66 @@
+# Intent Detection Patterns
+# Keywords and patterns for categorizing lead intent
+
+intents:
+  hiring:
+    keywords:
+      - "we're hiring"
+      - "now hiring"
+      - "job opening"
+      - "career opportunity"
+      - "join our team"
+      - "looking for"
+      - "position available"
+      - "recruiting"
+      - "hiring now"
+      - "open position"
+    patterns:
+      - "hiring.*(developer|engineer|manager|designer|marketer)"
+      - "looking for.*(talent|team|staff)"
+    category: "Hiring"
+
+  promoting:
+    keywords:
+      - "new product"
+      - "now available"
+      - "special offer"
+      - "discount"
+      - "sale"
+      - "promotion"
+      - "launch"
+      - "introducing"
+      - "check out"
+      - "limited time"
+    patterns:
+      - "new.*(product|service|feature)"
+      - "special.*(offer|deal|discount)"
+    category: "Promoting"
+
+  expanding:
+    keywords:
+      - "opening new"
+      - "expanding"
+      - "new location"
+      - "coming soon"
+      - "growing"
+      - "scaling"
+      - "new branch"
+      - "expansion"
+      - "now open"
+    patterns:
+      - "opening.*(location|branch|office)"
+      - "expanding.*(to|into)"
+    category: "Expanding"
+
+  inactive:
+    keywords:
+      - "closed"
+      - "permanently closed"
+      - "no longer"
+      - "discontinued"
+      - "shut down"
+    patterns:
+      - "permanently.*closed"
+      - "no longer.*(operating|open)"
+    category: "Inactive"
+

@@ -50,10 +50,39 @@ class XScraper(BaseScraper):
         return result
 
     def search(self, query: str, max_results: int) -> Iterable[ScrapeResult]:
-        candidates: List[str] = site_search(query=query, site="twitter.com", num=max_results, engine="duckduckgo")
+        search_limit = max(max_results * 10, 500) if max_results > 0 else 1000
+        candidates: List[str] = site_search(query=query, site="twitter.com", num=search_limit, engine="duckduckgo", debug=False)
+        if not candidates:
+            return
+        
+        # Filter out generic Twitter URLs
+        generic_patterns = [
+            "/home",
+            "/explore",
+            "/login",
+            "/signup",
+            "/en_us",
+            "/en",
+            "/i/",
+            "/settings",
+            "/compose",
+            "/notifications",
+            "/messages",
+            "/search",
+        ]
+        
         for url in candidates:
+            # Skip generic pages
+            if any(pattern in url.lower() for pattern in generic_patterns):
+                continue
+            # Only accept URLs with username pattern: twitter.com/username
+            if not re.search(r'twitter\.com/[^/]+$', url, re.I) and not re.search(r'x\.com/[^/]+$', url, re.I):
+                continue
+            
             try:
-                yield self._extract_profile(url, query)
+                result = self._extract_profile(url, query)
+                if result.get("Profile URL") and result.get("Profile URL") != "N/A":
+                    yield result
             except Exception:
                 continue
 

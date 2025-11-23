@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  backend-test:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - CORS_ORIGINS=http://localhost:3000
+      - CHROME_DEBUG_PORT=9222
+      - STREAM_FPS=2
+      - TASK_TIMEOUT_SECONDS=3600
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../../screenshots:/app/screenshots
+      - test_data:/app/test_data
+    shm_size: '2gb'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  frontend-test:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend-test:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend-test
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  test_data:
+

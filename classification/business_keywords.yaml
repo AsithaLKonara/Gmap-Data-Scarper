@@ -1,0 +1,366 @@
+# Business Classification Keywords
+# Maps keywords and patterns to business types and industries
+
+business_types:
+  restaurant:
+    keywords:
+      - restaurant
+      - cafe
+      - bistro
+      - diner
+      - eatery
+      - food
+      - dining
+      - cuisine
+      - grill
+      - pizzeria
+      - bakery
+      - bar
+      - pub
+      - tavern
+    categories:
+      - Restaurant
+      - Cafe
+      - Bar
+      - Food & Drink
+      - Bakery
+    industry: "Food & Beverage"
+    sub_categories:
+      - Fast Food
+      - Fine Dining
+      - Casual Dining
+      - Coffee Shop
+      - Bar & Grill
+
+  clinic:
+    keywords:
+      - clinic
+      - medical
+      - hospital
+      - doctor
+      - physician
+      - healthcare
+      - health center
+      - medical center
+      - hospital
+      - urgent care
+      - dental
+      - dentist
+      - pharmacy
+    categories:
+      - Hospital
+      - Medical Center
+      - Clinic
+      - Health
+      - Pharmacy
+    industry: "Healthcare"
+    sub_categories:
+      - General Practice
+      - Specialist
+      - Dental
+      - Urgent Care
+      - Pharmacy
+
+  salon:
+    keywords:
+      - salon
+      - hair salon
+      - beauty salon
+      - barbershop
+      - spa
+      - nail salon
+      - beauty parlor
+      - hair stylist
+      - barber
+      - cosmetology
+    categories:
+      - Beauty Salon
+      - Hair Salon
+      - Spa
+      - Barbershop
+    industry: "Beauty & Personal Care"
+    sub_categories:
+      - Hair Salon
+      - Nail Salon
+      - Spa
+      - Barbershop
+
+  software_company:
+    keywords:
+      - software
+      - tech
+      - technology
+      - IT
+      - development
+      - programming
+      - app development
+      - software company
+      - tech company
+      - IT services
+      - software solutions
+      - digital agency
+      - web development
+    categories:
+      - Software Company
+      - Technology
+      - IT Services
+      - Digital Agency
+    industry: "Technology"
+    sub_categories:
+      - Software Development
+      - Web Development
+      - Mobile App Development
+      - IT Consulting
+      - Digital Marketing
+
+  real_estate:
+    keywords:
+      - real estate
+      - realtor
+      - property
+      - realty
+      - estate agent
+      - property management
+      - real estate agency
+      - housing
+      - real estate broker
+    categories:
+      - Real Estate Agency
+      - Property Management
+      - Real Estate Broker
+    industry: "Real Estate"
+    sub_categories:
+      - Residential
+      - Commercial
+      - Property Management
+      - Real Estate Brokerage
+
+  education:
+    keywords:
+      - school
+      - university
+      - college
+      - academy
+      - institute
+      - education
+      - learning
+      - training
+      - tutoring
+      - educational
+      - preschool
+      - kindergarten
+    categories:
+      - School
+      - University
+      - College
+      - Academy
+      - Training Center
+    industry: "Education"
+    sub_categories:
+      - K-12
+      - Higher Education
+      - Vocational Training
+      - Tutoring
+      - Online Education
+
+  retail:
+    keywords:
+      - store
+      - shop
+      - retail
+      - boutique
+      - market
+      - shopping
+      - retail store
+      - department store
+      - convenience store
+    categories:
+      - Store
+      - Shop
+      - Retail Store
+      - Boutique
+      - Market
+    industry: "Retail"
+    sub_categories:
+      - Clothing
+      - Electronics
+      - Grocery
+      - Specialty Store
+      - Department Store
+
+  automotive:
+    keywords:
+      - auto
+      - car
+      - vehicle
+      - automotive
+      - mechanic
+      - garage
+      - car repair
+      - auto repair
+      - dealership
+      - car dealer
+    categories:
+      - Auto Repair
+      - Car Dealership
+      - Auto Service
+      - Garage
+    industry: "Automotive"
+    sub_categories:
+      - Auto Repair
+      - Car Dealership
+      - Auto Parts
+      - Car Wash
+
+  legal:
+    keywords:
+      - law
+      - lawyer
+      - attorney
+      - legal
+      - law firm
+      - legal services
+      - attorney at law
+      - law office
+    categories:
+      - Law Firm
+      - Legal Services
+      - Attorney
+    industry: "Legal Services"
+    sub_categories:
+      - Corporate Law
+      - Criminal Law
+      - Family Law
+      - Personal Injury
+
+  finance:
+    keywords:
+      - bank
+      - financial
+      - finance
+      - accounting
+      - accountant
+      - financial services
+      - investment
+      - insurance
+      - credit union
+    categories:
+      - Bank
+      - Financial Services
+      - Accounting
+      - Insurance
+    industry: "Finance"
+    sub_categories:
+      - Banking
+      - Accounting
+      - Insurance
+      - Investment
+
+  marketing:
+    keywords:
+      - marketing
+      - advertising
+      - agency
+      - digital marketing
+      - marketing agency
+      - ad agency
+      - marketing services
+      - SEO
+      - social media marketing
+    categories:
+      - Marketing Agency
+      - Advertising Agency
+      - Digital Marketing
+    industry: "Marketing & Advertising"
+    sub_categories:
+      - Digital Marketing
+      - SEO
+      - Social Media Marketing
+      - Traditional Advertising
+
+  construction:
+    keywords:
+      - construction
+      - contractor
+      - builder
+      - construction company
+      - construction services
+      - home builder
+      - general contractor
+    categories:
+      - Construction Company
+      - Contractor
+      - Builder
+    industry: "Construction"
+    sub_categories:
+      - Residential Construction
+      - Commercial Construction
+      - General Contractor
+      - Specialty Contractor
+
+  fitness:
+    keywords:
+      - gym
+      - fitness
+      - workout
+      - exercise
+      - fitness center
+      - health club
+      - personal trainer
+      - yoga
+      - pilates
+    categories:
+      - Gym
+      - Fitness Center
+      - Health Club
+      - Yoga Studio
+    industry: "Fitness & Recreation"
+    sub_categories:
+      - Gym
+      - Yoga Studio
+      - Personal Training
+      - CrossFit
+
+  hotel:
+    keywords:
+      - hotel
+      - motel
+      - inn
+      - lodging
+      - accommodation
+      - resort
+      - hospitality
+    categories:
+      - Hotel
+      - Motel
+      - Resort
+      - Inn
+    industry: "Hospitality"
+    sub_categories:
+      - Hotel
+      - Resort
+      - Motel
+      - Bed & Breakfast
+
+industries:
+  - Food & Beverage
+  - Healthcare
+  - Beauty & Personal Care
+  - Technology
+  - Real Estate
+  - Education
+  - Retail
+  - Automotive
+  - Legal Services
+  - Finance
+  - Marketing & Advertising
+  - Construction
+  - Fitness & Recreation
+  - Hospitality
+  - Manufacturing
+  - Transportation
+  - Entertainment
+  - Agriculture
+  - Energy
+  - Government
+

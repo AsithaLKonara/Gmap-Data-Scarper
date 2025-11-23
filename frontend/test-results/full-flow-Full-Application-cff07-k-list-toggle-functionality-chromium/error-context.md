@@ -1,0 +1,114 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e6]:
+      - heading "Data Usage Consent" [level=2] [ref=e7]
+      - generic [ref=e8]:
+        - paragraph [ref=e9]:
+          - strong [ref=e10]: "Important:"
+          - text: This tool collects publicly available information from Google Maps and social media platforms.
+        - generic [ref=e11]:
+          - heading "What We Collect:" [level=3] [ref=e12]
+          - list [ref=e13]:
+            - listitem [ref=e14]: Publicly displayed business information (name, address, phone, website)
+            - listitem [ref=e15]: Public social media profiles and posts
+            - listitem [ref=e16]: Contact information that is publicly visible
+        - generic [ref=e17]:
+          - heading "How We Use This Data:" [level=3] [ref=e18]
+          - list [ref=e19]:
+            - listitem [ref=e20]: For B2B lead generation and outreach purposes only
+            - listitem [ref=e21]: To help you find potential customers or partners
+            - listitem [ref=e22]: Data is stored locally on your device
+        - generic [ref=e23]:
+          - heading "Data Retention:" [level=3] [ref=e24]
+          - paragraph [ref=e25]: Collected data is automatically deleted after 6 months. You can also request immediate removal of any record.
+        - generic [ref=e26]:
+          - heading "Your Rights:" [level=3] [ref=e27]
+          - list [ref=e28]:
+            - listitem [ref=e29]: You can request removal of any collected data
+            - listitem [ref=e30]: You can export your data at any time
+            - listitem [ref=e31]: You can opt-out of specific platforms
+        - paragraph [ref=e33]:
+          - strong [ref=e34]: "Legal Notice:"
+          - text: This tool only collects publicly available information. Use this data responsibly and in compliance with local privacy laws (GDPR, CCPA, etc.). Do not use collected data for spam or unsolicited communications.
+      - generic [ref=e35]:
+        - button "Disagree" [ref=e36] [cursor=pointer]
+        - button "I Agree" [ref=e37] [cursor=pointer]
+    - generic [ref=e38]:
+      - generic [ref=e41]:
+        - generic [ref=e42]:
+          - heading "Lead Intelligence Platform" [level=1] [ref=e43]
+          - button "Show Tasks" [ref=e44] [cursor=pointer]
+        - generic [ref=e45] [cursor=pointer]:
+          - heading "Push Notifications" [level=2] [ref=e46]
+          - generic [ref=e47]:
+            - paragraph [ref=e49]: "Status: Not Subscribed"
+            - button "Subscribe to Notifications" [ref=e51]
+        - generic [ref=e52] [cursor=pointer]:
+          - heading "Search Queries" [level=2] [ref=e53]
+          - generic [ref=e54]:
+            - textbox "e.g., ICT students in Toronto" [ref=e57]
+            - button "+ Add Query" [ref=e58]
+        - generic [ref=e59] [cursor=pointer]:
+          - heading "Platforms" [level=2] [ref=e60]
+          - generic [ref=e61]:
+            - generic [ref=e62]:
+              - checkbox "google maps" [checked] [ref=e63]
+              - generic [ref=e64]: google maps
+            - generic [ref=e65]:
+              - checkbox "facebook" [ref=e66]
+              - generic [ref=e67]: facebook
+            - generic [ref=e68]:
+              - checkbox "instagram" [ref=e69]
+              - generic [ref=e70]: instagram
+            - generic [ref=e71]:
+              - checkbox "linkedin" [ref=e72]
+              - generic [ref=e73]: linkedin
+            - generic [ref=e74]:
+              - checkbox "x" [ref=e75]
+              - generic [ref=e76]: x
+            - generic [ref=e77]:
+              - checkbox "youtube" [ref=e78]
+              - generic [ref=e79]: youtube
+            - generic [ref=e80]:
+              - checkbox "tiktok" [ref=e81]
+              - generic [ref=e82]: tiktok
+        - generic [ref=e83] [cursor=pointer]:
+          - heading "Education/Career Filters" [level=2] [ref=e84]
+          - textbox "Field of Study (e.g., ICT, Computer Science)" [ref=e86]
+          - generic [ref=e87]:
+            - generic [ref=e88]:
+              - checkbox "Students Only" [ref=e89]
+              - generic [ref=e90]: Students Only
+            - generic [ref=e91]:
+              - checkbox "Only Leads with Phone Numbers" [ref=e92]
+              - generic [ref=e93]: Only Leads with Phone Numbers
+        - generic [ref=e95] [cursor=pointer]:
+          - heading "Query Optimization" [level=2] [ref=e96]
+          - generic [ref=e97]:
+            - checkbox "Enable" [checked] [ref=e98]
+            - generic [ref=e99]: Enable
+        - generic [ref=e100] [cursor=pointer]:
+          - heading "Controls" [level=2] [ref=e101]
+          - button "Start Scraping" [disabled] [ref=e102]
+        - generic [ref=e103] [cursor=pointer]:
+          - heading "Results" [level=2] [ref=e104]
+          - generic [ref=e107]: "Total Leads: 0"
+        - generic [ref=e108] [cursor=pointer]:
+          - heading "Export" [level=2] [ref=e109]
+          - generic [ref=e110]:
+            - generic [ref=e111]: "Format:"
+            - combobox [ref=e112]:
+              - option "CSV" [selected]
+              - option "JSON"
+              - option "Excel (.xlsx)"
+          - button "Export CSV" [disabled] [ref=e113]
+      - generic [ref=e114]:
+        - generic [ref=e117]:
+          - paragraph [ref=e118]: Start a scraping task
+          - paragraph [ref=e119]: Begin scraping to see the live browser view
+        - generic [ref=e123]: No logs yet...
+  - alert [ref=e124]
+```

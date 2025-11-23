@@ -1,0 +1,109 @@
+services:
+  # Backend API Service
+  - type: web
+    name: lead-intelligence-api
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    region: oregon
+    healthCheckPath: /api/health
+    envVars:
+      - key: API_HOST
+        value: 0.0.0.0
+      - key: API_PORT
+        value: 8000
+      - key: API_RELOAD
+        value: "false"
+      - key: CORS_ORIGINS
+        sync: false  # Set in dashboard
+      - key: DATABASE_URL
+        fromDatabase:
+          name: lead-intelligence-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: lead-intelligence-redis
+          type: redis
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "1440"
+      - key: JWT_REFRESH_TOKEN_EXPIRE_DAYS
+        value: "30"
+      - key: TASK_TIMEOUT_SECONDS
+        value: "3600"
+      - key: CHROME_DEBUG_PORT
+        value: "9222"
+      - key: STREAM_FPS
+        value: "2"
+      - key: OUTPUT_DIR
+        value: "/app/data"
+      - key: SCREENSHOT_DIR
+        value: "/app/screenshots"
+      - key: USE_HUGGINGFACE
+        value: "true"
+      - key: OPENAI_API_KEY
+        sync: false  # Set in dashboard
+      - key: STRIPE_SECRET_KEY
+        sync: false  # Set in dashboard
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false  # Set in dashboard
+      - key: STRIPE_PRICE_ID_MONTHLY
+        sync: false  # Set in dashboard
+      - key: STRIPE_PRICE_ID_USAGE_BASED
+        sync: false  # Set in dashboard
+    disk:
+      name: lead-intelligence-data
+      mountPath: /app/data
+      sizeGB: 10
+
+  # PostgreSQL Database
+  - type: pspg
+    name: lead-intelligence-db
+    plan: starter
+    region: oregon
+    databaseName: lead_intelligence
+    user: lead_intelligence_user
+
+  # Redis Cache
+  - type: redis
+    name: lead-intelligence-redis
+    plan: starter
+    region: oregon
+    maxmemoryPolicy: allkeys-lru
+
+  # Celery Worker (Optional - for background tasks)
+  - type: worker
+    name: lead-intelligence-worker
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    region: oregon
+    command: celery -A backend.celery_app worker --loglevel=info --concurrency=2
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: lead-intelligence-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: lead-intelligence-redis
+          type: redis
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        fromService:
+          name: lead-intelligence-api
+          type: web
+          property: JWT_SECRET_KEY
+      - key: OUTPUT_DIR
+        value: "/app/data"
+      - key: SCREENSHOT_DIR
+        value: "/app/screenshots"
+    disk:
+      name: lead-intelligence-worker-data
+      mountPath: /app/data
+      sizeGB: 10
+

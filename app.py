@@ -21,7 +21,7 @@ QUERIES_FILE = os.path.join(os.path.dirname(__file__), "search_queries.txt")
 OUTPUT_CSV = os.path.expanduser("~/Documents/gmap_all_leads.csv")
 RETRY_ATTEMPTS = 3
 DELAY_BETWEEN_QUERIES = 10  # Add delay between queries
-MAX_RESULTS_PER_QUERY = 20  # Increased limit for more results per query
+MAX_RESULTS_PER_QUERY = 0  # 0 = unlimited, process ALL results found
 RESUME_MODE = False  # Process all queries (including already done ones)
 
 # Use simple text instead of emojis for better compatibility
@@ -289,8 +289,13 @@ def main():
 
         visited = set()
 
-        # Limit results to prevent overload
-        max_results = min(len(result_items), MAX_RESULTS_PER_QUERY)
+        # Process ALL results if MAX_RESULTS_PER_QUERY is 0, otherwise use limit
+        if MAX_RESULTS_PER_QUERY == 0 or MAX_RESULTS_PER_QUERY >= len(result_items):
+            max_results = len(result_items)
+            print(f"[INFO] Processing ALL {max_results} results (unlimited mode)")
+        else:
+            max_results = min(len(result_items), MAX_RESULTS_PER_QUERY)
+            print(f"[INFO] Processing {max_results} of {len(result_items)} results")
         
         for index in range(max_results):
             try:
@@ -312,22 +317,46 @@ def main():
                     driver.execute_script("arguments[0].click();", result)
 
                 time.sleep(3)  # Reduced wait time
-                info = extract_info(driver, query)
-                write_result_to_csv(info, OUTPUT_CSV)
-                total_saved += 1
-                print(f"  [SUCCESS] {index+1}. {info[1]}")
+                try:
+                    info = extract_info(driver, query)
+                    write_result_to_csv(info, OUTPUT_CSV)
+                    total_saved += 1
+                    name = info[1] if len(info) > 1 else "N/A"
+                    address = info[3] if len(info) > 3 and info[3] != "N/A" else ""
+                    print(f"  ✓ [{index+1}/{max_results}] Collected: {name}")
+                    if address:
+                        print(f"     Address: {address[:60]}")
+                    if len(info) > 4 and info[4] != "N/A":
+                        print(f"     Phone: {info[4]}")
+                    if len(info) > 5 and info[5] != "N/A":
+                        print(f"     Website: {info[5]}")
+                except Exception as extract_error:
+                    print(f"  [ERROR] Failed to extract info for result {index+1}: {extract_error}")
+                    import traceback
+                    traceback.print_exc()
+                    continue
                 
                 # Add delay between results
                 time.sleep(2)
+            except KeyboardInterrupt:
+                print(f"\n[INTERRUPTED] Scraping stopped by user")
+                raise
             except Exception as e:
-                print(f"  [WARNING] Error at result {index+1}: {e}")
+                print(f"  [ERROR] Error at result {index+1}: {e}")
+                import traceback
+                traceback.print_exc()
                 continue
 
-    driver.quit()
+    try:
+        driver.quit()
+    except Exception as e:
+        print(f"[WARNING] Error closing browser: {e}")
 
-    print(f"\n[DONE] Scraped {total_saved} records.")
+    print(f"\n{'='*80}")
+    print(f"[DONE] Total records scraped: {total_saved}")
     print(f"[SAVE] All data saved incrementally to: {OUTPUT_CSV}")
     print(f"[SAFE] Data is safe even if program stops unexpectedly!")
+    print(f"{'='*80}")
 
 if __name__ == "__main__":
     main()

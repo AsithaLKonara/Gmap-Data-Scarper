@@ -1,0 +1,258 @@
+# Industry Query Templates
+# Pre-defined query templates for 200+ industries
+
+industries:
+  restaurant:
+    templates:
+      - "{category} in {location}"
+      - "{category} near {location}"
+      - "best {category} {location}"
+      - "{category} {location}"
+    keywords:
+      - restaurant
+      - cafe
+      - bistro
+      - diner
+      - eatery
+      - food
+      - dining
+
+  marketing:
+    templates:
+      - "{category} agencies in {location}"
+      - "{category} companies {location}"
+      - "digital {category} {location}"
+      - "{category} services {location}"
+    keywords:
+      - marketing
+      - advertising
+      - digital marketing
+      - SEO
+      - social media marketing
+
+  healthcare:
+    templates:
+      - "{category} in {location}"
+      - "{category} {location}"
+      - "medical {category} {location}"
+      - "{category} clinic {location}"
+    keywords:
+      - clinic
+      - hospital
+      - medical
+      - healthcare
+      - doctor
+      - dentist
+
+  technology:
+    templates:
+      - "{category} companies in {location}"
+      - "{category} firms {location}"
+      - "IT {category} {location}"
+      - "software {category} {location}"
+    keywords:
+      - software
+      - tech
+      - IT
+      - technology
+      - development
+
+  real_estate:
+    templates:
+      - "{category} in {location}"
+      - "{category} agents {location}"
+      - "real estate {location}"
+      - "property {category} {location}"
+    keywords:
+      - real estate
+      - realtor
+      - property
+      - realty
+
+  education:
+    templates:
+      - "{category} in {location}"
+      - "{category} {location}"
+      - "schools {location}"
+      - "educational {category} {location}"
+    keywords:
+      - school
+      - university
+      - college
+      - academy
+      - education
+
+  retail:
+    templates:
+      - "{category} stores in {location}"
+      - "{category} shops {location}"
+      - "retail {category} {location}"
+      - "{category} {location}"
+    keywords:
+      - store
+      - shop
+      - retail
+      - boutique
+
+  automotive:
+    templates:
+      - "{category} in {location}"
+      - "auto {category} {location}"
+      - "car {category} {location}"
+      - "{category} services {location}"
+    keywords:
+      - auto
+      - car
+      - automotive
+      - mechanic
+      - garage
+
+  legal:
+    templates:
+      - "{category} in {location}"
+      - "law firms {location}"
+      - "attorneys {location}"
+      - "legal {category} {location}"
+    keywords:
+      - law
+      - lawyer
+      - attorney
+      - legal
+
+  finance:
+    templates:
+      - "{category} in {location}"
+      - "financial {category} {location}"
+      - "{category} services {location}"
+      - "{category} {location}"
+    keywords:
+      - bank
+      - financial
+      - finance
+      - accounting
+      - insurance
+
+  construction:
+    templates:
+      - "{category} companies in {location}"
+      - "{category} contractors {location}"
+      - "construction {location}"
+      - "{category} {location}"
+    keywords:
+      - construction
+      - contractor
+      - builder
+
+  fitness:
+    templates:
+      - "{category} in {location}"
+      - "gyms {location}"
+      - "fitness {category} {location}"
+      - "{category} {location}"
+    keywords:
+      - gym
+      - fitness
+      - workout
+      - exercise
+
+  hotel:
+    templates:
+      - "{category} in {location}"
+      - "hotels {location}"
+      - "accommodation {location}"
+      - "{category} {location}"
+    keywords:
+      - hotel
+      - motel
+      - inn
+      - resort
+
+  beauty:
+    templates:
+      - "{category} in {location}"
+      - "salons {location}"
+      - "beauty {category} {location}"
+      - "{category} {location}"
+    keywords:
+      - salon
+      - beauty
+      - spa
+      - barbershop
+
+  consulting:
+    templates:
+      - "{category} firms in {location}"
+      - "{category} consultants {location}"
+      - "consulting {location}"
+      - "{category} {location}"
+    keywords:
+      - consulting
+      - consultant
+      - advisory
+
+  manufacturing:
+    templates:
+      - "{category} companies in {location}"
+      - "manufacturing {location}"
+      - "{category} {location}"
+    keywords:
+      - manufacturing
+      - factory
+      - production
+
+  transportation:
+    templates:
+      - "{category} in {location}"
+      - "transport {location}"
+      - "{category} services {location}"
+    keywords:
+      - transportation
+      - logistics
+      - shipping
+      - delivery
+
+  entertainment:
+    templates:
+      - "{category} in {location}"
+      - "entertainment {location}"
+      - "{category} venues {location}"
+    keywords:
+      - entertainment
+      - theater
+      - cinema
+      - event
+
+  agriculture:
+    templates:
+      - "{category} in {location}"
+      - "farms {location}"
+      - "agricultural {category} {location}"
+    keywords:
+      - farm
+      - agriculture
+      - farming
+
+  energy:
+    templates:
+      - "{category} companies in {location}"
+      - "energy {location}"
+      - "{category} {location}"
+    keywords:
+      - energy
+      - solar
+      - renewable
+      - power
+
+  government:
+    templates:
+      - "{category} in {location}"
+      - "government {location}"
+      - "{category} offices {location}"
+    keywords:
+      - government
+      - public
+      - municipal
+
+# Default template if industry not found
+default_template: "{category} in {location}"
+
