@@ -14,7 +14,7 @@ class AuditLog(Base):
     action = Column(String, nullable=False)  # "create", "update", "delete", "restore"
     user_id = Column(String, nullable=True, index=True)
     changes = Column(JSON, nullable=True)  # JSON object with field: {old: value, new: value}
-    metadata = Column(JSON, nullable=True)  # Additional metadata
+    metadata_json = Column(JSON, nullable=True)  # Additional metadata (renamed from 'metadata' to avoid SQLAlchemy conflict)
     ip_address = Column(String, nullable=True)
     user_agent = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)

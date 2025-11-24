@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '002_add_audit_log_table'
-down_revision = '001_add_soft_deletes_and_audit_trail'
+down_revision = '001'
 branch_labels = None
 depends_on = None
 
@@ -25,7 +25,7 @@ def upgrade() -> None:
         sa.Column('action', sa.String(), nullable=False),
         sa.Column('user_id', sa.String(), nullable=True),
         sa.Column('changes', sa.JSON(), nullable=True),
-        sa.Column('metadata', sa.JSON(), nullable=True),
+        sa.Column('metadata_json', sa.JSON(), nullable=True),
         sa.Column('ip_address', sa.String(), nullable=True),
         sa.Column('user_agent', sa.String(), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=False),
