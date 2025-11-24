@@ -13,6 +13,37 @@ from backend.utils.soft_delete import (
 )
 from backend.utils.error_handler import not_found_error, handle_exception
 from sqlalchemy.orm import Session
+import os
+
+
+def check_admin_access(db: Session, user_id: str) -> bool:
+    """
+    Check if user has admin access.
+    
+    For now, checks against ADMIN_USER_IDS environment variable (comma-separated).
+    Can be extended to check User.is_admin field if added in future.
+    
+    Args:
+        db: Database session
+        user_id: User ID to check
+        
+    Returns:
+        True if user is admin, False otherwise
+    """
+    # Check environment variable for admin user IDs
+    admin_user_ids = os.getenv("ADMIN_USER_IDS", "").split(",")
+    admin_user_ids = [uid.strip() for uid in admin_user_ids if uid.strip()]
+    
+    if user_id in admin_user_ids:
+        return True
+    
+    # Future: Check User.is_admin field if it exists
+    # from backend.models.user import User
+    # user = db.query(User).filter(User.id == user_id).first()
+    # if user and getattr(user, 'is_admin', False):
+    #     return True
+    
+    return False
 
 router = APIRouter(prefix="/api/soft-delete", tags=["soft-delete"])
 
@@ -176,7 +207,14 @@ async def hard_delete_lead_endpoint(
         Success message
     """
     try:
-        # TODO: Add admin check or confirmation
+        # Check if user is admin
+        user_id = current_user.get("user_id")
+        if not check_admin_access(db, user_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin access required for hard delete operations"
+            )
+        
         success = hard_delete_lead(db, lead_id)
         
         if not success:
@@ -212,7 +250,14 @@ async def hard_delete_task_endpoint(
         Success message
     """
     try:
-        # TODO: Add admin check or confirmation
+        # Check if user is admin
+        user_id = current_user.get("user_id")
+        if not check_admin_access(db, user_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin access required for hard delete operations"
+            )
+        
         success = hard_delete_task(db, task_id)
         
         if not success:

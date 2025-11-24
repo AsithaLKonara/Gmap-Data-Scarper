@@ -2,7 +2,9 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
 from backend.middleware.auth import get_current_user
+from backend.dependencies import get_db
 
 router = APIRouter(prefix="/api/workflows", tags=["workflows"])
 
@@ -27,19 +29,13 @@ class WorkflowUpdate(BaseModel):
 @router.post("/", response_model=Dict[str, Any])
 async def create_workflow(
     workflow: WorkflowCreate,
+    db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Create a new workflow."""
-    from backend.models.database import get_session
     from backend.models.workflow import Workflow
-    from backend.dependencies import get_db
-    from fastapi import Depends
-    from sqlalchemy.orm import Session
     import uuid
     
-    # Note: This endpoint doesn't use dependency injection yet due to complex logic
-    # Will be updated in a future refactor
-    db = get_session()
     try:
         workflow_id = str(uuid.uuid4())
         user_id = current_user["user_id"]
@@ -63,62 +59,53 @@ async def create_workflow(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to create workflow: {str(e)}")
-    finally:
-        db.close()
 
 
 @router.get("/", response_model=List[Dict[str, Any]])
-async def list_workflows(current_user: dict = Depends(get_current_user)):
+async def list_workflows(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
     """List all workflows for the current user."""
-    from backend.models.database import get_session
     from backend.models.workflow import Workflow
     
-    db = get_session()
-    try:
-        user_id = current_user["user_id"]
-        workflows = db.query(Workflow).filter(Workflow.user_id == user_id).all()
-        return [w.to_dict() for w in workflows]
-    finally:
-        db.close()
+    user_id = current_user["user_id"]
+    workflows = db.query(Workflow).filter(Workflow.user_id == user_id).all()
+    return [w.to_dict() for w in workflows]
 
 
 @router.get("/{workflow_id}", response_model=Dict[str, Any])
 async def get_workflow(
     workflow_id: str,
+    db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Get a specific workflow."""
-    from backend.models.database import get_session
     from backend.models.workflow import Workflow
     
-    db = get_session()
-    try:
-        user_id = current_user["user_id"]
-        workflow = db.query(Workflow).filter(
-            Workflow.workflow_id == workflow_id,
-            Workflow.user_id == user_id
-        ).first()
-        
-        if not workflow:
-            raise HTTPException(status_code=404, detail="Workflow not found")
-        
-        return workflow.to_dict()
-    finally:
-        db.close()
+    user_id = current_user["user_id"]
+    workflow = db.query(Workflow).filter(
+        Workflow.workflow_id == workflow_id,
+        Workflow.user_id == user_id
+    ).first()
+    
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    
+    return workflow.to_dict()
 
 
 @router.put("/{workflow_id}", response_model=Dict[str, Any])
 async def update_workflow(
     workflow_id: str,
     update: WorkflowUpdate,
+    db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Update a workflow."""
-    from backend.models.database import get_session
     from backend.models.workflow import Workflow
     from datetime import datetime
     
-    db = get_session()
     try:
         user_id = current_user["user_id"]
         workflow = db.query(Workflow).filter(
@@ -151,20 +138,17 @@ async def update_workflow(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to update workflow: {str(e)}")
-    finally:
-        db.close()
 
 
 @router.delete("/{workflow_id}", response_model=Dict[str, str])
 async def delete_workflow(
     workflow_id: str,
+    db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """Delete a workflow."""
-    from backend.models.database import get_session
     from backend.models.workflow import Workflow
     
-    db = get_session()
     try:
         user_id = current_user["user_id"]
         workflow = db.query(Workflow).filter(
@@ -184,29 +168,23 @@ async def delete_workflow(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to delete workflow: {str(e)}")
-    finally:
-        db.close()
 
 
 @router.get("/{workflow_id}/executions", response_model=List[Dict[str, Any]])
 async def get_workflow_executions(
     workflow_id: str,
+    db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
     limit: int = 50
 ):
     """Get execution history for a workflow."""
-    from backend.models.database import get_session
     from backend.models.workflow import WorkflowExecution
     
-    db = get_session()
-    try:
-        user_id = current_user["user_id"]
-        executions = db.query(WorkflowExecution).filter(
-            WorkflowExecution.workflow_id == workflow_id,
-            WorkflowExecution.user_id == user_id
-        ).order_by(WorkflowExecution.started_at.desc()).limit(limit).all()
-        
-        return [e.to_dict() for e in executions]
-    finally:
-        db.close()
+    user_id = current_user["user_id"]
+    executions = db.query(WorkflowExecution).filter(
+        WorkflowExecution.workflow_id == workflow_id,
+        WorkflowExecution.user_id == user_id
+    ).order_by(WorkflowExecution.started_at.desc()).limit(limit).all()
+    
+    return [e.to_dict() for e in executions]
 

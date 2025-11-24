@@ -2,7 +2,9 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 from backend.middleware.auth import get_current_user
+from backend.dependencies import get_db
 from backend.services.report_builder import report_builder_service
 from backend.services.scheduled_report_service import scheduled_report_service
 
@@ -105,22 +107,18 @@ async def create_scheduled_report(
 
 @router.get("/scheduled", response_model=List[Dict[str, Any]])
 async def list_scheduled_reports(
+    db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """List all scheduled reports for user."""
     try:
-        from backend.models.database import get_session
         from backend.models.scheduled_report import ScheduledReport
         
         user_id = current_user["user_id"]
-        db = get_session()
-        try:
-            reports = db.query(ScheduledReport).filter(
-                ScheduledReport.user_id == user_id
-            ).all()
-            return [r.to_dict() for r in reports]
-        finally:
-            db.close()
+        reports = db.query(ScheduledReport).filter(
+            ScheduledReport.user_id == user_id
+        ).all()
+        return [r.to_dict() for r in reports]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to list reports: {str(e)}")
 
@@ -132,26 +130,21 @@ async def delete_scheduled_report(
 ):
     """Delete a scheduled report."""
     try:
-        from backend.models.database import get_session
         from backend.models.scheduled_report import ScheduledReport
         
         user_id = current_user["user_id"]
-        db = get_session()
-        try:
-            report = db.query(ScheduledReport).filter(
-                ScheduledReport.report_id == report_id,
-                ScheduledReport.user_id == user_id
-            ).first()
-            
-            if not report:
-                raise HTTPException(status_code=404, detail="Report not found")
-            
-            report.is_active = False
-            db.commit()
-            
-            return {"status": "deleted", "report_id": report_id}
-        finally:
-            db.close()
+        report = db.query(ScheduledReport).filter(
+            ScheduledReport.report_id == report_id,
+            ScheduledReport.user_id == user_id
+        ).first()
+        
+        if not report:
+            raise HTTPException(status_code=404, detail="Report not found")
+        
+        report.is_active = False
+        db.commit()
+        
+        return {"status": "deleted", "report_id": report_id}
     except HTTPException:
         raise
     except Exception as e:
