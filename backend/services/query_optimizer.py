@@ -34,7 +34,7 @@ class QueryOptimizer:
             Optimized SQLAlchemy query
         """
         db = get_session()
-        query = db.query(Lead)
+        query = db.query(Lead).filter(Lead.deleted_at.is_(None))  # Exclude soft-deleted leads
         
         # Apply filters in order of index availability
         # 1. Task + Platform (composite index)
@@ -73,7 +73,8 @@ class QueryOptimizer:
         db = get_session()
         try:
             query = db.query(Lead).filter(
-                Lead.phone_normalized.isnot(None)
+                Lead.phone_normalized.isnot(None),
+                Lead.deleted_at.is_(None)  # Exclude soft-deleted leads
             )
             
             if task_id:
@@ -107,7 +108,8 @@ class QueryOptimizer:
         db = get_session()
         try:
             query = db.query(Lead).filter(
-                Lead.field_of_study.ilike(f"%{field_of_study}%")
+                Lead.field_of_study.ilike(f"%{field_of_study}%"),
+                Lead.deleted_at.is_(None)  # Exclude soft-deleted leads
             )
             
             if city:
@@ -139,7 +141,7 @@ class QueryOptimizer:
         """
         db = get_session()
         try:
-            query = db.query(Lead)
+            query = db.query(Lead).filter(Lead.deleted_at.is_(None))  # Exclude soft-deleted leads
             
             if start_date:
                 query = query.filter(Lead.extracted_at >= start_date)
@@ -154,7 +156,7 @@ class QueryOptimizer:
                 func.avg(
                     func.cast(Lead.followers, func.Integer)
                 ).label('avg_followers')
-            ).group_by(Lead.platform).all()
+            ).filter(Lead.deleted_at.is_(None)).group_by(Lead.platform).all()
             
             return {
                 platform: {

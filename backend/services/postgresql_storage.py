@@ -65,7 +65,8 @@ class PostgreSQLStorage:
                     profile_url = result.get("profile_url", "")
                     existing = db.query(Lead).filter(
                         Lead.task_id == task_id,
-                        Lead.profile_url == profile_url
+                        Lead.profile_url == profile_url,
+                        Lead.deleted_at.is_(None)  # Exclude soft-deleted leads
                     ).first()
                     
                     if existing:
@@ -164,7 +165,8 @@ class PostgreSQLStorage:
                 profile_url = result.get("profile_url", "")
                 existing = db.query(Lead).filter(
                     Lead.task_id == task_id,
-                    Lead.profile_url == profile_url
+                    Lead.profile_url == profile_url,
+                    Lead.deleted_at.is_(None)  # Exclude soft-deleted leads
                 ).first()
                 
                 if existing:
@@ -387,13 +389,13 @@ class PostgreSQLStorage:
                 platform_stats = db.query(
                     Lead.platform,
                     func.count(Lead.id).label('count')
-                ).group_by(Lead.platform).order_by(func.count(Lead.id).desc()).all()
+                ).filter(Lead.deleted_at.is_(None)).group_by(Lead.platform).order_by(func.count(Lead.id).desc()).all()
                 
                 # By field of study (optimized with index)
                 field_stats = db.query(
                     Lead.field_of_study,
                     func.count(Lead.id).label('count')
-                ).filter(Lead.field_of_study.isnot(None)).group_by(Lead.field_of_study).order_by(func.count(Lead.id).desc()).limit(20).all()
+                ).filter(Lead.field_of_study.isnot(None), Lead.deleted_at.is_(None)).group_by(Lead.field_of_study).order_by(func.count(Lead.id).desc()).limit(20).all()
                 
                 return {
                     "total": total,

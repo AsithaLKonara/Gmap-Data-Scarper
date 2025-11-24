@@ -64,7 +64,8 @@ class ScrapeRequest(BaseModel):
         
         return validated_platforms
     
-    @validator('field_of_study')
+    @field_validator('field_of_study')
+    @classmethod
     def validate_field_of_study(cls, v):
         """Sanitize field of study."""
         if v:
