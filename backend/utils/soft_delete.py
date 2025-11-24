@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Optional
 from sqlalchemy.orm import Session
 from backend.models.database import Lead, Task
+from backend.utils.audit_trail import track_change
 
 
 def soft_delete_lead(
@@ -29,12 +30,24 @@ def soft_delete_lead(
     if not lead:
         return False
     
+    old_deleted_at = lead.deleted_at
     lead.deleted_at = datetime.utcnow()
     lead.modified_at = datetime.utcnow()
     if deleted_by:
         lead.modified_by = deleted_by
     
     db.commit()
+    
+    # Track audit log
+    track_change(
+        table_name="leads",
+        record_id=str(lead.id),
+        action="delete",
+        user_id=deleted_by,
+        changes={"deleted_at": {"old": None, "new": lead.deleted_at.isoformat()}},
+        metadata={"task_id": lead.task_id, "profile_url": lead.profile_url}
+    )
+    
     return True
 
 
@@ -62,12 +75,24 @@ def restore_lead(
     if lead.deleted_at is None:
         return False  # Already restored
     
+    old_deleted_at = lead.deleted_at
     lead.deleted_at = None
     lead.modified_at = datetime.utcnow()
     if restored_by:
         lead.modified_by = restored_by
     
     db.commit()
+    
+    # Track audit log
+    track_change(
+        table_name="leads",
+        record_id=str(lead.id),
+        action="restore",
+        user_id=restored_by,
+        changes={"deleted_at": {"old": old_deleted_at.isoformat() if old_deleted_at else None, "new": None}},
+        metadata={"task_id": lead.task_id, "profile_url": lead.profile_url}
+    )
+    
     return True
 
 
@@ -95,12 +120,24 @@ def soft_delete_task(
     if not task:
         return False
     
+    old_deleted_at = task.deleted_at
     task.deleted_at = datetime.utcnow()
     task.modified_at = datetime.utcnow()
     if deleted_by:
         task.modified_by = deleted_by
     
     db.commit()
+    
+    # Track audit log
+    track_change(
+        table_name="tasks",
+        record_id=str(task.task_id),
+        action="delete",
+        user_id=deleted_by,
+        changes={"deleted_at": {"old": None, "new": task.deleted_at.isoformat()}},
+        metadata={"status": task.status}
+    )
+    
     return True
 
 
@@ -128,12 +165,24 @@ def restore_task(
     if task.deleted_at is None:
         return False  # Already restored
     
+    old_deleted_at = task.deleted_at
     task.deleted_at = None
     task.modified_at = datetime.utcnow()
     if restored_by:
         task.modified_by = restored_by
     
     db.commit()
+    
+    # Track audit log
+    track_change(
+        table_name="tasks",
+        record_id=str(task.task_id),
+        action="restore",
+        user_id=restored_by,
+        changes={"deleted_at": {"old": old_deleted_at.isoformat() if old_deleted_at else None, "new": None}},
+        metadata={"status": task.status}
+    )
+    
     return True
 
 
