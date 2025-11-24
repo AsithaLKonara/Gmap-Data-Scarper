@@ -60,29 +60,54 @@ def get_audit_info(obj: Any) -> Dict[str, Any]:
 
 
 def track_change(
-    db: Session,
-    model_class: Any,
-    record_id: Any,
-    user_id: Optional[str],
+    table_name: str,
+    record_id: str,
     action: str,
-    changes: Optional[Dict[str, Any]] = None
+    user_id: Optional[str] = None,
+    changes: Optional[Dict[str, Any]] = None,
+    metadata: Optional[Dict[str, Any]] = None,
+    ip_address: Optional[str] = None,
+    user_agent: Optional[str] = None
 ) -> None:
     """
-    Track a change to a record (for future audit log table implementation).
+    Track a change to a record.
     
     Args:
-        db: Database session
-        model_class: Model class
-        record_id: ID of the record being changed
-        user_id: User ID performing the action
-        action: Action type (create, update, delete, restore)
-        changes: Dictionary of field changes (optional)
+        table_name: Name of the table
+        record_id: ID of the record
+        action: Action performed (create, update, delete, restore)
+        user_id: User who made the change
+        changes: Dictionary of field changes {field: {old: value, new: value}}
+        metadata: Additional metadata
+        ip_address: IP address of the user
+        user_agent: User agent string
     """
-    # TODO: Implement audit log table and store changes
-    # For now, this is a placeholder for future implementation
-    import logging
-    logging.info(
-        f"Audit: {action} on {model_class.__name__} (id={record_id}) "
-        f"by user={user_id}, changes={changes}"
-    )
+    try:
+        from backend.models.database import get_session
+        from backend.models.audit_log import AuditLog
+        
+        db = get_session()
+        try:
+            audit_log = AuditLog(
+                table_name=table_name,
+                record_id=str(record_id),
+                action=action,
+                user_id=user_id,
+                changes=changes,
+                metadata_json=metadata,  # Use metadata_json to avoid SQLAlchemy conflict
+                ip_address=ip_address,
+                user_agent=user_agent,
+                created_at=datetime.utcnow()
+            )
+            db.add(audit_log)
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            import logging
+            logging.error(f"Failed to create audit log entry: {e}", exc_info=True)
+        finally:
+            db.close()
+    except Exception as e:
+        import logging
+        logging.error(f"Error creating audit log: {e}", exc_info=True)
 

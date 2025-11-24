@@ -214,6 +214,17 @@ class PostgreSQLStorage:
                 
                 db.add(lead)
                 db.commit()
+                db.refresh(lead)
+                
+                # Track audit log for new lead
+                if user_id:
+                    track_change(
+                        table_name="leads",
+                        record_id=str(lead.id),
+                        action="create",
+                        user_id=user_id,
+                        metadata={"task_id": task_id, "platform": lead.platform, "profile_url": lead.profile_url}
+                    )
                 
                 # Dual-write to CSV if enabled
                 if self.enable_csv_dual_write:
