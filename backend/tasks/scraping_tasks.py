@@ -4,6 +4,7 @@ from typing import Dict, List, Optional
 import sys
 import os
 import uuid
+import logging
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -19,12 +20,12 @@ class ScrapingTask(Task):
     
     def on_failure(self, exc, task_id, args, kwargs, einfo):
         """Handle task failure."""
-        print(f"[CELERY] Task {task_id} failed: {exc}")
+        logging.error(f"[CELERY] Task {task_id} failed: {exc}", exc_info=True)
         # Could emit WebSocket event here
     
     def on_success(self, retval, task_id, args, kwargs):
         """Handle task success."""
-        print(f"[CELERY] Task {task_id} completed successfully")
+        logging.info(f"[CELERY] Task {task_id} completed successfully")
 
 
 @celery_app.task(
@@ -67,7 +68,8 @@ def run_scraping_task(
         
         def on_log(message: str):
             """Log callback."""
-            print(f"[TASK {task_id}] {message}")
+            import logging
+            logging.info(f"[TASK {task_id}] {message}")
             # Could emit WebSocket event here
         
         def on_progress(progress: Dict[str, int]):
@@ -93,11 +95,12 @@ def run_scraping_task(
                 storage = get_postgresql_storage()
                 storage.save_lead(task_id, result)
             except Exception as e:
-                print(f"[TASK {task_id}] Error saving to DB: {e}")
+                logging.error(f"[TASK {task_id}] Error saving to DB: {e}", exc_info=True)
         
         def on_finish():
             """Finish callback."""
-            print(f"[TASK {task_id}] Scraping completed")
+            import logging
+            logging.info(f"[TASK {task_id}] Scraping completed")
         
         # Convert request data to ScrapeRequest
         request = ScrapeRequest(**request_data)
@@ -146,7 +149,7 @@ def stop_scraping_task(task_id: str):
     from redis import Redis
     redis_client = Redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379/0"))
     redis_client.set(f"stop_task:{task_id}", "1", ex=3600)  # Expire after 1 hour
-    print(f"[CELERY] Stop signal sent for task {task_id}")
+    logging.info(f"[CELERY] Stop signal sent for task {task_id}")
 
 
 @celery_app.task(

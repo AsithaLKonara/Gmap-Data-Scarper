@@ -7,6 +7,7 @@ import os
 import sys
 import json
 import asyncio
+import logging
 
 # Add parent directory to path to import orchestrator_core
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -200,7 +201,7 @@ class TaskManager:
                     return  # Skip saving duplicate
             except Exception as e:
                 # Log error but continue
-                print(f"[DEDUP] Error checking duplicates: {e}")
+                logging.error(f"[DEDUP] Error checking duplicates: {e}", exc_info=True)
             
             # Enrichment: Phone verification
             try:
@@ -224,7 +225,7 @@ class TaskManager:
                         # Update result dict
                         result["phones"] = phones_data
             except Exception as e:
-                print(f"[ENRICH] Error verifying phone: {e}")
+                logging.error(f"[ENRICH] Error verifying phone: {e}", exc_info=True)
             
             # Enrichment: Business enrichment
             try:
@@ -250,7 +251,7 @@ class TaskManager:
                     if enrichment_data.get("description"):
                         result["business_description"] = enrichment_data["description"]
             except Exception as e:
-                print(f"[ENRICH] Error enriching business: {e}")
+                logging.error(f"[ENRICH] Error enriching business: {e}", exc_info=True)
             
             # Convert result dict to ScrapeResult schema
             scrape_result = self._dict_to_scrape_result(result)
@@ -278,10 +279,10 @@ class TaskManager:
                             db.close()
                     except Exception as e:
                         # Log but don't fail - plan tracking is non-critical
-                        print(f"[PLAN] Error incrementing lead count: {e}")
+                        logging.error(f"[PLAN] Error incrementing lead count: {e}", exc_info=True)
             except Exception as e:
                 # Log error but don't fail the task
-                print(f"[POSTGRES] Error saving lead to database: {e}")
+                logging.error(f"[POSTGRES] Error saving lead to database: {e}", exc_info=True)
             
             # Trigger workflows for new lead
             try:
@@ -337,7 +338,7 @@ class TaskManager:
                         db.close()
             except Exception as e:
                 # Log but don't fail - workflow execution is non-critical
-                print(f"[WORKFLOW] Error triggering workflows: {e}")
+                logging.error(f"[WORKFLOW] Error triggering workflows: {e}", exc_info=True)
             
             self._broadcast_result(task_id, scrape_result)
         
