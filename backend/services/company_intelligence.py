@@ -255,7 +255,7 @@ class CompanyIntelligenceService:
             # Return just names for backward compatibility
             return [c["name"] for c in competitors_data]
         except Exception as e:
-            print(f"[COMPANY_INTELLIGENCE] Error identifying competitors: {e}")
+            logging.info(f"[COMPANY_INTELLIGENCE] Error identifying competitors: {e}")
             return []
     
     def generate_tags(

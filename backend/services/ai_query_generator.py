@@ -87,13 +87,14 @@ Respond with JSON only, no markdown formatting."""
             return result
             
         except Exception as e:
-            print(f"[AI] OpenAI generation failed: {e}")
+            logging.info(f"[AI] OpenAI generation failed: {e}")
             return self._generate_rule_based(user_input)
     
     def _generate_with_anthropic(self, user_input: str) -> Dict[str, Any]:
         """Generate using Anthropic Claude."""
         try:
             from anthropic import Anthropic
+import logging
             client = Anthropic(api_key=self.anthropic_api_key)
             
             prompt = f"""You are a lead generation expert. Analyze this user request and generate an optimal search configuration.
@@ -127,7 +128,7 @@ Respond with JSON only."""
             return result
             
         except Exception as e:
-            print(f"[AI] Anthropic generation failed: {e}")
+            logging.info(f"[AI] Anthropic generation failed: {e}")
             return self._generate_rule_based(user_input)
     
     def _generate_rule_based(self, user_input: str) -> Dict[str, Any]:

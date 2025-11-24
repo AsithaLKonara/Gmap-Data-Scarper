@@ -3,6 +3,7 @@ import random
 import secrets
 from typing import Dict, List, Optional
 from selenium.webdriver.chrome.options import Options
+import logging
 
 
 class AntiDetectionService:
@@ -168,7 +169,7 @@ class AntiDetectionService:
                 "source": stealth_script
             })
         except Exception as e:
-            print(f"[ANTI-DETECTION] Error injecting stealth script: {e}")
+            logging.info(f"[ANTI-DETECTION] Error injecting stealth script: {e}")
     
     def add_proxy(self, proxy_url: str) -> None:
         """

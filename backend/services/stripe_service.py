@@ -5,6 +5,7 @@ from typing import Optional, Dict, Any, List
 # Optional Stripe import - handle gracefully if not installed
 try:
     import stripe
+import logging
     STRIPE_AVAILABLE = True
 except ImportError:
     STRIPE_AVAILABLE = False
@@ -26,9 +27,9 @@ class StripeService:
     def __init__(self):
         """Initialize Stripe service."""
         if not STRIPE_AVAILABLE:
-            print("⚠️  Stripe package not installed. Payment features will be disabled.")
+            logging.info("⚠️  Stripe package not installed. Payment features will be disabled.")
         elif not stripe.api_key:
-            print("⚠️  Stripe API key not configured. Payment features will be disabled.")
+            logging.info("⚠️  Stripe API key not configured. Payment features will be disabled.")
     
     def create_customer(self, email: str, name: Optional[str] = None) -> Dict[str, Any]:
         """

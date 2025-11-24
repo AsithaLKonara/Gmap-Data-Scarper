@@ -4,6 +4,7 @@ from datetime import datetime
 import os
 import json
 import base64
+import logging
 from sqlalchemy.orm import Session
 from backend.models.database import get_session
 from backend.models.push_subscription import PushSubscription
@@ -13,7 +14,7 @@ try:
     PYWEBPUSH_AVAILABLE = True
 except ImportError:
     PYWEBPUSH_AVAILABLE = False
-    print("Warning: pywebpush not available. Install with: pip install pywebpush")
+    logging.info("Warning: pywebpush not available. Install with: pip install pywebpush")
 
 
 class PushService:
@@ -30,7 +31,7 @@ class PushService:
         self.vapid_email = os.getenv("VAPID_EMAIL", "admin@leadintelligence.com")
         
         if not self.vapid_private_key or not self.vapid_public_key:
-            print("Warning: VAPID keys not configured. Push notifications will not work.")
+            logging.info("Warning: VAPID keys not configured. Push notifications will not work.")
     
     def subscribe(
         self,
@@ -189,7 +190,7 @@ class PushService:
             
             return True
         except WebPushException as e:
-            print(f"WebPush error: {e}")
+            logging.info(f"WebPush error: {e}")
             # If subscription is invalid, mark as inactive
             if e.response and e.response.status_code == 410:
                 db = get_session()
@@ -200,7 +201,7 @@ class PushService:
                     db.close()
             return False
         except Exception as e:
-            print(f"Error sending push notification: {e}")
+            logging.info(f"Error sending push notification: {e}")
             return False
     
     def send_to_user(

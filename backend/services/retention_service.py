@@ -109,7 +109,7 @@ class RetentionService:
                     
             except Exception as e:
                 # Log error but continue with other files
-                print(f"[RETENTION] Error processing {csv_file}: {e}")
+                logging.info(f"[RETENTION] Error processing {csv_file}: {e}")
         
         return stats
     

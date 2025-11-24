@@ -43,7 +43,7 @@ class PostgreSQLCache:
                 self.database_url
             )
         except Exception as e:
-            print(f"Failed to initialize PostgreSQL pool: {e}")
+            logging.info(f"Failed to initialize PostgreSQL pool: {e}")
             self.connection_pool = None
     
     def _create_tables(self):
@@ -73,7 +73,7 @@ class PostgreSQLCache:
                     cur.execute(create_table_sql)
                     conn.commit()
         except Exception as e:
-            print(f"Failed to create tables: {e}")
+            logging.info(f"Failed to create tables: {e}")
     
     @contextmanager
     def _get_connection(self):

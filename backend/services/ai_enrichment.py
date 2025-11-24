@@ -309,7 +309,7 @@ class AIEnrichmentService:
             emails = email_extractor.extract_from_website(website, max_emails=1)
             return emails[0] if emails else None
         except Exception as e:
-            print(f"[ENRICHMENT] Error extracting email from website: {e}")
+            logging.info(f"[ENRICHMENT] Error extracting email from website: {e}")
             return None
     
     def location_to_coordinates(self, location: str) -> Optional[Dict[str, float]]:

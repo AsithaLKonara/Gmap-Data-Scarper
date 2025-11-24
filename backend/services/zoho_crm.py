@@ -2,6 +2,7 @@
 from typing import Dict, Any, Optional
 import os
 import requests
+import logging
 
 
 class ZohoCRMService:
@@ -35,7 +36,7 @@ class ZohoCRMService:
             self.access_token = data.get("access_token")
             return self.access_token
         except Exception as e:
-            print(f"[ZOHO] Failed to get access token: {e}")
+            logging.info(f"[ZOHO] Failed to get access token: {e}")
             return None
     
     def create_contact(

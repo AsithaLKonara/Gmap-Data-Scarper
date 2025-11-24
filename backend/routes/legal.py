@@ -123,7 +123,7 @@ async def process_optout(profile_url: str) -> Dict:
                     
         except Exception as e:
             # Log error but continue
-            print(f"[OPT-OUT] Error processing {csv_file}: {e}")
+            logging.info(f"[OPT-OUT] Error processing {csv_file}: {e}")
     
     if removed_count == 0:
         raise HTTPException(

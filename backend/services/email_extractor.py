@@ -4,6 +4,7 @@ import re
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
+import logging
 
 
 class EmailExtractor:
@@ -67,7 +68,7 @@ class EmailExtractor:
             return valid_emails[:max_emails]
             
         except Exception as e:
-            print(f"[EMAIL_EXTRACTOR] Error extracting from {website_url}: {e}")
+            logging.info(f"[EMAIL_EXTRACTOR] Error extracting from {website_url}: {e}")
             return []
     
     def _extract_from_page(self, url: str) -> List[str]:
@@ -105,7 +106,7 @@ class EmailExtractor:
             return list(emails)
             
         except Exception as e:
-            print(f"[EMAIL_EXTRACTOR] Error fetching {url}: {e}")
+            logging.info(f"[EMAIL_EXTRACTOR] Error fetching {url}: {e}")
             return []
     
     def _is_valid_email(self, email: str) -> bool:

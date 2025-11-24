@@ -36,7 +36,7 @@ class TemplateService:
             return self._templates
         
         if not self.templates_file.exists():
-            print(f"[TEMPLATE] Templates file not found: {self.templates_file}")
+            logging.info(f"[TEMPLATE] Templates file not found: {self.templates_file}")
             return []
         
         try:
@@ -45,7 +45,7 @@ class TemplateService:
                 self._templates = data.get("templates", [])
                 return self._templates
         except Exception as e:
-            print(f"[TEMPLATE] Error loading templates: {e}")
+            logging.info(f"[TEMPLATE] Error loading templates: {e}")
             return []
     
     def get_template(self, name: str) -> Optional[Dict[str, Any]]:
@@ -85,6 +85,7 @@ class TemplateService:
         
         # Deep copy template
         import copy
+import logging
         applied = copy.deepcopy(template)
         
         # Substitute variables in queries
