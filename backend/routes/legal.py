@@ -198,12 +198,7 @@ async def create_data_access_request(request: DataAccessRequest):
     estimated_completion = datetime.utcnow() + timedelta(days=30)
     
     # Create request record in database
-    from backend.dependencies import get_db
-    from fastapi import Depends
-    from sqlalchemy.orm import Session
-    
-    # Note: This endpoint doesn't use dependency injection yet due to complex logic
-    # Will be updated in a future refactor
+    # Note: This is a standalone function, not an endpoint, so it needs its own session
     db = get_session()
     try:
         data_request = DataRequest(
@@ -337,7 +332,6 @@ async def create_data_deletion_request(request: DataDeletionRequest):
     estimated_completion = datetime.utcnow() + timedelta(days=30)
     
     # Create request record in database
-    db = get_session()
     try:
         data_request = DataRequest(
             id=request_id,
@@ -358,24 +352,18 @@ async def create_data_deletion_request(request: DataDeletionRequest):
         db.rollback()
         import logging
         logging.error(f"Failed to create data deletion request: {e}")
-    finally:
-        db.close()
     
     # Process deletion if profile URL provided
     if request.profile_url:
         try:
             result = await process_optout(request.profile_url)
             # Update request status
-            db = get_session()
-            try:
-                data_request = db.query(DataRequest).filter(DataRequest.id == request_id).first()
-                if data_request:
-                    data_request.status = RequestStatus.COMPLETED
-                    data_request.completed_at = datetime.utcnow()
-                    data_request.response_data = json.dumps(result)
-                    db.commit()
-            finally:
-                db.close()
+            data_request = db.query(DataRequest).filter(DataRequest.id == request_id).first()
+            if data_request:
+                data_request.status = RequestStatus.COMPLETED
+                data_request.completed_at = datetime.utcnow()
+                data_request.response_data = json.dumps(result)
+                db.commit()
             
             return {
                 "status": "success",
@@ -391,16 +379,12 @@ async def create_data_deletion_request(request: DataDeletionRequest):
     try:
         result = await delete_data_by_email(request.email)
         # Update request status
-        db = get_session()
-        try:
-            data_request = db.query(DataRequest).filter(DataRequest.id == request_id).first()
-            if data_request:
-                data_request.status = RequestStatus.COMPLETED
-                data_request.completed_at = datetime.utcnow()
-                data_request.response_data = json.dumps(result)
-                db.commit()
-        finally:
-            db.close()
+        data_request = db.query(DataRequest).filter(DataRequest.id == request_id).first()
+        if data_request:
+            data_request.status = RequestStatus.COMPLETED
+            data_request.completed_at = datetime.utcnow()
+            data_request.response_data = json.dumps(result)
+            db.commit()
         
         return {
             "status": "success",
@@ -421,7 +405,10 @@ async def create_data_deletion_request(request: DataDeletionRequest):
 
 
 @router.get("/data-requests")
-async def get_data_requests(status: Optional[str] = None):
+async def get_data_requests(
+    status: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
     """
     Get all data access/deletion requests (admin endpoint).
     

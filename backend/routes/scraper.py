@@ -45,8 +45,9 @@ async def start_scraper(
                 )
         
         # Check plan limits (skip in TESTING mode only)
-        from backend.models.database import get_session
-        db = get_session()
+        from backend.dependencies import get_db
+        from sqlalchemy.orm import Session
+        db = next(get_db())
         try:
             if is_testing and not current_user:
                 # Skip limit check in TESTING mode for automated tests

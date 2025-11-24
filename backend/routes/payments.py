@@ -2,6 +2,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Header, Request, status
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
+from sqlalchemy.orm import Session
 # Import stripe service - handle gracefully if not available
 try:
     from backend.services.stripe_service import get_stripe_service
@@ -13,6 +14,7 @@ except ImportError:
 from backend.services.plan_service import get_plan_service
 from backend.config.pricing import get_stripe_price_id, get_plan_config
 from backend.middleware.auth import get_current_user
+from backend.dependencies import get_db
 import os
 
 # Optional stripe import
@@ -34,6 +36,7 @@ class CreateCheckoutRequest(BaseModel):
 @router.post("/create-checkout")
 async def create_checkout(
     request: CreateCheckoutRequest,
+    db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """
@@ -60,19 +63,8 @@ async def create_checkout(
             )
         
         # Create or get Stripe customer
-        from backend.dependencies import get_db
-        from fastapi import Depends
-        from sqlalchemy.orm import Session
-        
-        # Note: This endpoint doesn't use dependency injection yet due to complex logic
-        # Will be updated in a future refactor
-        from backend.models.database import get_session
-        db = get_session()
-        try:
-            plan_service = get_plan_service(db)
-            user_plan = plan_service.get_user_plan(user_id)
-        finally:
-            db.close()
+        plan_service = get_plan_service(db)
+        user_plan = plan_service.get_user_plan(user_id)
         customer_id = user_plan.stripe_customer_id if user_plan else None
         
         if not customer_id:
@@ -182,6 +174,7 @@ async def stripe_webhook(
 
 @router.get("/subscription-status")
 async def get_subscription_status(
+    db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """
@@ -194,16 +187,11 @@ async def get_subscription_status(
         Subscription status and plan information
     """
     try:
-        from backend.models.database import get_session
-        db = get_session()
-        try:
-            plan_service = get_plan_service(db)
-            user_id = current_user["user_id"]
-            
-            user_plan = plan_service.get_user_plan(user_id)
-            usage_stats = plan_service.get_usage_stats(user_id)
-        finally:
-            db.close()
+        plan_service = get_plan_service(db)
+        user_id = current_user["user_id"]
+        
+        user_plan = plan_service.get_user_plan(user_id)
+        usage_stats = plan_service.get_usage_stats(user_id)
         
         plan_config = get_plan_config(user_plan.plan_type)
         
@@ -227,6 +215,7 @@ async def get_subscription_status(
 
 @router.post("/cancel-subscription")
 async def cancel_subscription(
+    db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
     """
@@ -255,13 +244,8 @@ async def cancel_subscription(
         result = stripe_service.cancel_subscription(user_plan.stripe_subscription_id)
         
         # Update plan to free
-        from backend.models.database import get_session
-        db = get_session()
-        try:
-            plan_service = get_plan_service(db)
-            plan_service.update_user_plan(user_id, 'free')
-        finally:
-            db.close()
+        plan_service_db = get_plan_service(db)
+        plan_service_db.update_user_plan(user_id, 'free')
         
         return {
             "status": "success",
