@@ -1,17 +1,17 @@
 """Pydantic models for API requests and responses."""
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 from backend.middleware.security import validate_query, validate_platform, sanitize_input
 
 
 class ScrapeRequest(BaseModel):
     """Request model for starting a scrape job."""
-    queries: List[str] = Field(..., min_items=1, max_items=50, description="List of search queries")
+    queries: List[str] = Field(..., min_length=1, max_length=50, description="List of search queries")
     platforms: List[str] = Field(
         default=["google_maps"],
-        min_items=1,
-        max_items=10,
+        min_length=1,
+        max_length=10,
         description="List of platforms to scrape"
     )
     max_results: Optional[int] = Field(
@@ -27,7 +27,8 @@ class ScrapeRequest(BaseModel):
         description="Lead objective type: students, businesses, job_seekers, influencers, service_providers, real_estate, ecommerce, restaurants, medical_clinics, software_companies, freelancers"
     )
     
-    @validator('queries')
+    @field_validator('queries')
+    @classmethod
     def validate_queries(cls, v):
         """Validate and sanitize queries."""
         if not v:
@@ -47,7 +48,8 @@ class ScrapeRequest(BaseModel):
         
         return validated_queries
     
-    @validator('platforms')
+    @field_validator('platforms')
+    @classmethod
     def validate_platforms(cls, v):
         """Validate platforms against whitelist."""
         if not v:
@@ -69,14 +71,16 @@ class ScrapeRequest(BaseModel):
             return sanitize_input(v, max_length=100)
         return v
     
-    @validator('location')
+    @field_validator('location')
+    @classmethod
     def validate_location(cls, v):
         """Sanitize location."""
         if v:
             return sanitize_input(v, max_length=200)
         return v
     
-    @validator('institution')
+    @field_validator('institution')
+    @classmethod
     def validate_institution(cls, v):
         """Sanitize institution."""
         if v:

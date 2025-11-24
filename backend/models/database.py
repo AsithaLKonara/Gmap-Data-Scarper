@@ -1,6 +1,6 @@
 """SQLAlchemy database models for lead storage."""
 from sqlalchemy import create_engine, Column, String, Integer, Float, DateTime, Boolean, Text, JSON, Index
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import QueuePool
 from datetime import datetime
