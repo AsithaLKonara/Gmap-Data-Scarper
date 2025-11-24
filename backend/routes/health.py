@@ -14,11 +14,78 @@ router = APIRouter(prefix="/api", tags=["health"])
 @router.get("/health")
 async def health_check() -> Dict[str, Any]:
     """Basic health check endpoint."""
+    # Check database connection
+    db_status = "healthy"
+    db_error = None
+    try:
+        from backend.models.database import get_engine
+        from sqlalchemy import text
+        engine = get_engine()
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except Exception as e:
+        db_status = "unhealthy"
+        db_error = str(e)
+    
     return {
-        "status": "healthy",
+        "status": "healthy" if db_status == "healthy" else "degraded",
         "timestamp": time.time(),
-        "service": "Lead Intelligence Platform API"
+        "service": "Lead Intelligence Platform API",
+        "database": {
+            "status": db_status,
+            "error": db_error
+        }
     }
+
+
+@router.get("/health/database")
+async def database_health_check() -> Dict[str, Any]:
+    """Database connection health check endpoint."""
+    from backend.models.database import get_engine
+    from sqlalchemy import text, inspect
+    import time as time_module
+    
+    start_time = time_module.time()
+    status = "healthy"
+    error = None
+    pool_info = {}
+    
+    try:
+        engine = get_engine()
+        
+        # Test connection
+        with engine.connect() as conn:
+            result = conn.execute(text("SELECT 1"))
+            result.fetchone()
+        
+        # Get pool information (if available)
+        if hasattr(engine.pool, 'size'):
+            pool_info = {
+                "pool_size": engine.pool.size(),
+                "checked_in": engine.pool.checkedin(),
+                "checked_out": engine.pool.checkedout(),
+                "overflow": engine.pool.overflow(),
+            }
+        
+        response_time = (time_module.time() - start_time) * 1000  # Convert to ms
+        
+        return {
+            "status": status,
+            "response_time_ms": round(response_time, 2),
+            "pool": pool_info,
+            "timestamp": time.time()
+        }
+    except Exception as e:
+        status = "unhealthy"
+        error = str(e)
+        response_time = (time_module.time() - start_time) * 1000
+        
+        return {
+            "status": status,
+            "error": error,
+            "response_time_ms": round(response_time, 2),
+            "timestamp": time.time()
+        }
 
 
 @router.get("/metrics")

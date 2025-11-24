@@ -27,7 +27,124 @@ class PostgreSQLStorage:
         self.csv_dir.mkdir(exist_ok=True)
         init_db()
     
-    def save_lead(self, task_id: str, result: Dict[str, Any], db_session: Optional[Session] = None) -> bool:
+    def save_leads_batch(
+        self,
+        task_id: str,
+        results: List[Dict[str, Any]],
+        db_session: Optional[Session] = None,
+        batch_size: int = 100,
+        user_id: Optional[str] = None
+    ) -> int:
+        """
+        Save multiple leads in a batch operation for better performance.
+        
+        Args:
+            task_id: Task identifier
+            results: List of lead data dictionaries
+            db_session: Optional database session (for testing)
+            batch_size: Number of leads to insert per batch
+            
+        Returns:
+            Number of leads successfully saved
+        """
+        if not results:
+            return 0
+        
+        saved_count = 0
+        db = db_session if db_session else get_session()
+        should_close = db_session is None
+        
+        try:
+            # Process in batches
+            for i in range(0, len(results), batch_size):
+                batch = results[i:i + batch_size]
+                leads_to_add = []
+                
+                for result in batch:
+                    # Check for duplicate
+                    profile_url = result.get("profile_url", "")
+                    existing = db.query(Lead).filter(
+                        Lead.task_id == task_id,
+                        Lead.profile_url == profile_url
+                    ).first()
+                    
+                    if existing:
+                        continue  # Skip duplicate
+                    
+                    # Extract phone data
+                    phones_data = result.get("phones", [])
+                    phone = result.get("phone") or (phones_data[0].get("raw_phone") if phones_data else None)
+                    phone_normalized = None
+                    if phones_data:
+                        phone_normalized = phones_data[0].get("normalized_e164")
+                    
+                    # Create lead record
+                    lead = Lead(
+                        task_id=task_id,
+                        search_query=result.get("search_query", ""),
+                        platform=result.get("platform", ""),
+                        profile_url=profile_url,
+                        handle=result.get("handle"),
+                        display_name=result.get("display_name"),
+                        bio_about=result.get("bio_about"),
+                        website=result.get("website"),
+                        email=result.get("email"),
+                        phone=phone,
+                        phone_normalized=phone_normalized,
+                        followers=result.get("followers"),
+                        location=result.get("location"),
+                        phones_data=phones_data if phones_data else None,
+                        business_type=result.get("business_type"),
+                        industry=result.get("industry"),
+                        city=result.get("city"),
+                        region=result.get("region"),
+                        country=result.get("country"),
+                        job_title=result.get("job_title"),
+                        seniority_level=result.get("seniority_level"),
+                        education_level=result.get("education_level"),
+                        institution_name=result.get("institution_name"),
+                        lead_type=result.get("lead_type"),
+                        field_of_study=result.get("field_of_study"),
+                        degree_program=result.get("degree_program"),
+                        graduation_year=result.get("graduation_year"),
+                        extracted_at=datetime.utcnow(),
+                    )
+                    
+                    # Set audit fields
+                    from backend.utils.audit_trail import set_audit_fields
+                    audit_user_id = user_id or result.get("user_id")
+                    set_audit_fields(lead, user_id=audit_user_id, is_creation=True)
+                    
+                    leads_to_add.append(lead)
+                
+                # Bulk insert batch
+                if leads_to_add:
+                    db.bulk_save_objects(leads_to_add)
+                    db.commit()
+                    saved_count += len(leads_to_add)
+                    
+                    # Dual-write to CSV if enabled
+                    if self.enable_csv_dual_write:
+                        for result in batch:
+                            self._write_to_csv(task_id, result)
+                
+        except Exception as e:
+            db.rollback()
+            import logging
+            logging.error(f"[POSTGRES] Error saving leads batch: {e}")
+        finally:
+            if should_close:
+                db.close()
+        
+        return saved_count
+    
+    def save_lead(
+        self,
+        task_id: str,
+        result: Dict[str, Any],
+        db_session: Optional[Session] = None,
+        user_id: Optional[str] = None
+    ) -> bool:
         """
         Save a lead to PostgreSQL (and optionally CSV).
         
@@ -105,7 +222,8 @@ class PostgreSQLStorage:
                 if should_close:
                     db.close()
         except Exception as e:
-            print(f"[POSTGRES] Error saving lead: {e}")
+            import logging
+            logging.error(f"[POSTGRES] Error saving lead: {e}", exc_info=True)
             return False
     
     def _write_to_csv(self, task_id: str, result: Dict[str, Any]):
@@ -159,7 +277,8 @@ class PostgreSQLStorage:
                     'Extracted At': datetime.utcnow().isoformat(),
                 })
         except Exception as e:
-            print(f"[CSV] Error writing to CSV: {e}")
+            import logging
+            logging.error(f"[CSV] Error writing to CSV: {e}", exc_info=True)
     
     def get_leads(
         self,
@@ -201,7 +320,8 @@ class PostgreSQLStorage:
             # Batch convert to dict for better performance
             return [self._lead_to_dict(lead) for lead in leads]
         except Exception as e:
-            print(f"[POSTGRES] Error querying leads: {e}")
+            import logging
+            logging.error(f"[POSTGRES] Error querying leads: {e}", exc_info=True)
             return []
     
     def _lead_to_dict(self, lead: Lead) -> Dict[str, Any]:
@@ -285,7 +405,8 @@ class PostgreSQLStorage:
             finally:
                 db.close()
         except Exception as e:
-            print(f"[POSTGRES] Error getting stats: {e}")
+            import logging
+            logging.error(f"[POSTGRES] Error getting stats: {e}", exc_info=True)
             return {
                 "total": 0,
                 "with_phone": 0,

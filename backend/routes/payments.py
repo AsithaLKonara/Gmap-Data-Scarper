@@ -60,6 +60,12 @@ async def create_checkout(
             )
         
         # Create or get Stripe customer
+        from backend.dependencies import get_db
+        from fastapi import Depends
+        from sqlalchemy.orm import Session
+        
+        # Note: This endpoint doesn't use dependency injection yet due to complex logic
+        # Will be updated in a future refactor
         from backend.models.database import get_session
         db = get_session()
         try:

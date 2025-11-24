@@ -3,8 +3,10 @@ from fastapi import APIRouter, HTTPException, Depends, status, Request
 from fastapi.security import HTTPBearer
 from pydantic import BaseModel, EmailStr
 from typing import Optional
+from sqlalchemy.orm import Session
 from backend.services.auth_service import auth_service
 from backend.middleware.auth import get_current_user
+from backend.dependencies import get_db
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 security = HTTPBearer()
@@ -38,17 +40,17 @@ class TokenResponse(BaseModel):
 
 
 @router.post("/register", response_model=TokenResponse)
-async def register(request: RegisterRequest):
+async def register(
+    request: RegisterRequest,
+    db: Session = Depends(get_db)
+):
     """
     Register a new user.
     
     Creates user account and assigns plan based on plan_type.
     """
-    from backend.models.database import get_session
     from backend.models.user import User
     from backend.services.plan_service import get_plan_service
-    
-    db = get_session()
     
     try:
         # Generate user ID
@@ -107,19 +109,17 @@ async def register(request: RegisterRequest):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Registration failed: {str(e)}"
         )
-    finally:
-        db.close()
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(request: LoginRequest):
+async def login(
+    request: LoginRequest,
+    db: Session = Depends(get_db)
+):
     """
     Login and get access tokens.
     """
-    from backend.models.database import get_session
     from backend.models.user import User
-    
-    db = get_session()
     
     try:
         # Generate user ID from email
@@ -164,8 +164,6 @@ async def login(request: LoginRequest):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Login failed: {str(e)}"
         )
-    finally:
-        db.close()
 
 
 @router.post("/refresh", response_model=TokenResponse)

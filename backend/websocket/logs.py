@@ -7,8 +7,13 @@ import json
 
 
 async def log_stream(websocket: WebSocket, task_id: str):
-    """WebSocket endpoint for streaming logs."""
-    await websocket.accept()
+    """WebSocket endpoint for streaming logs.
+    
+    Note: Authentication should be handled before calling this function.
+    """
+    # WebSocket should already be accepted by the route handler
+    if websocket.client_state.name != "CONNECTED":
+        await websocket.accept()
     
     # Register WebSocket connection
     task_manager.register_websocket(task_id, "logs", websocket)

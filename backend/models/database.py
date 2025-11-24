@@ -14,6 +14,14 @@ class Lead(Base):
     """Lead data model."""
     __tablename__ = "leads"
     
+    # Soft delete field
+    deleted_at = Column(DateTime, nullable=True, index=True)
+    
+    # Audit fields
+    created_by = Column(String, nullable=True)
+    modified_by = Column(String, nullable=True)
+    modified_at = Column(DateTime, nullable=True, onupdate=datetime.utcnow)
+    
     id = Column(Integer, primary_key=True, index=True)
     task_id = Column(String, index=True, nullable=False)
     search_query = Column(String, index=True, nullable=False)
@@ -90,6 +98,14 @@ class Task(Base):
     started_at = Column(DateTime, default=datetime.utcnow, index=True)
     completed_at = Column(DateTime, nullable=True)
     error = Column(Text, nullable=True)
+    
+    # Soft delete field
+    deleted_at = Column(DateTime, nullable=True, index=True)
+    
+    # Audit fields
+    created_by = Column(String, nullable=True)
+    modified_by = Column(String, nullable=True)
+    modified_at = Column(DateTime, nullable=True, onupdate=datetime.utcnow)
 
 
 # Database connection

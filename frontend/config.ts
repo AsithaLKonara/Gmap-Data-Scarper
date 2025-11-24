@@ -22,6 +22,9 @@ export const config = {
   retry: {
     maxRetries: 3,
     retryDelay: 1000, // milliseconds
+    initialDelay: 1000,
+    maxDelay: 30000,
+    backoffMultiplier: 2,
   },
   
   // Timeout configuration

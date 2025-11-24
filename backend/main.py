@@ -115,6 +115,10 @@ app.include_router(reports.router)
 app.include_router(sso.router)
 app.include_router(branding.router)
 
+# Soft delete endpoints
+from backend.routes import soft_delete
+app.include_router(soft_delete.router)
+
 
 @app.get("/")
 async def root() -> dict:
@@ -138,19 +142,71 @@ async def root() -> dict:
 @app.on_event("startup")
 async def startup_event() -> None:
     """
-    Initialize database and ensure all tables exist.
+    Run database migrations and ensure all tables exist.
     """
     try:
-        from backend.models.database import init_db
-        from backend.models.push_subscription import PushSubscription  # Ensure model is registered
-        from backend.models.user import User  # Ensure model is registered
-        from backend.models.user_plan import UserPlan  # Ensure model is registered
-        from backend.models.lead_usage import LeadUsage  # Ensure model is registered
-        from backend.models.token_blacklist import TokenBlacklist  # Ensure model is registered
-        from backend.models.data_request import DataRequest  # Ensure model is registered
-        init_db()
-        print("✅ Database initialized successfully")
+        import os
+        import sys
+        from pathlib import Path
+        
+        # Check if we should run migrations (skip in TESTING mode)
+        is_testing = os.getenv("TESTING") == "true"
+        
+        if not is_testing:
+            # Try to run Alembic migrations
+            try:
+                from alembic.config import Config
+                from alembic import command
+                
+                alembic_cfg = Config(str(Path(__file__).parent.parent / "alembic.ini"))
+                # Set database URL
+                database_url = os.getenv(
+                    "DATABASE_URL",
+                    "sqlite:///./lead_intelligence.db"
+                )
+                alembic_cfg.set_main_option("sqlalchemy.url", database_url)
+                
+                # Run migrations
+                command.upgrade(alembic_cfg, "head")
+                print("✅ Database migrations completed successfully")
+            except ImportError:
+                # Alembic not installed, fall back to create_all
+                print("⚠️  Alembic not installed, using create_all()")
+                from backend.models.database import init_db
+                from backend.models.push_subscription import PushSubscription
+                from backend.models.user import User
+                from backend.models.user_plan import UserPlan
+                from backend.models.lead_usage import LeadUsage
+                from backend.models.token_blacklist import TokenBlacklist
+                from backend.models.data_request import DataRequest
+                init_db()
+                print("✅ Database initialized successfully (using create_all)")
+            except Exception as migration_error:
+                # Migration failed, fall back to create_all
+                print(f"⚠️  Migration failed: {migration_error}, falling back to create_all()")
+                from backend.models.database import init_db
+                from backend.models.push_subscription import PushSubscription
+                from backend.models.user import User
+                from backend.models.user_plan import UserPlan
+                from backend.models.lead_usage import LeadUsage
+                from backend.models.token_blacklist import TokenBlacklist
+                from backend.models.data_request import DataRequest
+                init_db()
+                print("✅ Database initialized successfully (using create_all fallback)")
+        else:
+            # In testing mode, just ensure tables exist
+            from backend.models.database import init_db
+            from backend.models.push_subscription import PushSubscription
+            from backend.models.user import User
+            from backend.models.user_plan import UserPlan
+            from backend.models.lead_usage import LeadUsage
+            from backend.models.token_blacklist import TokenBlacklist
+            from backend.models.data_request import DataRequest
+            init_db()
+            print("✅ Database initialized successfully (testing mode)")
     except Exception as e:
+        import logging
+        logging.error(f"Database initialization error: {e}", exc_info=True)
         print(f"⚠️  Database initialization warning: {e}")
 
 # Graceful shutdown handler

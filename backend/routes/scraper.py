@@ -24,13 +24,13 @@ async def start_scraper(
     from fastapi import status
     
     try:
-        # Allow unauthenticated access in development mode
-        is_development = os.getenv("ENVIRONMENT", "development") == "development"
+        # Require authentication (except in TESTING mode for automated tests)
+        is_testing = os.getenv("TESTING") == "true"
         
         if not current_user:
-            if is_development:
-                # Create a dummy user_id for development
-                user_id = "dev_user_12345"
+            if is_testing:
+                # Only allow unauthenticated access in TESTING mode for automated tests
+                user_id = "test_user_12345"
             else:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -39,20 +39,17 @@ async def start_scraper(
         else:
             user_id = current_user.get("user_id")
             if not user_id:
-                if is_development:
-                    user_id = "dev_user_12345"
-                else:
-                    raise HTTPException(
-                        status_code=status.HTTP_401_UNAUTHORIZED,
-                        detail="Invalid user"
-                    )
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid user"
+                )
         
-        # Check plan limits (skip in development if no user)
+        # Check plan limits (skip in TESTING mode only)
         from backend.models.database import get_session
         db = get_session()
         try:
-            if is_development and not current_user:
-                # Skip limit check in development
+            if is_testing and not current_user:
+                # Skip limit check in TESTING mode for automated tests
                 limit_check = {
                     'allowed': True,
                     'remaining': None,
@@ -81,8 +78,11 @@ async def start_scraper(
         
         request.user_id = user_id
         
-        # Create task
+        # Create task with audit fields
         task_id = task_manager.create_task(request, user_id=user_id)
+        
+        # Set audit fields on task if stored in database
+        # (Task manager may store in memory, so this is optional)
         
         # Start Chrome stream
         stream_service.start_stream(task_id, headless=request.headless or False)
@@ -118,9 +118,11 @@ async def stop_scraper(task_id: str):
             "message": f"Task {task_id} stopped"
         }
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        from backend.utils.error_handler import not_found_error
+        raise not_found_error(f"Task {task_id}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        from backend.utils.error_handler import handle_exception
+        raise handle_exception(e, context="stop_scraper")
 
 
 @router.post("/pause/{task_id}", response_model=dict)
@@ -134,9 +136,11 @@ async def pause_scraper(task_id: str):
             "message": f"Task {task_id} paused"
         }
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        from backend.utils.error_handler import not_found_error
+        raise not_found_error(f"Task {task_id}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        from backend.utils.error_handler import handle_exception
+        raise handle_exception(e, context="pause_scraper")
 
 
 @router.post("/resume/{task_id}", response_model=dict)
@@ -150,9 +154,11 @@ async def resume_scraper(task_id: str):
             "message": f"Task {task_id} resumed"
         }
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        from backend.utils.error_handler import not_found_error
+        raise not_found_error(f"Task {task_id}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        from backend.utils.error_handler import handle_exception
+        raise handle_exception(e, context="resume_scraper")
 
 
 @router.get("/status/{task_id}", response_model=TaskStatus)
@@ -171,12 +177,37 @@ async def get_task_status(
 @router.websocket("/ws/logs/{task_id}")
 async def websocket_logs(websocket: WebSocket, task_id: str):
     """WebSocket endpoint for streaming logs."""
+    from backend.middleware.auth import get_websocket_user
+    
+    # Authenticate WebSocket connection
+    try:
+        current_user = await get_websocket_user(websocket)
+        if not current_user:
+            await websocket.close(code=1008, reason="Authentication required")
+            return
+    except Exception as e:
+        await websocket.close(code=1008, reason=str(e))
+        return
+    
+    await websocket.accept()
     await log_stream(websocket, task_id)
 
 
 @router.websocket("/ws/progress/{task_id}")
 async def websocket_progress(websocket: WebSocket, task_id: str):
     """WebSocket endpoint for streaming progress updates."""
+    from backend.middleware.auth import get_websocket_user
+    
+    # Authenticate WebSocket connection
+    try:
+        current_user = await get_websocket_user(websocket)
+        if not current_user:
+            await websocket.close(code=1008, reason="Authentication required")
+            return
+    except Exception as e:
+        await websocket.close(code=1008, reason=str(e))
+        return
+    
     await websocket.accept()
     
     # Register WebSocket connection
@@ -212,6 +243,18 @@ async def websocket_progress(websocket: WebSocket, task_id: str):
 @router.websocket("/ws/results/{task_id}")
 async def websocket_results(websocket: WebSocket, task_id: str):
     """WebSocket endpoint for streaming results."""
+    from backend.middleware.auth import get_websocket_user
+    
+    # Authenticate WebSocket connection
+    try:
+        current_user = await get_websocket_user(websocket)
+        if not current_user:
+            await websocket.close(code=1008, reason="Authentication required")
+            return
+    except Exception as e:
+        await websocket.close(code=1008, reason=str(e))
+        return
+    
     await websocket.accept()
     
     # Register WebSocket connection

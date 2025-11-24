@@ -49,15 +49,32 @@ function Home() {
   
   const logMessages = useWebSocket(
     mounted && taskId ? `${wsBaseUrl}/api/scraper/ws/logs/${taskId}` : null,
-    { batch: false }
+    { 
+      batch: false,
+      reconnect: true,
+      maxReconnectAttempts: 10,
+      reconnectInterval: 1000
+    }
   );
   const progressUpdates = useWebSocket(
     mounted && taskId ? `${wsBaseUrl}/api/scraper/ws/progress/${taskId}` : null,
-    { batch: false }
+    { 
+      batch: false,
+      reconnect: true,
+      maxReconnectAttempts: 10,
+      reconnectInterval: 1000
+    }
   );
   const resultUpdates = useWebSocket(
     mounted && taskId ? `${wsBaseUrl}/api/scraper/ws/results/${taskId}` : null,
-    { batch: true, batchInterval: 100, maxBatchSize: 50 } // Batch results for performance
+    { 
+      batch: true, 
+      batchInterval: 100, 
+      maxBatchSize: 50, // Batch results for performance
+      reconnect: true,
+      maxReconnectAttempts: 10,
+      reconnectInterval: 1000
+    }
   );
 
   // Update logs from WebSocket

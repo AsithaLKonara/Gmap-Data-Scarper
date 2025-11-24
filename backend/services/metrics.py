@@ -1,7 +1,8 @@
 """Prometheus metrics service for monitoring."""
 from prometheus_client import Counter, Histogram, Gauge, generate_latest, REGISTRY
-from typing import Optional
+from typing import Optional, Dict, Any
 import time
+from backend.models.database import get_engine
 
 
 # Metrics
@@ -130,6 +131,22 @@ class MetricsService:
     def get_metrics() -> bytes:
         """Get Prometheus metrics in text format."""
         return generate_latest(REGISTRY)
+    
+    @staticmethod
+    def get_database_pool_stats() -> Dict[str, Any]:
+        """Get database connection pool statistics."""
+        try:
+            engine = get_engine()
+            if hasattr(engine.pool, 'size'):
+                return {
+                    "pool_size": engine.pool.size(),
+                    "checked_in": engine.pool.checkedin(),
+                    "checked_out": engine.pool.checkedout(),
+                    "overflow": engine.pool.overflow(),
+                }
+            return {"pool_size": "N/A (SQLite)"}
+        except Exception as e:
+            return {"error": str(e)}
 
 
 # Global instance

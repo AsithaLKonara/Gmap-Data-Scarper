@@ -1,6 +1,77 @@
 /** FastAPI client functions */
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+// Token refresh helper
+let refreshPromise: Promise<string | null> | null = null;
+
+async function getValidToken(): Promise<string | null> {
+  if (typeof window === 'undefined') return null;
+  
+  const token = localStorage.getItem('access_token');
+  const expiryTime = localStorage.getItem('token_expiry');
+  
+  if (!token) return null;
+  
+  // Check if token is expired or expiring soon (within 5 minutes)
+  if (expiryTime) {
+    const expiry = parseInt(expiryTime, 10);
+    const now = Date.now();
+    const timeUntilExpiry = expiry - now;
+    
+    if (timeUntilExpiry < 5 * 60 * 1000) {
+      // Token expiring soon, refresh it
+      if (!refreshPromise) {
+        refreshPromise = refreshToken();
+        refreshPromise.finally(() => {
+          refreshPromise = null;
+        });
+      }
+      return await refreshPromise;
+    }
+  }
+  
+  return token;
+}
+
+async function refreshToken(): Promise<string | null> {
+  const refreshTokenValue = localStorage.getItem('refresh_token');
+  if (!refreshTokenValue) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ refresh_token: refreshTokenValue }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Token refresh failed');
+    }
+
+    const data = await response.json();
+    
+    localStorage.setItem('access_token', data.access_token);
+    localStorage.setItem('refresh_token', data.refresh_token);
+    
+    const expiresIn = data.expires_in || 3600;
+    const expiryTime = Date.now() + expiresIn * 1000;
+    localStorage.setItem('token_expiry', expiryTime.toString());
+
+    return data.access_token;
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    // Clear tokens on refresh failure
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('token_expiry');
+    return null;
+  }
+}
+
 export interface ScrapeRequest {
   queries: string[];
   platforms: string[];
@@ -32,22 +103,22 @@ export interface TaskStatus {
 }
 
 export async function startScraper(request: ScrapeRequest): Promise<{ task_id: string; usage?: any }> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-  const response = await fetch(`${API_BASE_URL}/api/scraper/start`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` }),
+  const token = await getValidToken();
+  const response = await retryFetch(
+    `${API_BASE_URL}/api/scraper/start`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` }),
+      },
+      body: JSON.stringify(request),
     },
-    body: JSON.stringify(request),
-  });
+    config.retry
+  );
   
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: response.statusText }));
-    const errorMessage = typeof error.detail === 'string' 
-      ? error.detail 
-      : error.detail?.message || error.detail?.error || `Failed to start scraper: ${response.statusText}`;
-    throw new Error(errorMessage);
+    await handleApiError(response);
   }
   
   return response.json();
@@ -76,7 +147,7 @@ export interface CheckoutSession {
 }
 
 export async function getUserPlan(): Promise<UserPlan> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  const token = await getValidToken();
   const response = await fetch(`${API_BASE_URL}/api/payments/subscription-status`, {
     method: 'GET',
     headers: {
@@ -98,7 +169,7 @@ export async function getUsageStats(): Promise<UserPlan['usage']> {
 }
 
 export async function createCheckoutSession(planType: 'paid_monthly' | 'paid_usage'): Promise<CheckoutSession> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  const token = await getValidToken();
   const response = await fetch(`${API_BASE_URL}/api/payments/create-checkout`, {
     method: 'POST',
     headers: {
@@ -109,8 +180,7 @@ export async function createCheckoutSession(planType: 'paid_monthly' | 'paid_usa
   });
   
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || `Failed to create checkout session: ${response.statusText}`);
+    await handleApiError(response);
   }
   
   return response.json();
@@ -121,7 +191,7 @@ export async function getSubscriptionStatus(): Promise<UserPlan> {
 }
 
 export async function cancelSubscription(): Promise<{ status: string; message: string }> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+  const token = await getValidToken();
   const response = await fetch(`${API_BASE_URL}/api/payments/cancel-subscription`, {
     method: 'POST',
     headers: {
@@ -131,8 +201,7 @@ export async function cancelSubscription(): Promise<{ status: string; message: s
   });
   
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || `Failed to cancel subscription: ${response.statusText}`);
+    await handleApiError(response);
   }
   
   return response.json();
@@ -144,7 +213,7 @@ export async function stopScraper(taskId: string): Promise<void> {
   });
   
   if (!response.ok) {
-    throw new Error(`Failed to stop scraper: ${response.statusText}`);
+    await handleApiError(response);
   }
 }
 
@@ -172,7 +241,7 @@ export async function getTaskStatus(taskId: string): Promise<TaskStatus> {
   const response = await fetch(`${API_BASE_URL}/api/scraper/status/${taskId}`);
   
   if (!response.ok) {
-    throw new Error(`Failed to get task status: ${response.statusText}`);
+    await handleApiError(response);
   }
   
   return response.json();
@@ -186,7 +255,7 @@ export async function exportCSV(taskId?: string, platform?: string): Promise<Blo
   const response = await fetch(`${API_BASE_URL}/api/export/csv?${params}`);
   
   if (!response.ok) {
-    throw new Error(`Failed to export CSV: ${response.statusText}`);
+    await handleApiError(response);
   }
   
   return response.blob();
@@ -244,7 +313,8 @@ export async function getLeadObjectives(): Promise<LeadObjective[]> {
     // Ensure we return an array
     return Array.isArray(data) ? data : [];
   } catch (error) {
-    console.error('Error fetching lead objectives:', error);
+    const appError = handleFetchError(error);
+    logError(appError, 'getLeadObjectives');
     return [];
   }
 }
@@ -256,8 +326,7 @@ export async function optOut(profileUrl: string): Promise<void> {
   });
   
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: response.statusText }));
-    throw { response: { data: error } };
+    await handleApiError(response);
   }
 }
 
@@ -302,8 +371,8 @@ export interface TokenResponse {
   expires_in: number;
 }
 
-function getAuthHeaders(): HeadersInit {
-  const token = localStorage.getItem('access_token');
+async function getAuthHeaders(): Promise<HeadersInit> {
+  const token = await getValidToken();
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
@@ -323,10 +392,21 @@ export async function login(request: LoginRequest): Promise<TokenResponse> {
   });
   
   if (!response.ok) {
-    throw new Error(`Login failed: ${response.statusText}`);
+    await handleApiError(response);
   }
   
-  return response.json();
+  const data = await response.json();
+  
+  // Store tokens and expiry
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('access_token', data.access_token);
+    localStorage.setItem('refresh_token', data.refresh_token);
+    const expiresIn = data.expires_in || 3600;
+    const expiryTime = Date.now() + expiresIn * 1000;
+    localStorage.setItem('token_expiry', expiryTime.toString());
+  }
+  
+  return data;
 }
 
 export async function register(request: RegisterRequest): Promise<TokenResponse> {
@@ -339,10 +419,21 @@ export async function register(request: RegisterRequest): Promise<TokenResponse>
   });
   
   if (!response.ok) {
-    throw new Error(`Registration failed: ${response.statusText}`);
+    await handleApiError(response);
   }
   
-  return response.json();
+  const data = await response.json();
+  
+  // Store tokens and expiry
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('access_token', data.access_token);
+    localStorage.setItem('refresh_token', data.refresh_token);
+    const expiresIn = data.expires_in || 3600;
+    const expiryTime = Date.now() + expiresIn * 1000;
+    localStorage.setItem('token_expiry', expiryTime.toString());
+  }
+  
+  return data;
 }
 
 export async function refreshToken(refreshToken: string): Promise<TokenResponse> {
@@ -355,15 +446,16 @@ export async function refreshToken(refreshToken: string): Promise<TokenResponse>
   });
   
   if (!response.ok) {
-    throw new Error(`Token refresh failed: ${response.statusText}`);
+    await handleApiError(response);
   }
   
   return response.json();
 }
 
 export async function getCurrentUser(): Promise<any> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
-    headers: getAuthHeaders(),
+    headers,
   });
   
   if (!response.ok) {
@@ -376,8 +468,9 @@ export async function getCurrentUser(): Promise<any> {
 // Task management functions
 export async function listTasks(status?: string): Promise<any[]> {
   const params = status ? `?status=${status}` : '';
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/tasks${params}`, {
-    headers: getAuthHeaders(),
+    headers,
   });
   
   if (!response.ok) {
@@ -388,8 +481,9 @@ export async function listTasks(status?: string): Promise<any[]> {
 }
 
 export async function getTask(taskId: string): Promise<TaskStatus> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
-    headers: getAuthHeaders(),
+    headers,
   });
   
   if (!response.ok) {
@@ -400,8 +494,9 @@ export async function getTask(taskId: string): Promise<TaskStatus> {
 }
 
 export async function getQueueStatus(): Promise<any> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/tasks/queue/status`, {
-    headers: getAuthHeaders(),
+    headers,
   });
   
   if (!response.ok) {
@@ -412,9 +507,10 @@ export async function getQueueStatus(): Promise<any> {
 }
 
 export async function bulkStopTasks(taskIds: string[]): Promise<any> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/tasks/bulk/stop`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    headers,
     body: JSON.stringify(taskIds),
   });
   
@@ -426,9 +522,10 @@ export async function bulkStopTasks(taskIds: string[]): Promise<any> {
 }
 
 export async function bulkPauseTasks(taskIds: string[]): Promise<any> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/tasks/bulk/pause`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    headers,
     body: JSON.stringify(taskIds),
   });
   
@@ -440,9 +537,10 @@ export async function bulkPauseTasks(taskIds: string[]): Promise<any> {
 }
 
 export async function bulkResumeTasks(taskIds: string[]): Promise<any> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/tasks/bulk/resume`, {
     method: 'POST',
-    headers: getAuthHeaders(),
+    headers,
     body: JSON.stringify(taskIds),
   });
   
@@ -499,8 +597,9 @@ export interface ConfidenceStats {
 }
 
 export async function getAnalyticsSummary(days: number = 7): Promise<AnalyticsSummary> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/analytics/summary?days=${days}`, {
-    headers: getAuthHeaders(),
+    headers,
   });
   
   if (!response.ok) {
@@ -511,8 +610,9 @@ export async function getAnalyticsSummary(days: number = 7): Promise<AnalyticsSu
 }
 
 export async function getPlatformStats(): Promise<PlatformStats> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/analytics/platforms`, {
-    headers: getAuthHeaders(),
+    headers,
   });
   
   if (!response.ok) {
@@ -523,8 +623,9 @@ export async function getPlatformStats(): Promise<PlatformStats> {
 }
 
 export async function getTimelineData(days: number = 30): Promise<TimelineData> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/analytics/timeline?days=${days}`, {
-    headers: getAuthHeaders(),
+    headers,
   });
   
   if (!response.ok) {
@@ -535,8 +636,9 @@ export async function getTimelineData(days: number = 30): Promise<TimelineData> 
 }
 
 export async function getCategoryStats(): Promise<CategoryStats> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/analytics/categories`, {
-    headers: getAuthHeaders(),
+    headers,
   });
   
   if (!response.ok) {
@@ -547,8 +649,9 @@ export async function getCategoryStats(): Promise<CategoryStats> {
 }
 
 export async function getConfidenceStats(): Promise<ConfidenceStats> {
+  const headers = await getAuthHeaders();
   const response = await fetch(`${API_BASE_URL}/api/analytics/confidence`, {
-    headers: getAuthHeaders(),
+    headers,
   });
   
   if (!response.ok) {

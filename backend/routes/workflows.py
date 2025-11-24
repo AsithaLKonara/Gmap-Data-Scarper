@@ -32,8 +32,13 @@ async def create_workflow(
     """Create a new workflow."""
     from backend.models.database import get_session
     from backend.models.workflow import Workflow
+    from backend.dependencies import get_db
+    from fastapi import Depends
+    from sqlalchemy.orm import Session
     import uuid
     
+    # Note: This endpoint doesn't use dependency injection yet due to complex logic
+    # Will be updated in a future refactor
     db = get_session()
     try:
         workflow_id = str(uuid.uuid4())

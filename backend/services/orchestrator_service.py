@@ -260,7 +260,9 @@ class TaskManager:
                 from backend.services.postgresql_storage import get_postgresql_storage
                 storage = get_postgresql_storage()
                 result_dict["phones"] = phones_data if phones_data else []
-                storage.save_lead(task_id, result_dict)
+                # Pass user_id for audit trail
+                user_id = task.get("user_id")
+                storage.save_lead(task_id, result_dict, user_id=user_id)
                 
                 # Increment lead count for user plan
                 user_id = task.get("user_id")

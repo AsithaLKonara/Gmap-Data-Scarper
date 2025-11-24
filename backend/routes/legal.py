@@ -11,6 +11,9 @@ from backend.services.optout_service import optout_service
 from backend.models.database import get_session
 from backend.models.data_request import DataRequest, RequestType, RequestStatus
 from backend.models.database import Lead
+from backend.dependencies import get_db
+from fastapi import Depends
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/legal", tags=["legal"])
 
@@ -195,6 +198,12 @@ async def create_data_access_request(request: DataAccessRequest):
     estimated_completion = datetime.utcnow() + timedelta(days=30)
     
     # Create request record in database
+    from backend.dependencies import get_db
+    from fastapi import Depends
+    from sqlalchemy.orm import Session
+    
+    # Note: This endpoint doesn't use dependency injection yet due to complex logic
+    # Will be updated in a future refactor
     db = get_session()
     try:
         data_request = DataRequest(
@@ -238,21 +247,34 @@ async def delete_data_by_email(email: str) -> Dict:
     
     Args:
         email: Email address to delete data for
+        db: Database session
         
     Returns:
         Dictionary with deletion results
     """
+    from backend.dependencies import get_db
+    from fastapi import Depends
+    from sqlalchemy.orm import Session
+    
+    # For now, use get_session directly since this is called from another endpoint
+    # TODO: Refactor to use dependency injection
     db = get_session()
     removed_count = 0
     files_processed = 0
     
     try:
-        # Delete from database
-        leads = db.query(Lead).filter(Lead.email == email).all()
+        # Delete from database (use soft delete)
+        leads = db.query(Lead).filter(
+            Lead.email == email,
+            Lead.deleted_at.is_(None)  # Only get non-deleted leads
+        ).all()
         removed_count = len(leads)
         
+        # Soft delete instead of hard delete
+        from datetime import datetime
         for lead in leads:
-            db.delete(lead)
+            lead.deleted_at = datetime.utcnow()
+            lead.modified_at = datetime.utcnow()
         
         db.commit()
         
