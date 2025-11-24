@@ -7,6 +7,8 @@ from starlette.responses import Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 import time
 from typing import Callable
+from contextlib import asynccontextmanager
+import logging
 from backend.config import CORS_ORIGINS, API_HOST, API_PORT, API_RELOAD, TASK_TIMEOUT_SECONDS
 from backend.routes import scraper, export, filters, legal, health, consent, auth, tasks, enrichment, archival, notifications, payments, ai, templates, company, workflows, teams, predictive, reports, sso, branding
 from backend.routes import analytics_enhanced as analytics
@@ -14,10 +16,99 @@ from backend.middleware.rate_limit import RateLimitMiddleware
 from backend.middleware.security import SecurityHeadersMiddleware
 from backend.utils.structured_logging import set_request_context, clear_request_context
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup and shutdown events."""
+    # Startup
+    try:
+        import os
+        import sys
+        from pathlib import Path
+        
+        # Check if we should run migrations (skip in TESTING mode)
+        is_testing = os.getenv("TESTING") == "true"
+        
+        if not is_testing:
+            # Try to run Alembic migrations
+            try:
+                from alembic.config import Config
+                from alembic import command
+                
+                alembic_cfg = Config(str(Path(__file__).parent.parent / "alembic.ini"))
+                # Set database URL
+                database_url = os.getenv(
+                    "DATABASE_URL",
+                    "sqlite:///./lead_intelligence.db"
+                )
+                alembic_cfg.set_main_option("sqlalchemy.url", database_url)
+                
+                # Run migrations
+                command.upgrade(alembic_cfg, "head")
+                logging.info("✅ Database migrations completed successfully")
+            except ImportError:
+                # Alembic not installed, fall back to create_all
+                logging.warning("⚠️  Alembic not installed, using create_all()")
+                from backend.models.database import init_db
+                from backend.models.push_subscription import PushSubscription
+                from backend.models.user import User
+                from backend.models.user_plan import UserPlan
+                from backend.models.lead_usage import LeadUsage
+                from backend.models.token_blacklist import TokenBlacklist
+                from backend.models.data_request import DataRequest
+                init_db()
+                logging.info("✅ Database initialized successfully (using create_all)")
+            except Exception as migration_error:
+                # Migration failed, fall back to create_all
+                logging.warning(f"⚠️  Migration failed: {migration_error}, falling back to create_all()")
+                from backend.models.database import init_db
+                from backend.models.push_subscription import PushSubscription
+                from backend.models.user import User
+                from backend.models.user_plan import UserPlan
+                from backend.models.lead_usage import LeadUsage
+                from backend.models.token_blacklist import TokenBlacklist
+                from backend.models.data_request import DataRequest
+                from backend.models.audit_log import AuditLog
+                init_db()
+                logging.info("✅ Database initialized successfully (using create_all fallback)")
+        else:
+            # In testing mode, just ensure tables exist
+            from backend.models.database import init_db
+            from backend.models.push_subscription import PushSubscription
+            from backend.models.user import User
+            from backend.models.user_plan import UserPlan
+            from backend.models.lead_usage import LeadUsage
+            from backend.models.token_blacklist import TokenBlacklist
+            from backend.models.data_request import DataRequest
+            from backend.models.audit_log import AuditLog
+            init_db()
+            logging.info("✅ Database initialized successfully (testing mode)")
+    except Exception as e:
+        logging.error(f"Database initialization error: {e}", exc_info=True)
+        logging.warning(f"⚠️  Database initialization warning: {e}")
+    
+    yield
+    
+    # Shutdown
+    logging.info("Shutting down gracefully...")
+    from backend.services.stream_service import stream_service
+    from backend.services.orchestrator_service import task_manager
+    
+    # Stop all Chrome instances
+    for task_id in list(stream_service.drivers.keys()):
+        stream_service.stop_stream(task_id)
+    
+    # Stop all running tasks
+    for task_id in list(task_manager.tasks.keys()):
+        if task_manager.tasks[task_id]["status"] == "running":
+            task_manager.stop_task(task_id)
+
+
 app = FastAPI(
     title="Lead Intelligence Platform API",
     description="API for interactive lead scraping with phone extraction",
-    version="3.1.0"
+    version="3.1.0",
+    lifespan=lifespan
 )
 
 
@@ -138,96 +229,7 @@ async def root() -> dict:
 # Health endpoint moved to health.py router
 
 
-# Initialize database on startup
-@app.on_event("startup")
-async def startup_event() -> None:
-    """
-    Run database migrations and ensure all tables exist.
-    """
-    try:
-        import os
-        import sys
-        from pathlib import Path
-        
-        # Check if we should run migrations (skip in TESTING mode)
-        is_testing = os.getenv("TESTING") == "true"
-        
-        if not is_testing:
-            # Try to run Alembic migrations
-            try:
-                from alembic.config import Config
-                from alembic import command
-                
-                alembic_cfg = Config(str(Path(__file__).parent.parent / "alembic.ini"))
-                # Set database URL
-                database_url = os.getenv(
-                    "DATABASE_URL",
-                    "sqlite:///./lead_intelligence.db"
-                )
-                alembic_cfg.set_main_option("sqlalchemy.url", database_url)
-                
-                # Run migrations
-                command.upgrade(alembic_cfg, "head")
-                logging.info("✅ Database migrations completed successfully")
-            except ImportError:
-                # Alembic not installed, fall back to create_all
-                logging.warning("⚠️  Alembic not installed, using create_all()")
-                from backend.models.database import init_db
-                from backend.models.push_subscription import PushSubscription
-                from backend.models.user import User
-                from backend.models.user_plan import UserPlan
-                from backend.models.lead_usage import LeadUsage
-                from backend.models.token_blacklist import TokenBlacklist
-                from backend.models.data_request import DataRequest
-                init_db()
-                logging.info("✅ Database initialized successfully (using create_all)")
-            except Exception as migration_error:
-                # Migration failed, fall back to create_all
-                logging.warning(f"⚠️  Migration failed: {migration_error}, falling back to create_all()")
-                from backend.models.database import init_db
-                from backend.models.push_subscription import PushSubscription
-                from backend.models.user import User
-                from backend.models.user_plan import UserPlan
-                from backend.models.lead_usage import LeadUsage
-                from backend.models.token_blacklist import TokenBlacklist
-                from backend.models.data_request import DataRequest
-                init_db()
-                logging.info("✅ Database initialized successfully (using create_all fallback)")
-        else:
-            # In testing mode, just ensure tables exist
-            from backend.models.database import init_db
-            from backend.models.push_subscription import PushSubscription
-            from backend.models.user import User
-            from backend.models.user_plan import UserPlan
-            from backend.models.lead_usage import LeadUsage
-            from backend.models.token_blacklist import TokenBlacklist
-            from backend.models.data_request import DataRequest
-            init_db()
-            logging.info("✅ Database initialized successfully (testing mode)")
-    except Exception as e:
-        import logging
-        logging.error(f"Database initialization error: {e}", exc_info=True)
-        logging.warning(f"⚠️  Database initialization warning: {e}")
-
-# Graceful shutdown handler
-@app.on_event("shutdown")
-async def shutdown_event() -> None:
-    """
-    Cleanup on shutdown.
-    
-    Stops all Chrome instances and running tasks gracefully.
-    """
-    from backend.services.stream_service import stream_service
-    from backend.services.orchestrator_service import task_manager
-    
-    # Stop all Chrome instances
-    for task_id in list(stream_service.drivers.keys()):
-        stream_service.stop_stream(task_id)
-    
-    # Stop all running tasks
-    for task_id in list(task_manager.tasks.keys()):
-        if task_manager.tasks[task_id]["status"] == "running":
-            task_manager.stop_task(task_id)
+# Database initialization and shutdown are now handled in lifespan context manager above
 
 
 if __name__ == "__main__":
