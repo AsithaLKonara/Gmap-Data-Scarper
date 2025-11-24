@@ -1,11 +1,11 @@
 """Stripe service for payment processing."""
 import os
+import logging
 from typing import Optional, Dict, Any, List
 
 # Optional Stripe import - handle gracefully if not installed
 try:
     import stripe
-import logging
     STRIPE_AVAILABLE = True
 except ImportError:
     STRIPE_AVAILABLE = False
