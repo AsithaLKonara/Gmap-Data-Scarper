@@ -2,7 +2,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List, Dict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 import csv
 import json
@@ -195,7 +195,7 @@ async def create_data_access_request(request: DataAccessRequest):
         request: Data access request with email and optional profile URL
     """
     request_id = f"dar_{int(datetime.now().timestamp())}"
-    estimated_completion = datetime.utcnow() + timedelta(days=30)
+    estimated_completion = datetime.now(timezone.utc) + timedelta(days=30)
     
     # Create request record in database
     # Note: This is a standalone function, not an endpoint, so it needs its own session
@@ -236,28 +236,34 @@ async def create_data_access_request(request: DataAccessRequest):
     }
 
 
-async def delete_data_by_email(email: str) -> Dict:
+async def delete_data_by_email(email: str, db: Session = None) -> Dict:
     """
     Delete all data associated with an email address.
     
     Args:
         email: Email address to delete data for
-        db: Database session
+        db: Database session (optional, will create one if not provided)
         
     Returns:
         Dictionary with deletion results
     """
-    from backend.dependencies import get_db
-    from fastapi import Depends
-    from sqlalchemy.orm import Session
+    from backend.dependencies import get_db as get_db_dep
+    from backend.utils.database import get_session
     
-    # For now, use get_session directly since this is called from another endpoint
-    # TODO: Refactor to use dependency injection
-    db = get_session()
+    # Use provided session or create a new one
+    from backend.models.database import get_session as get_session_func
+    if db is None:
+        db = get_session_func()
+        should_close = True
+    else:
+        should_close = False
     removed_count = 0
     files_processed = 0
     
     try:
+        # Import Lead model
+        from backend.models.database import Lead
+        
         # Delete from database (use soft delete)
         leads = db.query(Lead).filter(
             Lead.email == email,
@@ -266,10 +272,10 @@ async def delete_data_by_email(email: str) -> Dict:
         removed_count = len(leads)
         
         # Soft delete instead of hard delete
-        from datetime import datetime
+        from datetime import datetime, timezone
         for lead in leads:
-            lead.deleted_at = datetime.utcnow()
-            lead.modified_at = datetime.utcnow()
+            lead.deleted_at = datetime.now(timezone.utc)
+            lead.modified_at = datetime.now(timezone.utc)
         
         db.commit()
         
@@ -312,24 +318,30 @@ async def delete_data_by_email(email: str) -> Dict:
             "files_processed": files_processed
         }
     except Exception as e:
-        db.rollback()
+        if db:
+            db.rollback()
         import logging
         logging.error(f"Error deleting data by email: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to delete data: {str(e)}")
     finally:
-        db.close()
+        if should_close and db:
+            db.close()
 
 
 @router.post("/data-deletion-request")
-async def create_data_deletion_request(request: DataDeletionRequest):
+async def create_data_deletion_request(
+    request: DataDeletionRequest,
+    db: Session = Depends(get_db)
+):
     """
     Create a GDPR data deletion request.
     
     Args:
         request: Data deletion request with email and optional profile URL
+        db: Database session
     """
     request_id = f"ddr_{int(datetime.now().timestamp())}"
-    estimated_completion = datetime.utcnow() + timedelta(days=30)
+    estimated_completion = datetime.now(timezone.utc) + timedelta(days=30)
     
     # Create request record in database
     try:
@@ -361,7 +373,7 @@ async def create_data_deletion_request(request: DataDeletionRequest):
             data_request = db.query(DataRequest).filter(DataRequest.id == request_id).first()
             if data_request:
                 data_request.status = RequestStatus.COMPLETED
-                data_request.completed_at = datetime.utcnow()
+                data_request.completed_at = datetime.now(timezone.utc)
                 data_request.response_data = json.dumps(result)
                 db.commit()
             
@@ -377,12 +389,12 @@ async def create_data_deletion_request(request: DataDeletionRequest):
     
     # Process email-based deletion
     try:
-        result = await delete_data_by_email(request.email)
+        result = await delete_data_by_email(request.email, db=db)
         # Update request status
         data_request = db.query(DataRequest).filter(DataRequest.id == request_id).first()
         if data_request:
             data_request.status = RequestStatus.COMPLETED
-            data_request.completed_at = datetime.utcnow()
+            data_request.completed_at = datetime.now(timezone.utc)
             data_request.response_data = json.dumps(result)
             db.commit()
         
@@ -415,7 +427,6 @@ async def get_data_requests(
     Args:
         status: Optional status filter (pending, processing, completed, failed)
     """
-    db = get_session()
     try:
         query = db.query(DataRequest)
         
