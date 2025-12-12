@@ -1,5 +1,5 @@
 """Audit trail utility functions."""
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import Column, String, DateTime, Text, Integer
@@ -26,13 +26,13 @@ def set_audit_fields(
         if hasattr(obj, 'created_by') and not obj.created_by:
             obj.created_by = user_id
         if hasattr(obj, 'created_at') and not obj.created_at:
-            obj.created_at = datetime.utcnow()
+            obj.created_at = datetime.now(timezone.utc)
     
     # Always update modified fields
     if hasattr(obj, 'modified_by'):
         obj.modified_by = user_id
     if hasattr(obj, 'modified_at'):
-        obj.modified_at = datetime.utcnow()
+        obj.modified_at = datetime.now(timezone.utc)
 
 
 def get_audit_info(obj: Any) -> Dict[str, Any]:
@@ -97,7 +97,7 @@ def track_change(
                 metadata_json=metadata,  # Use metadata_json to avoid SQLAlchemy conflict
                 ip_address=ip_address,
                 user_agent=user_agent,
-                created_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc)
             )
             db.add(audit_log)
             db.commit()
