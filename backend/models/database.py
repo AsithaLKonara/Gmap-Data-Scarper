@@ -3,7 +3,7 @@ from sqlalchemy import create_engine, Column, String, Integer, Float, DateTime, 
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import QueuePool
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
 import os
 
@@ -20,7 +20,7 @@ class Lead(Base):
     # Audit fields
     created_by = Column(String, nullable=True)
     modified_by = Column(String, nullable=True)
-    modified_at = Column(DateTime, nullable=True, onupdate=datetime.utcnow)
+    modified_at = Column(DateTime, nullable=True, onupdate=lambda: datetime.now(timezone.utc))
     
     id = Column(Integer, primary_key=True, index=True)
     task_id = Column(String, index=True, nullable=False)
@@ -65,8 +65,8 @@ class Lead(Base):
     employee_count = Column(Integer, nullable=True)  # Estimated employee count
     
     # Metadata
-    extracted_at = Column(DateTime, default=datetime.utcnow, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    extracted_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
     
     # Indexes for common queries
     __table_args__ = (
@@ -95,7 +95,7 @@ class Task(Base):
     current_query = Column(String, nullable=True)
     current_platform = Column(String, nullable=True)
     lead_objective = Column(String, nullable=True, index=True)  # Phase 1: Global Lead Types
-    started_at = Column(DateTime, default=datetime.utcnow, index=True)
+    started_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
     completed_at = Column(DateTime, nullable=True)
     error = Column(Text, nullable=True)
     
@@ -105,7 +105,7 @@ class Task(Base):
     # Audit fields
     created_by = Column(String, nullable=True)
     modified_by = Column(String, nullable=True)
-    modified_at = Column(DateTime, nullable=True, onupdate=datetime.utcnow)
+    modified_at = Column(DateTime, nullable=True, onupdate=lambda: datetime.now(timezone.utc))
 
 
 # Database connection

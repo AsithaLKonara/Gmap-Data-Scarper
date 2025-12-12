@@ -1,6 +1,6 @@
 """PostgreSQL storage service for leads with dual-write support."""
 from typing import Optional, Dict, Any, List
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_, func
 from backend.models.database import Lead, Task, get_session, init_db, close_db
@@ -108,7 +108,7 @@ class PostgreSQLStorage:
                         field_of_study=result.get("field_of_study"),
                         degree_program=result.get("degree_program"),
                         graduation_year=result.get("graduation_year"),
-                        extracted_at=datetime.utcnow(),
+                        extracted_at=datetime.now(timezone.utc),
                     )
                     
                     # Set audit fields
@@ -208,8 +208,8 @@ class PostgreSQLStorage:
                     lead_type=result.get("lead_type"),
                     field_of_study=result.get("field_of_study"),
                     degree_program=result.get("degree_program"),
-                    graduation_year=result.get("graduation_year"),
-                    extracted_at=datetime.utcnow(),
+                        graduation_year=result.get("graduation_year"),
+                    extracted_at=datetime.now(timezone.utc),
                 )
                 
                 db.add(lead)
@@ -287,7 +287,7 @@ class PostgreSQLStorage:
                     'Lead Type': result.get("lead_type", ""),
                     'Degree Program': result.get("degree_program", ""),
                     'Graduation Year': result.get("graduation_year", ""),
-                    'Extracted At': datetime.utcnow().isoformat(),
+                    'Extracted At': datetime.now(timezone.utc).isoformat(),
                 })
         except Exception as e:
             import logging
