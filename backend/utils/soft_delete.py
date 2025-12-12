@@ -1,5 +1,5 @@
 """Soft delete utility functions."""
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from sqlalchemy.orm import Session
 from backend.models.database import Lead, Task
@@ -31,8 +31,8 @@ def soft_delete_lead(
         return False
     
     old_deleted_at = lead.deleted_at
-    lead.deleted_at = datetime.utcnow()
-    lead.modified_at = datetime.utcnow()
+    lead.deleted_at = datetime.now(timezone.utc)
+    lead.modified_at = datetime.now(timezone.utc)
     if deleted_by:
         lead.modified_by = deleted_by
     
@@ -77,7 +77,7 @@ def restore_lead(
     
     old_deleted_at = lead.deleted_at
     lead.deleted_at = None
-    lead.modified_at = datetime.utcnow()
+    lead.modified_at = datetime.now(timezone.utc)
     if restored_by:
         lead.modified_by = restored_by
     
@@ -121,8 +121,8 @@ def soft_delete_task(
         return False
     
     old_deleted_at = task.deleted_at
-    task.deleted_at = datetime.utcnow()
-    task.modified_at = datetime.utcnow()
+    task.deleted_at = datetime.now(timezone.utc)
+    task.modified_at = datetime.now(timezone.utc)
     if deleted_by:
         task.modified_by = deleted_by
     
@@ -167,7 +167,7 @@ def restore_task(
     
     old_deleted_at = task.deleted_at
     task.deleted_at = None
-    task.modified_at = datetime.utcnow()
+    task.modified_at = datetime.now(timezone.utc)
     if restored_by:
         task.modified_by = restored_by
     
