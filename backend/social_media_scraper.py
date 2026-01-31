@@ -680,6 +680,90 @@ async def scrape_social_media(
         "message": f"{request.platform.title()} scraping started"
     }
 
+from social_discovery import run_discovery_task
+
+class DiscoveryRequest(BaseModel):
+    platforms: List[str] = Field(["linkedin.com/in/", "facebook.com", "instagram.com"])
+    skills: List[str] = Field(["Java", "Python", "React", "Mobile Development"])
+    cities: List[str] = Field(["Colombo", "Kandy", "Galle", "Gampaha"])
+    providers: List[str] = Field(["sliit.lk", "mrt.ac.lk", "nsbm.ac.lk", "iit.lk", "gmail.com"])
+    collection_name: Optional[str] = "Undergraduate Discovery"
+
+@router.post("/discovery/undergraduates")
+async def start_undergrad_discovery(
+    background_tasks: BackgroundTasks,
+    request: DiscoveryRequest,
+    current_user: Users = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Start the fully automated undergraduate discovery engine."""
+    
+    # Check Lead Source
+    source = db.query(LeadSources).filter(LeadSources.name == "Social Discovery Engine").first()
+    if not source:
+        source = LeadSources(name="Social Discovery Engine", type="x-ray")
+        db.add(source)
+        db.commit()
+        db.refresh(source)
+    
+    # Create Collection
+    collection = LeadCollections(
+        name=request.collection_name,
+        user_id=current_user.id,
+        source_id=source.id,
+        status="running",
+        config=json.dumps({
+            "platforms": request.platforms,
+            "skills": request.skills,
+            "cities": request.cities
+        })
+    )
+    db.add(collection)
+    db.commit()
+    db.refresh(collection)
+    
+    background_tasks.add_task(
+        run_discovery_task,
+        current_user.id,
+        request.platforms,
+        request.skills,
+        request.cities,
+        request.providers,
+        collection.id
+    )
+    
+    return {
+        "status": "started",
+        "collection_id": collection.id,
+        "message": "High-priority undergraduate discovery engine started."
+    }
+
+@router.get("/discovery/status/{collection_id}")
+async def get_discovery_status(
+    collection_id: int,
+    current_user: Users = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    collection = db.query(LeadCollections).filter(
+        LeadCollections.id == collection_id,
+        LeadCollections.user_id == current_user.id
+    ).first()
+    
+    if not collection:
+        raise HTTPException(status_code=404, detail="Collection not found")
+        
+    lead_count = db.query(SocialMediaLeads).filter(
+        SocialMediaLeads.collection_id == collection_id
+    ).count()
+    
+    return {
+        "id": collection.id,
+        "name": collection.name,
+        "status": collection.status,
+        "leads_found": lead_count,
+        "last_updated": collection.updated_at
+    }
+
 async def scrape_social_media_task(
     collection_id: int,
     platform: str,
