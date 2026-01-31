@@ -10,13 +10,8 @@ import Dashboard from './pages/Dashboard';
 import BulkWhatsAppSender from './components/BulkWhatsAppSender';
 import { Box, Heading, Text } from '@chakra-ui/react';
 
-// Placeholder components
-const LeadSearch = () => (
-  <Box p={6}>
-    <Heading size="lg" mb={4}>Lead Search</Heading>
-    <Text>Lead Search functionality - Coming Soon!</Text>
-  </Box>
-);
+import SocialDiscovery from './pages/SocialDiscovery';
+import LeadSearch from './pages/LeadSearch';
 
 function App() {
   return (
@@ -28,11 +23,16 @@ function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          
+
           {/* Protected routes with Layout */}
           <Route path="/dashboard" element={
             <Layout>
               <Dashboard />
+            </Layout>
+          } />
+          <Route path="/social-discovery" element={
+            <Layout>
+              <SocialDiscovery />
             </Layout>
           } />
           <Route path="/leads/search" element={
@@ -45,7 +45,7 @@ function App() {
               <BulkWhatsAppSender />
             </Layout>
           } />
-          
+
           {/* Redirect any unknown routes to landing page */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
