@@ -43,8 +43,5 @@ COPY . .
 # Environment variable for database path (should be a persistent volume)
 ENV DATABASE_URL="sqlite:////app/data/leadtap.db"
 
-# Expose port
-EXPOSE 8000
-
-# Start command
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Start command using the PORT environment variable provided by Railway
+CMD ["sh", "-c", "uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
