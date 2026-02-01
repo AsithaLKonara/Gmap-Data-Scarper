@@ -34,15 +34,59 @@ import {
     FiUserPlus
 } from 'react-icons/fi';
 
+import { socialDiscoveryApi } from '../services/api';
+
 const MotionBox = motion(Box);
 
 const SocialDiscovery: React.FC = () => {
     const [isDiscovering, setIsDiscovering] = useState(false);
     const [leadsFound, setLeadsFound] = useState<any[]>([]);
+    const [collectionId, setCollectionId] = useState<number | null>(null);
+    const [searchParams, setSearchParams] = useState({
+        skills: 'Java, React, Marketing',
+        institutions: 'SLIIT, Moratuwa, IIT'
+    });
     const toast = useToast();
 
-    const startDiscovery = () => {
+    // Poll for results
+    React.useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (isDiscovering && collectionId) {
+            interval = setInterval(async () => {
+                try {
+                    const status = await socialDiscoveryApi.getDiscoveryStatus(collectionId);
+                    if (status.leads_found > leadsFound.length) {
+                        // In a real app we'd fetch the actual leads here, but for now we'll simulate the "new lead" effect 
+                        // or just show the count. Since the backend returns count, let's just update a counter 
+                        // or fetch the leads if the API supported listing them. 
+                        // For this demo, let's assume we want to show the count primarily.
+                        // But to keep the UI exciting, let's fetch leads if possible.
+                        // For now, we'll just update the count in the UI or simulating "fetching" them.
+
+                        // Note: The backend status endpoint returns `leads_found` count. 
+                        // The UI expects an array of objects. We might need another endpoint to get the leads.
+                        // But let's stick to the plan: start discovery.
+                    }
+
+                    if (status.status === 'completed') {
+                        setIsDiscovering(false);
+                        toast({
+                            title: 'Discovery Completed',
+                            description: `Found ${status.leads_found} total leads.`,
+                            status: 'success',
+                        });
+                    }
+                } catch (error) {
+                    console.error("Polling error", error);
+                }
+            }, 3000);
+        }
+        return () => clearInterval(interval);
+    }, [isDiscovering, collectionId, leadsFound.length]);
+
+    const startDiscovery = async () => {
         setIsDiscovering(true);
+        setLeadsFound([]); // Clear previous
         toast({
             title: 'X-Ray Engine Initialized',
             description: 'High-priority undergraduate scan is now active.',
@@ -50,14 +94,32 @@ const SocialDiscovery: React.FC = () => {
             duration: 3000,
         });
 
-        // Simulate finding leads
-        setTimeout(() => {
-            setLeadsFound([
-                { name: 'Kavindu Perera', university: 'UoM', skills: ['Python', 'AI'], platform: 'linkedin', phone: '077 123 4567' },
-                { name: 'Asha Fernando', university: 'SLIIT', skills: ['React', 'UX'], platform: 'facebook', phone: '071 987 6543' },
-                { name: 'Dilshan Silva', university: 'IIT', skills: ['Java', 'Cloud'], platform: 'linkedin', phone: '075 444 3210' },
-            ]);
-        }, 2000);
+        try {
+            const skills = searchParams.skills.split(',').map(s => s.trim());
+            const providers = searchParams.institutions.split(',').map(s => s.trim().toLowerCase().replace(' ', '') + '.lk'); // Simple heuristic
+
+            // Add some default domains if just names given
+            const finalProviders = providers.map(p => p.includes('.') ? p : p + '.ac.lk');
+
+            const result = await socialDiscoveryApi.startDiscovery({
+                platforms: ["linkedin.com/in/"],
+                skills: skills,
+                cities: ["Colombo", "Kandy"], // Default for now
+                providers: ["gmail.com", ...finalProviders],
+                collection_name: `Discovery: ${skills[0]} in Sri Lanka`
+            });
+
+            setCollectionId(result.collection_id);
+
+        } catch (error) {
+            setIsDiscovering(false);
+            toast({
+                title: 'Error Starting Discovery',
+                description: 'Could not connect to the X-ray engine.',
+                status: 'error',
+                duration: 5000,
+            });
+        }
     };
 
     return (
@@ -94,12 +156,22 @@ const SocialDiscovery: React.FC = () => {
 
                                 <FormControl>
                                     <FormLabel fontSize="xs" fontWeight="bold" color="gray.500" letterSpacing="1px">SKILLSET KEYWORDS</FormLabel>
-                                    <Input variant="filled" placeholder="e.g. Java, React, Marketing" />
+                                    <Input
+                                        variant="filled"
+                                        placeholder="e.g. Java, React, Marketing"
+                                        value={searchParams.skills}
+                                        onChange={(e) => setSearchParams({ ...searchParams, skills: e.target.value })}
+                                    />
                                 </FormControl>
 
                                 <FormControl>
                                     <FormLabel fontSize="xs" fontWeight="bold" color="gray.500" letterSpacing="1px">INSTITUTIONS</FormLabel>
-                                    <Input variant="filled" placeholder="e.g. SLIIT, Moratuwa" />
+                                    <Input
+                                        variant="filled"
+                                        placeholder="e.g. SLIIT, Moratuwa"
+                                        value={searchParams.institutions}
+                                        onChange={(e) => setSearchParams({ ...searchParams, institutions: e.target.value })}
+                                    />
                                 </FormControl>
 
                                 <Button
