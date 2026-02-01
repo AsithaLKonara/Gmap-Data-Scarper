@@ -19,7 +19,10 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv('JWT_REFRESH_TOKEN_EXPIRE_DAYS', 7))
     
     # Database Configuration
-    DATABASE_URL: str = os.getenv('DATABASE_URL', 'sqlite:///./leadtap.db')
+    DATABASE_URL: str = os.getenv(
+        'DATABASE_URL', 
+        'sqlite:////app/data/leadtap.db' if os.getenv('ENVIRONMENT') == 'production' else 'sqlite:///./leadtap.db'
+    )
     POSTGRES_DB: str = os.getenv('POSTGRES_DB', 'leadtap')
     POSTGRES_USER: str = os.getenv('POSTGRES_USER', 'leadtap')
     POSTGRES_PASSWORD: str = os.getenv('POSTGRES_PASSWORD', 'leadtap')
