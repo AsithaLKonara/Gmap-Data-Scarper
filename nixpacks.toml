@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["python311", "google-chrome", "chromedriver", "gcc", "zlib", "openssl"]
+
+[phases.build]
+cmds = ["pip install -r backend/requirements.txt"]
+
+[start]
+cmd = "uvicorn backend.main:app --host 0.0.0.0 --port $PORT"
